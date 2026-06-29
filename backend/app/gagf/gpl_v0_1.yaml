@@ -1,0 +1,31 @@
+policy_version: "0.1"
+policy_id: "gagf_default_kernel_policy"
+mode: "declarative"
+
+thresholds:
+  risk:
+    high_enter: 0.75
+    high_exit: 0.60
+
+  coherence_psi:
+    low_enter: 0.45
+    low_exit: 0.60
+
+  uncertainty:
+    high_enter: 0.65
+    high_exit: 0.50
+
+  revision_pressure:
+    high_enter: 0.70
+    high_exit: 0.55
+
+  governance_momentum:
+    high_enter: 0.70
+    high_exit: 0.55
+
+strategy_priority:
+  - Contain
+  - Recover
+  - Verify
+  - Probe
+  - Normal

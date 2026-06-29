@@ -1,0 +1,68 @@
+from backend.app.gagf.schemas import AdaptiveStateSnapshot, ArbitrationResult, DecisionMeta
+from backend.app.gagf.gpl_loader import GPLLoader
+
+
+class ArbitrationService:
+    def __init__(self, gpl: GPLLoader):
+        self.gpl = gpl
+
+    def arbitrate(
+        self,
+        snapshot: AdaptiveStateSnapshot,
+        active_strategy: str,
+        proposal: str,
+    ) -> ArbitrationResult:
+        if snapshot.status != "VALID":
+            return self._blocked_decision(snapshot, active_strategy, proposal)
+
+        state = snapshot.adaptive_state
+        thresholds = self.gpl.manifest["thresholds"]
+
+        if state.risk_index >= thresholds["risk"]["high_enter"]:
+            return self._transition("Contain", ["risk_index_high"], True, snapshot, active_strategy, proposal)
+
+        if state.coherence_psi <= thresholds["coherence_psi"]["low_enter"]:
+            return self._transition("Recover", ["coherence_psi_low"], True, snapshot, active_strategy, proposal)
+
+        if (
+            state.revision_pressure >= thresholds["revision_pressure"]["high_enter"]
+            and state.governance_momentum >= thresholds["governance_momentum"]["high_enter"]
+        ):
+            return self._transition("Verify", ["revision_conflict"], True, snapshot, active_strategy, proposal)
+
+        if state.uncertainty >= thresholds["uncertainty"]["high_enter"]:
+            return self._transition("Probe", ["uncertainty_high"], False, snapshot, active_strategy, proposal)
+
+        return self._transition("Normal", ["all_indicators_stable"], False, snapshot, active_strategy, proposal)
+
+    def _transition(self, strategy, reasons, override, snapshot, active_strategy, proposal):
+        return ArbitrationResult(
+            snapshot_id=snapshot.snapshot_id,
+            active_strategy=active_strategy,
+            strategy_proposal=proposal,
+            kernel_decision=f"transition_to_{strategy.lower()}",
+            selected_strategy=strategy,
+            reason=reasons,
+            decision_meta=DecisionMeta(
+                is_override_triggered=override,
+                hysteresis_buffer_active=False,
+                policy_version=self.gpl.version,
+                policy_id=self.gpl.policy_id,
+            ),
+        )
+
+    def _blocked_decision(self, snapshot, active_strategy, proposal):
+        return ArbitrationResult(
+            snapshot_id=snapshot.snapshot_id,
+            active_strategy=active_strategy,
+            strategy_proposal=proposal,
+            kernel_decision="blocked_decision",
+            selected_strategy=None,
+            reason=["snapshot_invalid"],
+            decision_meta=DecisionMeta(
+                is_override_triggered=False,
+                hysteresis_buffer_active=False,
+                policy_version=self.gpl.version,
+                policy_id=self.gpl.policy_id,
+            ),
+        )
