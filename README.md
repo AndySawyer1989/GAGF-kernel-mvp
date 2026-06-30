@@ -1,586 +1,160 @@
-\# GAGF Kernel MVP v0.1
+# GAGF Kernel MVP
 
+> General Adaptive Governance Framework (GAGF) Kernel MVP
 
+A local-first governance decision engine that converts raw operational events into adaptive state snapshots, evaluates those snapshots using a declarative Governance Policy Language (GPL), and records deterministic governance decisions with a complete audit trail.
 
-\## Overview
+---
 
+# Current Version
 
+**v0.1.0**
 
-The \*\*General Adaptive Governance Framework (GAGF) Kernel MVP\*\* is an evidence-driven governance engine that evaluates system state and selects adaptive strategies using deterministic, auditable rules.
+Status:
 
+- ✅ Stable MVP
+- ✅ Local Execution
+- ✅ Automated Tests Passing
+- ✅ Governance Console Available
 
+---
 
-Rather than reacting directly to raw events, the Kernel translates operational evidence into an \*\*Adaptive State\*\*, evaluates that state against a versioned Governance Policy Language (GPL), and records every governance decision in an immutable decision ledger.
+# Features
 
+- Adaptive State Metric Adapter
+- Governance Policy Language (GPL)
+- Deterministic Arbitration Engine
+- Snapshot Ledger
+- Decision Ledger
+- SQLite Persistence
+- REST API
+- Governance Console
+- Dashboard Service
+- Automated pytest Suite
 
+---
 
-The primary design goals are:
+# Architecture
 
-
-
-\* Deterministic decision making
-
-\* Evidence-based governance
-
-\* Full auditability
-
-\* Scientific reproducibility
-
-\* Clear separation between observation, policy, and execution
-
-
-
-\---
-
-
-
-\# Current Architecture
-
-
-
-```
-
-Raw Events
-
-&#x20;     │
-
-&#x20;     ▼
-
-MetricAdapter
-
-&#x20;     │
-
-&#x20;     ▼
-
-Adaptive State Snapshot
-
-&#x20;     │
-
-&#x20;     ▼
-
-GPL Policy Loader
-
-&#x20;     │
-
-&#x20;     ▼
-
-Kernel Arbitration Service
-
-&#x20;     │
-
-&#x20;     ▼
-
-Decision Ledger (SQLite)
-
-```
-
-
-
-\---
-
-
-
-\# Components
-
-
-
-\## MetricAdapter
-
-
-
-Transforms raw security events into normalized governance indicators.
-
-
-
-Example indicators include:
-
-
-
-\* Risk Index
-
-\* Uncertainty
-
-\* Coherence (Ψ)
-
-\* Revision Pressure
-
-\* Governance Momentum
-
-
-
-\---
-
-
-
-\## Snapshot Ledger
-
-
-
-Stores immutable Adaptive State Snapshots.
-
-
-
-Each snapshot contains:
-
-
-
-\* Adaptive State
-
-\* Evidence Confidence
-
-\* Timestamp Quality Distribution
-
-\* Evidence IDs
-
-\* Normalization metadata
-
-
-
-\---
-
-
-
-\## GPL Loader
-
-
-
-Loads the versioned Governance Policy Language (GPL).
-
-
-
-The current implementation supports:
-
-
-
-\* Declarative YAML policies
-
-\* Version enforcement
-
-\* Immutable runtime configuration
-
-
-
-\---
-
-
-
-\## Arbitration Service
-
-
-
-Evaluates Adaptive State against the GPL thresholds.
-
-
-
-Current strategy priority:
-
-
-
-1\. Contain
-
-2\. Recover
-
-3\. Verify
-
-4\. Probe
-
-5\. Normal
-
-
-
-The Kernel follows the \*\*Lockable Principle\*\*:
-
-
-
-> Strategies may recommend actions, but only the Kernel authorizes transitions.
-
-
-
-\---
-
-
-
-\## Decision Ledger
-
-
-
-Persists every Kernel decision.
-
-
-
-Each record includes:
-
-
-
-\* Snapshot ID
-
-\* Selected Strategy
-
-\* Decision Reason
-
-\* Policy Version
-
-\* Evidence
-
-\* Timestamp
-
-
-
-This provides complete governance provenance.
-
-
-
-\---
-
-
-
-\# Database
-
-
-
-SQLite
-
-
-
-```
-
-gagf.db
-
-```
-
-
-
-SQLite is used for local development because it:
-
-
-
-\* requires no server
-
-\* ships with Python
-
-\* supports rapid experimentation
-
-\* can later be replaced by PostgreSQL
-
-
-
-\---
-
-
-
-\# Running the Project
-
-
-
-\## Create the virtual environment
-
-
-
-```
-
-python -m venv .venv
-
-```
-
-
-
-Activate:
-
-
-
-Windows
-
-
-
-```
-
-.venv\\Scripts\\activate
-
-```
-
-
-
-Install dependencies
-
-
-
-```
-
-pip install -r requirements.txt
-
-```
-
-
-
-\---
-
-
-
-\# Running Tests
-
-
-
-Execute the full validation suite:
-
-
-
-```
-
-pytest
-
-```
-
-
-
-Current status:
-
-
-
-```
-
-4 passed
-
-```
-
-
-
-\---
-
-
-
-\# Validation Suite
-
-
-
-\## Full Pipeline
-
-
-
-Validates
-
-
-
-MetricAdapter
-
-
-
-↓
-
-
-
+```text
+Browser
+     │
+     ▼
+Governance Console
+     │
+     ▼
+FastAPI
+     │
+     ▼
+Dashboard Service
+     │
+     ▼
 Snapshot Ledger
-
-
-
-↓
-
-
-
-GPL Loader
-
-
-
-↓
-
-
-
-Kernel Arbitration
-
-
-
-↓
-
-
-
 Decision Ledger
-
-
-
-\---
-
-
-
-\## Invalid Snapshot Gate
-
-
-
-Confirms the Kernel refuses to arbitrate when the snapshot is invalid.
-
-
-
-\---
-
-
-
-\## Replay Determinism
-
-
-
-Verifies identical inputs always produce identical governance decisions.
-
-
-
-\---
-
-
-
-\## Sustained Attack Lifecycle
-
-
-
-Validates the strategy progression:
-
-
-
+     │
+     ▼
+SQLite
+     │
+     ▼
+Kernel
+     │
+     ▼
+Metric Adapter
 ```
 
-Normal
+---
 
-&#x20;   ↓
+# API Endpoints
 
-Probe
+| Method | Endpoint |
+|---------|----------|
+| GET | /health |
+| POST | /snapshot |
+| POST | /arbitrate |
+| GET | /snapshots |
+| GET | /snapshot/{id} |
+| GET | /decisions |
+| GET | /decision/{id} |
+| GET | /dashboard |
+| GET | /console |
 
-&#x20;   ↓
+---
 
-Contain
+# Running Locally
 
+Create and activate the virtual environment.
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
 ```
 
+Start the server:
 
-
-\---
-
-
-
-\# Current Status
-
-
-
-Architecture Version
-
-
-
+```bash
+py -m uvicorn backend.app.main:app --reload
 ```
 
-GAGF v0.1
+Open:
 
 ```
+http://127.0.0.1:8000/docs
+```
 
+Governance Console:
 
+```
+http://127.0.0.1:8000/console
+```
 
-Implementation Status
+---
 
+# Testing
 
+Run:
 
-✅ MetricAdapter
+```bash
+pytest
+```
 
+All tests should pass before committing changes.
 
+---
 
-✅ Snapshot Ledger
+# Documentation
 
+See the `docs/` folder:
 
+- ARCHITECTURE.md
+- API.md
+- DATABASE.md
 
-✅ GPL Loader
+---
 
+# Roadmap
 
+## Version 0.2
 
-✅ Arbitration Service
+- Dashboard enhancements
+- Improved Governance Console
+- Charts and visualizations
 
+## Version 0.3
 
+- Jira integration
+- GitHub integration
+- CSV ingestion
 
-✅ Decision Ledger
+## Version 1.0
 
+- Friction Intelligence Platform (FIP)
+- PostgreSQL
+- Authentication
+- Enterprise deployment
 
+---
 
-✅ SQLite Persistence
+# License
 
-
-
-✅ Local Test Environment
-
-
-
-✅ Four-Pillar Validation Suite
-
-
-
-\---
-
-
-
-\# Roadmap
-
-
-
-Upcoming work:
-
-
-
-\* FastAPI API
-
-\* REST endpoints
-
-\* Snapshot Service
-
-\* Hysteresis Engine
-
-\* Governance Dashboard
-
-\* Docker deployment
-
-\* PostgreSQL support
-
-\* Hypothesis Engine
-
-
-
-\---
-
-
-
-\# Design Principles
-
-
-
-The project is built around several core principles:
-
-
-
-\* Evidence before inference
-
-\* Observation before interpretation
-
-\* Reality over intuition
-
-\* Deterministic governance
-
-\* Epistemic humility
-
-\* Scientific reproducibility
-
-\* Immutable policy
-
-\* Full decision provenance
-
-
-
-\---
-
-
-
-\# License
-
-
-
-Development Prototype
-
-
-
-Research implementation of the General Adaptive Governance Framework (GAGF).
-
-
-
-© Andy Sawyer
-
-
-
+Development project for research, governance engineering, and software architecture.
