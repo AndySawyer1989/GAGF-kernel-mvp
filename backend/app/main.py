@@ -1,6 +1,7 @@
+from backend.app.gagf.decision_ledger import DecisionLedger
 from typing import List
 from uuid import uuid4
-
+from backend.app.services.dashboard_service import DashboardService
 from fastapi import FastAPI
 
 from backend.app.gagf.schemas import (
@@ -85,3 +86,23 @@ def create_snapshot(events: List[RawSecurityEvent]):
     )
 
     return snapshot
+@app.get("/snapshots")
+def list_snapshots():
+    return SnapshotLedger().list_snapshots()
+
+@app.get("/decisions")
+def list_decisions():
+    return DecisionLedger().list_decisions()
+
+
+@app.get("/decision/{decision_id}")
+def get_decision(decision_id: str):
+    decision = DecisionLedger().get_decision(decision_id)
+
+    if decision is None:
+        return {"error": "decision_not_found"}
+
+    return decision
+@app.get("/dashboard")
+def dashboard():
+    return DashboardService().get_dashboard_summary()

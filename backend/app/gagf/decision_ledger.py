@@ -82,3 +82,15 @@ class DecisionLedger:
             ).fetchone()
 
         return dict(row) if row else None
+    def list_decisions(self):
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM gagf_decision_records
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+
+        return [dict(row) for row in rows]
