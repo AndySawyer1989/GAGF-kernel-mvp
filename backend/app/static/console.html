@@ -28,14 +28,14 @@
             border: 1px solid #374151;
         }
 
-       .upload-card,
-       .result-card,
-       .activity-card,
-       .decision-card,
-       .refresh-card {
-       margin-top: 20px;
-       max-width: 900px;
-        }
+        .upload-card,
+        .result-card,
+        .activity-card,
+        .decision-card,
+        .refresh-card,
+        .snapshots-card {
+            margin-top: 20px;
+            max-width: 900px;
         }
 
         .result-card {
@@ -112,6 +112,28 @@
             font-weight: bold;
         }
 
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .data-table th,
+        .data-table td {
+            border-bottom: 1px solid #374151;
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .data-table th {
+            color: #9ca3af;
+        }
+
+        .data-table td {
+            color: #f9fafb;
+        }
+
         button {
             margin-top: 20px;
             padding: 10px 20px;
@@ -133,6 +155,7 @@
         }
     </style>
 </head>
+
 <body>
     <h1>GAGF Governance Console</h1>
 
@@ -210,34 +233,34 @@
         </div>
     </div>
 
-<div class="card decision-card">
-    <div class="result-title">Latest Decision</div>
+    <div class="card decision-card">
+        <div class="result-title">Latest Decision</div>
 
-    <div class="result-row">
-        <span class="label">Selected Strategy</span>
-        <span id="decision_strategy" class="small-value">—</span>
-    </div>
+        <div class="result-row">
+            <span class="label">Selected Strategy</span>
+            <span id="decision_strategy" class="small-value">—</span>
+        </div>
 
-    <div class="result-row">
-        <span class="label">Kernel Decision</span>
-        <span id="decision_kernel" class="small-value">—</span>
-    </div>
+        <div class="result-row">
+            <span class="label">Kernel Decision</span>
+            <span id="decision_kernel" class="small-value">—</span>
+        </div>
 
-    <div class="result-row">
-        <span class="label">Reason</span>
-        <span id="decision_reason" class="small-value">—</span>
-    </div>
+        <div class="result-row">
+            <span class="label">Reason</span>
+            <span id="decision_reason" class="small-value">—</span>
+        </div>
 
-    <div class="result-row">
-        <span class="label">Policy Version</span>
-        <span id="decision_policy" class="small-value">—</span>
-    </div>
+        <div class="result-row">
+            <span class="label">Policy Version</span>
+            <span id="decision_policy" class="small-value">—</span>
+        </div>
 
-    <div class="result-row">
-        <span class="label">Override Triggered</span>
-        <span id="decision_override" class="small-value">—</span>
+        <div class="result-row">
+            <span class="label">Override Triggered</span>
+            <span id="decision_override" class="small-value">—</span>
+        </div>
     </div>
-</div> 
 
     <div class="card activity-card">
         <div class="result-title">Recent Activity</div>
@@ -246,13 +269,68 @@
         </div>
     </div>
 
-<div class="card refresh-card">
-    <div class="label">System Refresh</div>
-    <div id="refresh_status" class="small-value">Waiting for first refresh...</div>
-    <button onclick="loadDashboard()">Refresh Now</button>
-</div>
+    <div class="card snapshots-card">
+        <div class="result-title">Recent Snapshots</div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Snapshot ID</th>
+                    <th>Status</th>
+                    <th>Risk</th>
+                    <th>Uncertainty</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody id="snapshots_table_body">
+                <tr>
+                    <td colspan="5">Loading snapshots...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card refresh-card">
+        <div class="label">System Refresh</div>
+        <div id="refresh_status" class="small-value">Waiting for first refresh...</div>
+        <button onclick="loadDashboard()">Refresh Now</button>
+    </div>
 
     <script>
+        async function loadSnapshotsTable() {
+            const response = await fetch('/snapshots');
+            const snapshots = await response.json();
+
+            const tableBody = document.getElementById('snapshots_table_body');
+            tableBody.innerHTML = "";
+
+            if (!snapshots.length) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5">No snapshots found.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            snapshots.slice(0, 5).forEach(snapshot => {
+                const adaptiveState = JSON.parse(snapshot.adaptive_state_json);
+                const createdAt = new Date(snapshot.created_at).toLocaleTimeString();
+
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td>${snapshot.snapshot_id.slice(0, 8)}...</td>
+                    <td>${snapshot.status}</td>
+                    <td>${adaptiveState.risk_index}</td>
+                    <td>${adaptiveState.uncertainty}</td>
+                    <td>${createdAt}</td>
+                `;
+
+                tableBody.appendChild(row);
+            });
+        }
+
         async function loadDashboard() {
             const response = await fetch('/dashboard');
             const data = await response.json();
@@ -261,33 +339,32 @@
             document.getElementById('snapshot_count').textContent = data.snapshot_count;
             document.getElementById('decision_count').textContent = data.decision_count;
 
-if (data.latest_decision) {
-    document.getElementById('latest_strategy').textContent =
-        data.latest_decision.selected_strategy;
+            if (data.latest_decision) {
+                document.getElementById('latest_strategy').textContent =
+                    data.latest_decision.selected_strategy;
 
-    document.getElementById('decision_strategy').textContent =
-        data.latest_decision.selected_strategy;
+                document.getElementById('decision_strategy').textContent =
+                    data.latest_decision.selected_strategy;
 
-    document.getElementById('decision_kernel').textContent =
-        data.latest_decision.kernel_decision;
+                document.getElementById('decision_kernel').textContent =
+                    data.latest_decision.kernel_decision;
 
-    document.getElementById('decision_reason').textContent =
-        data.latest_decision.reason.join(", ");
+                document.getElementById('decision_reason').textContent =
+                    data.latest_decision.reason.join(", ");
 
-    document.getElementById('decision_policy').textContent =
-        data.latest_decision.decision_meta.policy_version;
+                document.getElementById('decision_policy').textContent =
+                    data.latest_decision.decision_meta.policy_version;
 
-    document.getElementById('decision_override').textContent =
-        data.latest_decision.decision_meta.is_override_triggered ? "Yes" : "No";
-} else {
-    document.getElementById('latest_strategy').textContent = "None";
-
-    document.getElementById('decision_strategy').textContent = "None";
-    document.getElementById('decision_kernel').textContent = "None";
-    document.getElementById('decision_reason').textContent = "None";
-    document.getElementById('decision_policy').textContent = "None";
-    document.getElementById('decision_override').textContent = "None";
-}
+                document.getElementById('decision_override').textContent =
+                    data.latest_decision.decision_meta.is_override_triggered ? "Yes" : "No";
+            } else {
+                document.getElementById('latest_strategy').textContent = "None";
+                document.getElementById('decision_strategy').textContent = "None";
+                document.getElementById('decision_kernel').textContent = "None";
+                document.getElementById('decision_reason').textContent = "None";
+                document.getElementById('decision_policy').textContent = "None";
+                document.getElementById('decision_override').textContent = "None";
+            }
 
             if (data.latest_snapshot) {
                 document.getElementById('risk_index').textContent =
@@ -299,6 +376,10 @@ if (data.latest_decision) {
                 document.getElementById('risk_index').textContent = "None";
                 document.getElementById('uncertainty').textContent = "None";
             }
+
+            const refreshTime = new Date().toLocaleTimeString();
+            document.getElementById('refresh_status').textContent =
+                `Last refreshed at ${refreshTime}`;
         }
 
         function showImportResult(fileName, data) {
@@ -384,17 +465,20 @@ if (data.latest_decision) {
                 addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
 
                 await loadDashboard();
+                await loadSnapshotsTable();
             } else {
                 statusBox.textContent = "Import failed.";
                 addActivity(`${fileName} import failed`);
             }
-                const refreshTime = new Date().toLocaleTimeString();
-	        document.getElementById('refresh_status').textContent =
-    `           Last refreshed at ${refreshTime}`;
-         }
+        }
 
         loadDashboard();
-        setInterval(loadDashboard, 5000);
+        loadSnapshotsTable();
+
+        setInterval(() => {
+            loadDashboard();
+            loadSnapshotsTable();
+        }, 5000);
     </script>
 </body>
 </html>
