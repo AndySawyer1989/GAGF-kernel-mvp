@@ -29,11 +29,12 @@
         }
 
        .upload-card,
-	   .result-card,
-	   .activity-card,
-	   .decision-card {
-           margin-top: 20px;
-           max-width: 900px;
+       .result-card,
+       .activity-card,
+       .decision-card,
+       .refresh-card {
+       margin-top: 20px;
+       max-width: 900px;
         }
         }
 
@@ -245,7 +246,11 @@
         </div>
     </div>
 
-    <button onclick="loadDashboard()">Refresh Dashboard</button>
+<div class="card refresh-card">
+    <div class="label">System Refresh</div>
+    <div id="refresh_status" class="small-value">Waiting for first refresh...</div>
+    <button onclick="loadDashboard()">Refresh Now</button>
+</div>
 
     <script>
         async function loadDashboard() {
@@ -383,9 +388,13 @@ if (data.latest_decision) {
                 statusBox.textContent = "Import failed.";
                 addActivity(`${fileName} import failed`);
             }
-        }
+                const refreshTime = new Date().toLocaleTimeString();
+	        document.getElementById('refresh_status').textContent =
+    `           Last refreshed at ${refreshTime}`;
+         }
 
         loadDashboard();
+        setInterval(loadDashboard, 5000);
     </script>
 </body>
 </html>
