@@ -1,12 +1,18 @@
+import shutil
+from pathlib import Path
+
+from fastapi import UploadFile, File
 from backend.app.gagf.decision_ledger import DecisionLedger
 from typing import List
 from uuid import uuid4
 from backend.app.services.dashboard_service import DashboardService
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
+from backend.app.services.ingestion_service import IngestionService
 from fastapi.staticfiles import StaticFiles
 app = FastAPI(title="GAGF Kernel MVP")
 app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
+
 
 from backend.app.gagf.schemas import (
     AdaptiveState,
@@ -113,3 +119,16 @@ def dashboard():
 @app.get("/console")
 def console():
     return FileResponse("backend/app/static/console.html")
+@app.post("/upload-csv")
+def upload_csv(file: UploadFile = File(...)):
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+
+    file_path = upload_dir / file.filename
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    result = IngestionService().ingest_csv(str(file_path))
+
+    return result

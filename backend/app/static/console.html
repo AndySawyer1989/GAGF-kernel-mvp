@@ -28,6 +28,36 @@
             border: 1px solid #374151;
         }
 
+        .upload-card,
+        .result-card,
+        .activity-card {
+            margin-top: 20px;
+            max-width: 900px;
+        }
+
+        .result-card {
+            display: none;
+            border-color: #facc15;
+        }
+
+        .result-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #facc15;
+            margin-bottom: 15px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #374151;
+            padding: 8px 0;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
         .label {
             color: #9ca3af;
             font-size: 14px;
@@ -39,6 +69,11 @@
             margin-top: 8px;
         }
 
+        .small-value {
+            color: #f9fafb;
+            font-weight: bold;
+        }
+
         .strategy {
             color: #facc15;
         }
@@ -47,8 +82,35 @@
             color: #22c55e;
         }
 
+        .success {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .activity-item {
+            border-bottom: 1px solid #374151;
+            padding: 10px 0;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-time {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        .activity-text {
+            margin-top: 4px;
+            font-weight: bold;
+        }
+
         button {
-            margin-top: 30px;
+            margin-top: 20px;
             padding: 10px 20px;
             background: #38bdf8;
             color: #111827;
@@ -56,6 +118,15 @@
             border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        input {
+            margin-top: 15px;
+        }
+
+        #upload_status {
+            margin-top: 15px;
+            color: #facc15;
         }
     </style>
 </head>
@@ -94,6 +165,55 @@
         </div>
     </div>
 
+    <div class="card upload-card">
+        <div class="label">Upload Evidence CSV</div>
+        <input type="file" id="csv_file" accept=".csv">
+        <br>
+        <button onclick="uploadCSV()">Upload CSV</button>
+        <div id="upload_status"></div>
+    </div>
+
+    <div id="import_result_card" class="card result-card">
+        <div id="import_result_title" class="result-title">Import Result</div>
+
+        <div class="result-row">
+            <span class="label">File</span>
+            <span id="result_file" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Events Imported</span>
+            <span id="result_events" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Snapshot Status</span>
+            <span id="result_snapshot_status" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Selected Strategy</span>
+            <span id="result_strategy" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Kernel Decision</span>
+            <span id="result_kernel_decision" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Reason</span>
+            <span id="result_reason" class="small-value">—</span>
+        </div>
+    </div>
+
+    <div class="card activity-card">
+        <div class="result-title">Recent Activity</div>
+        <div id="activity_timeline">
+            <div class="label">No activity loaded yet.</div>
+        </div>
+    </div>
+
     <button onclick="loadDashboard()">Refresh Dashboard</button>
 
     <script>
@@ -121,6 +241,95 @@
             } else {
                 document.getElementById('risk_index').textContent = "None";
                 document.getElementById('uncertainty').textContent = "None";
+            }
+        }
+
+        function showImportResult(fileName, data) {
+            const card = document.getElementById('import_result_card');
+            const title = document.getElementById('import_result_title');
+
+            card.style.display = 'block';
+
+            if (data.status === "ingested") {
+                title.textContent = "✓ Import Successful";
+                title.className = "result-title success";
+
+                document.getElementById('result_file').textContent = fileName;
+                document.getElementById('result_events').textContent = data.events_normalized;
+                document.getElementById('result_snapshot_status').textContent = data.snapshot_status;
+                document.getElementById('result_strategy').textContent = data.selected_strategy;
+                document.getElementById('result_kernel_decision').textContent = data.kernel_decision;
+                document.getElementById('result_reason').textContent = data.reason.join(", ");
+            } else {
+                title.textContent = "✕ Import Failed";
+                title.className = "result-title error";
+
+                document.getElementById('result_file').textContent = fileName;
+                document.getElementById('result_events').textContent = "0";
+                document.getElementById('result_snapshot_status').textContent = "N/A";
+                document.getElementById('result_strategy').textContent = "N/A";
+                document.getElementById('result_kernel_decision').textContent = "N/A";
+                document.getElementById('result_reason').textContent =
+                    JSON.stringify(data.errors || data);
+            }
+        }
+
+        function addActivity(message) {
+            const timeline = document.getElementById('activity_timeline');
+            const now = new Date().toLocaleTimeString();
+
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+
+            item.innerHTML = `
+                <div class="activity-time">${now}</div>
+                <div class="activity-text">${message}</div>
+            `;
+
+            if (timeline.textContent.includes("No activity loaded yet")) {
+                timeline.innerHTML = "";
+            }
+
+            timeline.prepend(item);
+        }
+
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csv_file');
+            const statusBox = document.getElementById('upload_status');
+
+            if (!fileInput.files.length) {
+                statusBox.textContent = "Please choose a CSV file first.";
+                return;
+            }
+
+            const fileName = fileInput.files[0].name;
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            statusBox.textContent = "Uploading and processing CSV...";
+
+            const response = await fetch('/upload-csv', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            showImportResult(fileName, data);
+
+            if (data.status === "ingested") {
+                statusBox.textContent = "Import complete.";
+
+                addActivity(`${fileName} imported`);
+                addActivity(`${data.events_normalized} events normalized`);
+                addActivity(`Snapshot ${data.snapshot_status}`);
+                addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
+
+                await loadDashboard();
+            } else {
+                statusBox.textContent = "Import failed.";
+                addActivity(`${fileName} import failed`);
             }
         }
 

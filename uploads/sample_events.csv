@@ -1,0 +1,3 @@
+event_id,event_type,timestamp_quality,source_system,event_occurred_at
+evt-001,honeyfile_interaction,SOURCE_OCCURRED_AT,CSV,2026-06-30T12:00:00Z
+evt-002,unauthorized_api_call,SOURCE_OCCURRED_AT,CSV,2026-06-30T12:03:00Z
