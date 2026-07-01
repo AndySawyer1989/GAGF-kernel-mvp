@@ -3,6 +3,10 @@ from typing import List
 from uuid import uuid4
 from backend.app.services.dashboard_service import DashboardService
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+app = FastAPI(title="GAGF Kernel MVP")
+app.mount("/static", StaticFiles(directory="backend/app/static"), name="static")
 
 from backend.app.gagf.schemas import (
     AdaptiveState,
@@ -106,3 +110,6 @@ def get_decision(decision_id: str):
 @app.get("/dashboard")
 def dashboard():
     return DashboardService().get_dashboard_summary()
+@app.get("/console")
+def console():
+    return FileResponse("backend/app/static/console.html")

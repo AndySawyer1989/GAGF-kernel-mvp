@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GAGF Governance Console</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111827;
+            color: #f9fafb;
+            margin: 40px;
+        }
+
+        h1 {
+            color: #38bdf8;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 900px;
+        }
+
+        .card {
+            background: #1f2937;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #374151;
+        }
+
+        .label {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .strategy {
+            color: #facc15;
+        }
+
+        .online {
+            color: #22c55e;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 10px 20px;
+            background: #38bdf8;
+            color: #111827;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>GAGF Governance Console</h1>
+
+    <div class="grid">
+        <div class="card">
+            <div class="label">Kernel Status</div>
+            <div id="kernel_status" class="value online">Loading...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Latest Strategy</div>
+            <div id="latest_strategy" class="value strategy">Loading...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Snapshot Count</div>
+            <div id="snapshot_count" class="value">Loading...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Decision Count</div>
+            <div id="decision_count" class="value">Loading...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Risk Index</div>
+            <div id="risk_index" class="value">Loading...</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Uncertainty</div>
+            <div id="uncertainty" class="value">Loading...</div>
+        </div>
+    </div>
+
+    <button onclick="loadDashboard()">Refresh Dashboard</button>
+
+    <script>
+        async function loadDashboard() {
+            const response = await fetch('/dashboard');
+            const data = await response.json();
+
+            document.getElementById('kernel_status').textContent = data.kernel_status;
+            document.getElementById('snapshot_count').textContent = data.snapshot_count;
+            document.getElementById('decision_count').textContent = data.decision_count;
+
+            if (data.latest_decision) {
+                document.getElementById('latest_strategy').textContent =
+                    data.latest_decision.selected_strategy;
+            } else {
+                document.getElementById('latest_strategy').textContent = "None";
+            }
+
+            if (data.latest_snapshot) {
+                document.getElementById('risk_index').textContent =
+                    data.latest_snapshot.adaptive_state.risk_index;
+
+                document.getElementById('uncertainty').textContent =
+                    data.latest_snapshot.adaptive_state.uncertainty;
+            } else {
+                document.getElementById('risk_index').textContent = "None";
+                document.getElementById('uncertainty').textContent = "None";
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>
