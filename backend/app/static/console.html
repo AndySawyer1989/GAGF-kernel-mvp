@@ -28,15 +28,16 @@
             border: 1px solid #374151;
         }
 
-        .upload-card,
-        .result-card,
-        .activity-card,
-        .decision-card,
-        .refresh-card,
-        .snapshots-card {
-            margin-top: 20px;
-            max-width: 900px;
-        }
+	.upload-card,
+	.result-card,
+	.activity-card,
+	.decision-card,
+	.refresh-card,
+	.snapshots-card,
+	.decisions-card {
+	    margin-top: 20px;
+	    max-width: 900px;
+	}
 
         .result-card {
             display: none;
@@ -290,6 +291,27 @@
         </table>
     </div>
 
+<div class="card decisions-card">
+    <div class="result-title">Recent Decisions</div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Decision ID</th>
+                <th>Strategy</th>
+                <th>Decision</th>
+                <th>Override</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody id="decisions_table_body">
+            <tr>
+                <td colspan="5">Loading decisions...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
     <div class="card refresh-card">
         <div class="label">System Refresh</div>
         <div id="refresh_status" class="small-value">Waiting for first refresh...</div>
@@ -297,188 +319,227 @@
     </div>
 
     <script>
-        async function loadSnapshotsTable() {
-            const response = await fetch('/snapshots');
-            const snapshots = await response.json();
 
-            const tableBody = document.getElementById('snapshots_table_body');
-            tableBody.innerHTML = "";
+    async function loadSnapshotsTable() {
+        const response = await fetch('/snapshots');
+        const snapshots = await response.json();
 
-            if (!snapshots.length) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="5">No snapshots found.</td>
-                    </tr>
-                `;
-                return;
-            }
+        const tableBody = document.getElementById('snapshots_table_body');
+        tableBody.innerHTML = "";
 
-            snapshots.slice(0, 5).forEach(snapshot => {
-                const adaptiveState = JSON.parse(snapshot.adaptive_state_json);
-                const createdAt = new Date(snapshot.created_at).toLocaleTimeString();
-
-                const row = document.createElement('tr');
-
-                row.innerHTML = `
-                    <td>${snapshot.snapshot_id.slice(0, 8)}...</td>
-                    <td>${snapshot.status}</td>
-                    <td>${adaptiveState.risk_index}</td>
-                    <td>${adaptiveState.uncertainty}</td>
-                    <td>${createdAt}</td>
-                `;
-
-                tableBody.appendChild(row);
-            });
+        if (!snapshots.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5">No snapshots found.</td>
+                </tr>
+            `;
+            return;
         }
 
-        async function loadDashboard() {
-            const response = await fetch('/dashboard');
-            const data = await response.json();
+        snapshots.slice(0, 5).forEach(snapshot => {
+            const adaptiveState = JSON.parse(snapshot.adaptive_state_json);
+            const createdAt = new Date(snapshot.created_at).toLocaleTimeString();
 
-            document.getElementById('kernel_status').textContent = data.kernel_status;
-            document.getElementById('snapshot_count').textContent = data.snapshot_count;
-            document.getElementById('decision_count').textContent = data.decision_count;
+            const row = document.createElement('tr');
 
-            if (data.latest_decision) {
-                document.getElementById('latest_strategy').textContent =
-                    data.latest_decision.selected_strategy;
-
-                document.getElementById('decision_strategy').textContent =
-                    data.latest_decision.selected_strategy;
-
-                document.getElementById('decision_kernel').textContent =
-                    data.latest_decision.kernel_decision;
-
-                document.getElementById('decision_reason').textContent =
-                    data.latest_decision.reason.join(", ");
-
-                document.getElementById('decision_policy').textContent =
-                    data.latest_decision.decision_meta.policy_version;
-
-                document.getElementById('decision_override').textContent =
-                    data.latest_decision.decision_meta.is_override_triggered ? "Yes" : "No";
-            } else {
-                document.getElementById('latest_strategy').textContent = "None";
-                document.getElementById('decision_strategy').textContent = "None";
-                document.getElementById('decision_kernel').textContent = "None";
-                document.getElementById('decision_reason').textContent = "None";
-                document.getElementById('decision_policy').textContent = "None";
-                document.getElementById('decision_override').textContent = "None";
-            }
-
-            if (data.latest_snapshot) {
-                document.getElementById('risk_index').textContent =
-                    data.latest_snapshot.adaptive_state.risk_index;
-
-                document.getElementById('uncertainty').textContent =
-                    data.latest_snapshot.adaptive_state.uncertainty;
-            } else {
-                document.getElementById('risk_index').textContent = "None";
-                document.getElementById('uncertainty').textContent = "None";
-            }
-
-            const refreshTime = new Date().toLocaleTimeString();
-            document.getElementById('refresh_status').textContent =
-                `Last refreshed at ${refreshTime}`;
-        }
-
-        function showImportResult(fileName, data) {
-            const card = document.getElementById('import_result_card');
-            const title = document.getElementById('import_result_title');
-
-            card.style.display = 'block';
-
-            if (data.status === "ingested") {
-                title.textContent = "✓ Import Successful";
-                title.className = "result-title success";
-
-                document.getElementById('result_file').textContent = fileName;
-                document.getElementById('result_events').textContent = data.events_normalized;
-                document.getElementById('result_snapshot_status').textContent = data.snapshot_status;
-                document.getElementById('result_strategy').textContent = data.selected_strategy;
-                document.getElementById('result_kernel_decision').textContent = data.kernel_decision;
-                document.getElementById('result_reason').textContent = data.reason.join(", ");
-            } else {
-                title.textContent = "✕ Import Failed";
-                title.className = "result-title error";
-
-                document.getElementById('result_file').textContent = fileName;
-                document.getElementById('result_events').textContent = "0";
-                document.getElementById('result_snapshot_status').textContent = "N/A";
-                document.getElementById('result_strategy').textContent = "N/A";
-                document.getElementById('result_kernel_decision').textContent = "N/A";
-                document.getElementById('result_reason').textContent =
-                    JSON.stringify(data.errors || data);
-            }
-        }
-
-        function addActivity(message) {
-            const timeline = document.getElementById('activity_timeline');
-            const now = new Date().toLocaleTimeString();
-
-            const item = document.createElement('div');
-            item.className = 'activity-item';
-
-            item.innerHTML = `
-                <div class="activity-time">${now}</div>
-                <div class="activity-text">${message}</div>
+            row.innerHTML = `
+                <td>${snapshot.snapshot_id.slice(0, 8)}...</td>
+                <td>${snapshot.status}</td>
+                <td>${adaptiveState.risk_index}</td>
+                <td>${adaptiveState.uncertainty}</td>
+                <td>${createdAt}</td>
             `;
 
-            if (timeline.textContent.includes("No activity loaded yet")) {
-                timeline.innerHTML = "";
-            }
+            tableBody.appendChild(row);
+        });
+    }
 
-            timeline.prepend(item);
+    async function loadDecisionsTable() {
+        const response = await fetch('/decisions');
+        const decisions = await response.json();
+
+        const tableBody = document.getElementById('decisions_table_body');
+        tableBody.innerHTML = "";
+
+        if (!decisions.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5">No decisions found.</td>
+                </tr>
+            `;
+            return;
         }
 
-        async function uploadCSV() {
-            const fileInput = document.getElementById('csv_file');
-            const statusBox = document.getElementById('upload_status');
+        decisions.slice(0, 5).forEach(decision => {
+            const decisionMeta = JSON.parse(decision.decision_meta_json);
+            const createdAt = new Date(decision.created_at).toLocaleTimeString();
 
-            if (!fileInput.files.length) {
-                statusBox.textContent = "Please choose a CSV file first.";
-                return;
-            }
+            const row = document.createElement('tr');
 
-            const fileName = fileInput.files[0].name;
+            row.innerHTML = `
+                <td>${decision.decision_id.slice(0, 8)}...</td>
+                <td>${decision.selected_strategy}</td>
+                <td>${decision.kernel_decision}</td>
+                <td>${decisionMeta.is_override_triggered ? "Yes" : "No"}</td>
+                <td>${createdAt}</td>
+            `;
 
-            const formData = new FormData();
-            formData.append("file", fileInput.files[0]);
+            tableBody.appendChild(row);
+        });
+    }
 
-            statusBox.textContent = "Uploading and processing CSV...";
+    async function loadDashboard() {
+        const response = await fetch('/dashboard');
+        const data = await response.json();
 
-            const response = await fetch('/upload-csv', {
-                method: 'POST',
-                body: formData
-            });
+        document.getElementById('kernel_status').textContent = data.kernel_status;
+        document.getElementById('snapshot_count').textContent = data.snapshot_count;
+        document.getElementById('decision_count').textContent = data.decision_count;
 
-            const data = await response.json();
+        if (data.latest_decision) {
+            document.getElementById('latest_strategy').textContent =
+                data.latest_decision.selected_strategy;
 
-            showImportResult(fileName, data);
+            document.getElementById('decision_strategy').textContent =
+                data.latest_decision.selected_strategy;
 
-            if (data.status === "ingested") {
-                statusBox.textContent = "Import complete.";
+            document.getElementById('decision_kernel').textContent =
+                data.latest_decision.kernel_decision;
 
-                addActivity(`${fileName} imported`);
-                addActivity(`${data.events_normalized} events normalized`);
-                addActivity(`Snapshot ${data.snapshot_status}`);
-                addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
+            document.getElementById('decision_reason').textContent =
+                data.latest_decision.reason.join(", ");
 
-                await loadDashboard();
-                await loadSnapshotsTable();
-            } else {
-                statusBox.textContent = "Import failed.";
-                addActivity(`${fileName} import failed`);
-            }
+            document.getElementById('decision_policy').textContent =
+                data.latest_decision.decision_meta.policy_version;
+
+            document.getElementById('decision_override').textContent =
+                data.latest_decision.decision_meta.is_override_triggered ? "Yes" : "No";
+        } else {
+            document.getElementById('latest_strategy').textContent = "None";
+            document.getElementById('decision_strategy').textContent = "None";
+            document.getElementById('decision_kernel').textContent = "None";
+            document.getElementById('decision_reason').textContent = "None";
+            document.getElementById('decision_policy').textContent = "None";
+            document.getElementById('decision_override').textContent = "None";
         }
 
+        if (data.latest_snapshot) {
+            document.getElementById('risk_index').textContent =
+                data.latest_snapshot.adaptive_state.risk_index;
+
+            document.getElementById('uncertainty').textContent =
+                data.latest_snapshot.adaptive_state.uncertainty;
+        } else {
+            document.getElementById('risk_index').textContent = "None";
+            document.getElementById('uncertainty').textContent = "None";
+        }
+
+        const refreshTime = new Date().toLocaleTimeString();
+        document.getElementById('refresh_status').textContent =
+            `Last refreshed at ${refreshTime}`;
+    }
+
+    function showImportResult(fileName, data) {
+        const card = document.getElementById('import_result_card');
+        const title = document.getElementById('import_result_title');
+
+        card.style.display = 'block';
+
+        if (data.status === "ingested") {
+            title.textContent = "✓ Import Successful";
+            title.className = "result-title success";
+
+            document.getElementById('result_file').textContent = fileName;
+            document.getElementById('result_events').textContent = data.events_normalized;
+            document.getElementById('result_snapshot_status').textContent = data.snapshot_status;
+            document.getElementById('result_strategy').textContent = data.selected_strategy;
+            document.getElementById('result_kernel_decision').textContent = data.kernel_decision;
+            document.getElementById('result_reason').textContent = data.reason.join(", ");
+        } else {
+            title.textContent = "✕ Import Failed";
+            title.className = "result-title error";
+
+            document.getElementById('result_file').textContent = fileName;
+            document.getElementById('result_events').textContent = "0";
+            document.getElementById('result_snapshot_status').textContent = "N/A";
+            document.getElementById('result_strategy').textContent = "N/A";
+            document.getElementById('result_kernel_decision').textContent = "N/A";
+            document.getElementById('result_reason').textContent =
+                JSON.stringify(data.errors || data);
+        }
+    }
+
+    function addActivity(message) {
+        const timeline = document.getElementById('activity_timeline');
+        const now = new Date().toLocaleTimeString();
+
+        const item = document.createElement('div');
+        item.className = 'activity-item';
+
+        item.innerHTML = `
+            <div class="activity-time">${now}</div>
+            <div class="activity-text">${message}</div>
+        `;
+
+        if (timeline.textContent.includes("No activity loaded yet")) {
+            timeline.innerHTML = "";
+        }
+
+        timeline.prepend(item);
+    }
+
+    async function uploadCSV() {
+        const fileInput = document.getElementById('csv_file');
+        const statusBox = document.getElementById('upload_status');
+
+        if (!fileInput.files.length) {
+            statusBox.textContent = "Please choose a CSV file first.";
+            return;
+        }
+
+        const fileName = fileInput.files[0].name;
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        statusBox.textContent = "Uploading and processing CSV...";
+
+        const response = await fetch('/upload-csv', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        showImportResult(fileName, data);
+
+        if (data.status === "ingested") {
+            statusBox.textContent = "Import complete.";
+
+            addActivity(`${fileName} imported`);
+            addActivity(`${data.events_normalized} events normalized`);
+            addActivity(`Snapshot ${data.snapshot_status}`);
+            addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
+
+            await loadDashboard();
+            await loadSnapshotsTable();
+            await loadDecisionsTable();
+        } else {
+            statusBox.textContent = "Import failed.";
+            addActivity(`${fileName} import failed`);
+        }
+    }
+
+    loadDashboard();
+    loadSnapshotsTable();
+    loadDecisionsTable();
+
+    setInterval(() => {
         loadDashboard();
         loadSnapshotsTable();
+        loadDecisionsTable();
+    }, 5000);
 
-        setInterval(() => {
-            loadDashboard();
-            loadSnapshotsTable();
-        }, 5000);
     </script>
 </body>
 </html>
