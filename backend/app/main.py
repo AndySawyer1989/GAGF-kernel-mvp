@@ -28,6 +28,11 @@ from backend.app.gagf.arbitration_service import ArbitrationService
 
 app = FastAPI(title="GAGF Kernel MVP")
 
+app.mount(
+    "/static",
+    StaticFiles(directory="backend/app/static"),
+    name="static"
+)
 
 @app.get("/health")
 def health():
