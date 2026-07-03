@@ -1,0 +1,151 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #111827;
+    color: #f9fafb;
+    margin: 40px;
+}
+
+h1 {
+    color: #38bdf8;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 900px;
+}
+
+.card {
+    background: #1f2937;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #374151;
+}
+
+.upload-card,
+.result-card,
+.activity-card,
+.decision-card,
+.refresh-card,
+.snapshots-card,
+.decisions-card {
+    margin-top: 20px;
+    max-width: 900px;
+}
+
+.result-card {
+    display: none;
+    border-color: #facc15;
+}
+
+.result-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #facc15;
+    margin-bottom: 15px;
+}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #374151;
+    padding: 8px 0;
+}
+
+.result-row:last-child {
+    border-bottom: none;
+}
+
+.label {
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.value {
+    font-size: 28px;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.small-value {
+    color: #f9fafb;
+    font-weight: bold;
+}
+
+.strategy {
+    color: #facc15;
+}
+
+.online {
+    color: #22c55e;
+}
+
+.success {
+    color: #22c55e;
+}
+
+.error {
+    color: #ef4444;
+}
+
+.activity-item {
+    border-bottom: 1px solid #374151;
+    padding: 10px 0;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-time {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+.activity-text {
+    margin-top: 4px;
+    font-weight: bold;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.data-table th,
+.data-table td {
+    border-bottom: 1px solid #374151;
+    padding: 10px;
+    text-align: left;
+    font-size: 14px;
+}
+
+.data-table th {
+    color: #9ca3af;
+}
+
+.data-table td {
+    color: #f9fafb;
+}
+
+button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: #38bdf8;
+    color: #111827;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+input {
+    margin-top: 15px;
+}
+
+#upload_status {
+    margin-top: 15px;
+    color: #facc15;
+}
