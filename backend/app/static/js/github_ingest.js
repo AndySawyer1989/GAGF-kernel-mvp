@@ -1,3 +1,33 @@
+
+const GITHUB_EXAMPLE_PAYLOAD = `{
+  "events": [
+    {
+      "id": "gh-ui-001",
+      "event_name": "pull_request",
+      "action": "opened",
+      "created_at": "2026-07-03T18:00:00Z"
+    },
+    {
+      "id": "gh-ui-002",
+      "event_name": "push",
+      "action": "created",
+      "created_at": "2026-07-03T18:05:00Z"
+    }
+  ]
+}`;
+
+function resetGitHubExamplePayload() {
+    const input = document.getElementById('github_json_input');
+    const statusBox = document.getElementById('github_ingest_status');
+
+    input.value = GITHUB_EXAMPLE_PAYLOAD;
+
+    statusBox.textContent = "Example GitHub payload restored.";
+    statusBox.className = "success";
+
+    addActivity("GitHub example payload restored");
+}
+
 function showGitHubIngestionResult(data) {
     const card = document.getElementById('github_result_card');
     const title = document.getElementById('github_result_title');

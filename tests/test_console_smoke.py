@@ -34,3 +34,4 @@ def test_console_references_static_assets():
     assert "/static/js/upload.js" in html
     assert "/static/js/github_ingest.js" in html
     assert "/static/js/console.js" in html
+    assert "Reset Example Payload" in response.text
