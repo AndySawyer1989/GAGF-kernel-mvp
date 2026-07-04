@@ -57,7 +57,7 @@
 
     <div class="label">Paste GitHub-style JSON</div>
 
-    <textarea id="github_json_input" class="json-input">
+<textarea id="github_json_input" class="json-input">
 {
   "events": [
     {
@@ -74,11 +74,41 @@
     }
   ]
 }
-    </textarea>
+</textarea>
 
-    <br>
-    <button onclick="ingestGitHubEvidence()">Ingest GitHub Evidence</button>
+<div class="schema-help">
+    <div class="schema-title">Required GitHub Payload Shape</div>
+
+    <div class="schema-row">
+        <span class="schema-field">events</span>
+        <span class="schema-description">Required list of GitHub evidence events.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">id</span>
+        <span class="schema-description">Required unique event identifier.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">event_name</span>
+        <span class="schema-description">Required GitHub event type, such as pull_request or push.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">created_at</span>
+        <span class="schema-description">Required ISO timestamp from the source event.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">action</span>
+        <span class="schema-description">Optional GitHub action, such as opened, closed, or review_requested.</span>
+    </div>
+</div>
+
+<br>
+<button onclick="ingestGitHubEvidence()">Ingest GitHub Evidence</button>
     <div id="github_ingest_status"></div>
+
 </div>
 
 <div id="github_result_card" class="card result-card">

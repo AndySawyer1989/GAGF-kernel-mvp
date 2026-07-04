@@ -168,3 +168,34 @@ input {
     margin-top: 15px;
     color: #facc15;
 }
+
+.schema-help {
+    margin-top: 15px;
+    padding: 12px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+}
+
+.schema-title {
+    color: #facc15;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.schema-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.schema-field {
+    min-width: 110px;
+    color: #38bdf8;
+    font-family: Consolas, monospace;
+    font-weight: bold;
+}
+
+.schema-description {
+    color: #d1d5db;
+}

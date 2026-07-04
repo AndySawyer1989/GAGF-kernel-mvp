@@ -15,6 +15,9 @@ def test_console_page_loads():
     assert "Ingest GitHub Evidence" in response.text
     assert "GitHub Ingestion Result" in response.text
     assert "Events Processed" in response.text
+    assert "Required GitHub Payload Shape" in response.text
+    assert "event_name" in response.text
+    assert "created_at" in response.text
 
 def test_console_references_static_assets():
     response = client.get("/console")
