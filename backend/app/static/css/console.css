@@ -24,6 +24,7 @@ h1 {
 }
 
 .upload-card,
+.github-card,
 .result-card,
 .activity-card,
 .decision-card,
@@ -146,6 +147,24 @@ input {
 }
 
 #upload_status {
+    margin-top: 15px;
+    color: #facc15;
+}
+
+.json-input {
+    width: 100%;
+    min-height: 220px;
+    margin-top: 15px;
+    background: #111827;
+    color: #f9fafb;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    padding: 12px;
+    font-family: Consolas, monospace;
+    font-size: 14px;
+}
+
+#github_ingest_status {
     margin-top: 15px;
     color: #facc15;
 }

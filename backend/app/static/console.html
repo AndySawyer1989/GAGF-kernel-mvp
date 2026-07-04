@@ -52,6 +52,35 @@
         <div id="upload_status"></div>
     </div>
 
+<div class="card github-card">
+    <div class="result-title">Ingest GitHub Evidence</div>
+
+    <div class="label">Paste GitHub-style JSON</div>
+
+    <textarea id="github_json_input" class="json-input">
+{
+  "events": [
+    {
+      "id": "gh-ui-001",
+      "event_name": "pull_request",
+      "action": "opened",
+      "created_at": "2026-07-03T18:00:00Z"
+    },
+    {
+      "id": "gh-ui-002",
+      "event_name": "push",
+      "action": "created",
+      "created_at": "2026-07-03T18:05:00Z"
+    }
+  ]
+}
+    </textarea>
+
+    <br>
+    <button onclick="ingestGitHubEvidence()">Ingest GitHub Evidence</button>
+    <div id="github_ingest_status"></div>
+</div>
+
     <div id="import_result_card" class="card result-card">
         <div id="import_result_title" class="result-title">Import Result</div>
 
@@ -175,6 +204,7 @@
     <script src="/static/js/decisions.js"></script>
     <script src="/static/js/activity.js"></script>
     <script src="/static/js/upload.js"></script>
+    <script src="/static/js/github_ingest.js"></script>
     <script src="/static/js/console.js"></script>
 </body>
 </html>
