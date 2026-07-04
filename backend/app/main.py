@@ -39,6 +39,40 @@ def get_arbiter() -> ArbitrationService:
     return ArbitrationService(gpl)
 
 
+def validate_github_payload(payload: dict):
+    errors = []
+
+    if "events" not in payload:
+        errors.append("missing_events_field")
+        return errors
+
+    events = payload.get("events")
+
+    if not isinstance(events, list):
+        errors.append("events_must_be_a_list")
+        return errors
+
+    if len(events) == 0:
+        errors.append("events_list_is_empty")
+        return errors
+
+    for index, event in enumerate(events):
+        if not isinstance(event, dict):
+            errors.append(f"event_{index}_must_be_an_object")
+            continue
+
+        if not event.get("id"):
+            errors.append(f"event_{index}_missing_id")
+
+        if not event.get("event_name"):
+            errors.append(f"event_{index}_missing_event_name")
+
+        if not event.get("created_at"):
+            errors.append(f"event_{index}_missing_created_at")
+
+    return errors
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -90,7 +124,11 @@ def create_snapshot(events: List[RawSecurityEvent]):
         ),
     }
 
-    status = "INVALID" if timestamp_quality_distribution["MISSING_TIMESTAMP"] > 0 else "VALID"
+    status = (
+        "INVALID"
+        if timestamp_quality_distribution["MISSING_TIMESTAMP"] > 0
+        else "VALID"
+    )
 
     snapshot = AdaptiveStateSnapshot(
         snapshot_id=str(uuid4()),
@@ -158,6 +196,16 @@ def upload_csv(file: UploadFile = File(...)):
 
 @app.post("/ingest/github")
 def ingest_github(payload: dict):
+    validation_errors = validate_github_payload(payload)
+
+    if validation_errors:
+        return {
+            "status": "failed",
+            "source_system": "github",
+            "events_normalized": 0,
+            "errors": validation_errors,
+        }
+
     connector = GitHubConnector()
     events = connector.normalize_events(payload.get("events", []))
 
