@@ -11,7 +11,7 @@ def test_console_page_loads():
 
     assert response.status_code == 200
     assert "GAGF Governance Console" in response.text
-
+    assert "Latest Evidence Source" in response.text
 
 def test_console_references_static_assets():
     response = client.get("/console")

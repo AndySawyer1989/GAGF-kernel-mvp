@@ -5,6 +5,9 @@ async function loadDashboard() {
     document.getElementById('kernel_status').textContent = data.kernel_status;
     document.getElementById('snapshot_count').textContent = data.snapshot_count;
     document.getElementById('decision_count').textContent = data.decision_count;
+    
+    document.getElementById('latest_evidence_source').textContent =
+    data.latest_evidence_source;
 
     if (data.latest_decision) {
         document.getElementById('latest_strategy').textContent =
