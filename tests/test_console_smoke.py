@@ -13,6 +13,8 @@ def test_console_page_loads():
     assert "GAGF Governance Console" in response.text
     assert "Latest Evidence Source" in response.text
     assert "Ingest GitHub Evidence" in response.text
+    assert "GitHub Ingestion Result" in response.text
+    assert "Events Processed" in response.text
 
 def test_console_references_static_assets():
     response = client.get("/console")

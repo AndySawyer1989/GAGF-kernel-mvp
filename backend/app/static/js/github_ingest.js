@@ -1,3 +1,45 @@
+function showGitHubIngestionResult(data) {
+    const card = document.getElementById('github_result_card');
+    const title = document.getElementById('github_result_title');
+
+    card.style.display = 'block';
+
+    if (data.status === "ingested") {
+        title.textContent = "✓ GitHub Ingestion Successful";
+        title.className = "result-title success";
+
+        document.getElementById('github_result_source').textContent =
+            data.source_system || "github";
+
+        document.getElementById('github_result_events').textContent =
+            data.events_normalized;
+
+        document.getElementById('github_result_snapshot_status').textContent =
+            data.snapshot_status;
+
+        document.getElementById('github_result_strategy').textContent =
+            data.selected_strategy;
+
+        document.getElementById('github_result_kernel_decision').textContent =
+            data.kernel_decision;
+
+        document.getElementById('github_result_reason').textContent =
+            data.reason.join(", ");
+    } else {
+        title.textContent = "✕ GitHub Ingestion Failed";
+        title.className = "result-title error";
+
+        document.getElementById('github_result_source').textContent = "github";
+        document.getElementById('github_result_events').textContent = "0";
+        document.getElementById('github_result_snapshot_status').textContent = "N/A";
+        document.getElementById('github_result_strategy').textContent = "N/A";
+        document.getElementById('github_result_kernel_decision').textContent = "N/A";
+        document.getElementById('github_result_reason').textContent =
+            JSON.stringify(data.errors || data);
+    }
+}
+
+
 async function ingestGitHubEvidence() {
     const input = document.getElementById('github_json_input');
     const statusBox = document.getElementById('github_ingest_status');
@@ -10,6 +52,12 @@ async function ingestGitHubEvidence() {
         statusBox.textContent = "Invalid JSON. Please check the payload.";
         statusBox.className = "error";
         addActivity("GitHub evidence import failed: invalid JSON");
+
+        showGitHubIngestionResult({
+            status: "failed",
+            errors: ["invalid_json"],
+        });
+
         return;
     }
 
@@ -26,11 +74,15 @@ async function ingestGitHubEvidence() {
 
     const data = await response.json();
 
+    showGitHubIngestionResult(data);
+
     if (data.status === "ingested") {
-        statusBox.textContent = `GitHub ingest complete: ${data.events_normalized} events processed.`;
+        statusBox.textContent =
+            `GitHub ingest complete: ${data.events_normalized} events processed.`;
+
         statusBox.className = "success";
 
-        addActivity(`GitHub evidence ingested`);
+        addActivity("GitHub evidence ingested");
         addActivity(`${data.events_normalized} GitHub events normalized`);
         addActivity(`GitHub snapshot ${data.snapshot_status}`);
         addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
