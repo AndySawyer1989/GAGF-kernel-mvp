@@ -59,6 +59,79 @@ function formatGitHubPayload() {
     }
 }
 
+function getGitHubPayloadValidationErrors(payload) {
+    const errors = [];
+
+    if (!Object.prototype.hasOwnProperty.call(payload, "events")) {
+        errors.push("missing_events_field");
+        return errors;
+    }
+
+    if (!Array.isArray(payload.events)) {
+        errors.push("events_must_be_a_list");
+        return errors;
+    }
+
+    if (payload.events.length === 0) {
+        errors.push("events_list_is_empty");
+        return errors;
+    }
+
+    payload.events.forEach((event, index) => {
+        if (typeof event !== "object" || event === null || Array.isArray(event)) {
+            errors.push(`event_${index}_must_be_an_object`);
+            return;
+        }
+
+        if (!event.id) {
+            errors.push(`event_${index}_missing_id`);
+        }
+
+        if (!event.event_name) {
+            errors.push(`event_${index}_missing_event_name`);
+        }
+
+        if (!event.created_at) {
+            errors.push(`event_${index}_missing_created_at`);
+        }
+    });
+
+    return errors;
+}
+
+
+function validateGitHubPayload() {
+    const input = document.getElementById('github_json_input');
+    const statusBox = document.getElementById('github_ingest_status');
+
+    let payload;
+
+    try {
+        payload = JSON.parse(input.value);
+    } catch (error) {
+        statusBox.textContent = "Payload validation failed: invalid JSON.";
+        statusBox.className = "error";
+
+        addActivity("GitHub payload validation failed: invalid JSON");
+        return;
+    }
+
+    const errors = getGitHubPayloadValidationErrors(payload);
+
+    if (errors.length > 0) {
+        statusBox.textContent = `Payload validation failed: ${errors.join(", ")}.`;
+        statusBox.className = "error";
+
+        addActivity("GitHub payload validation failed");
+        return;
+    }
+
+    statusBox.textContent = "Payload validation passed.";
+    statusBox.className = "success";
+
+    addActivity("GitHub payload validation passed");
+}
+
 function showGitHubIngestionResult(data) {
     const card = document.getElementById('github_result_card');
     const title = document.getElementById('github_result_title');

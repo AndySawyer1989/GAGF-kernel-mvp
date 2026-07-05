@@ -20,6 +20,7 @@ def test_console_page_loads():
     assert "created_at" in response.text
     assert "Clear Payload" in response.text
     assert "Format Payload" in response.text
+    assert "Validate Payload" in response.text
 
 def test_console_references_static_assets():
     response = client.get("/console")
