@@ -1,4 +1,3 @@
-
 const GITHUB_EXAMPLE_PAYLOAD = `{
   "events": [
     {
@@ -26,6 +25,18 @@ function resetGitHubExamplePayload() {
     statusBox.className = "success";
 
     addActivity("GitHub example payload restored");
+}
+
+function clearGitHubPayload() {
+    const input = document.getElementById('github_json_input');
+    const statusBox = document.getElementById('github_ingest_status');
+
+    input.value = "";
+
+    statusBox.textContent = "GitHub payload cleared.";
+    statusBox.className = "success";
+
+    addActivity("GitHub payload cleared");
 }
 
 function showGitHubIngestionResult(data) {
