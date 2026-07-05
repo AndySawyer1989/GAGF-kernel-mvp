@@ -39,6 +39,26 @@ function clearGitHubPayload() {
     addActivity("GitHub payload cleared");
 }
 
+function formatGitHubPayload() {
+    const input = document.getElementById('github_json_input');
+    const statusBox = document.getElementById('github_ingest_status');
+
+    try {
+        const payload = JSON.parse(input.value);
+        input.value = JSON.stringify(payload, null, 2);
+
+        statusBox.textContent = "GitHub payload formatted.";
+        statusBox.className = "success";
+
+        addActivity("GitHub payload formatted");
+    } catch (error) {
+        statusBox.textContent = "Cannot format invalid JSON.";
+        statusBox.className = "error";
+
+        addActivity("GitHub payload format failed: invalid JSON");
+    }
+}
+
 function showGitHubIngestionResult(data) {
     const card = document.getElementById('github_result_card');
     const title = document.getElementById('github_result_title');
