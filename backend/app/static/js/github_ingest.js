@@ -15,11 +15,22 @@ const GITHUB_EXAMPLE_PAYLOAD = `{
   ]
 }`;
 
+function setGitHubIngestEnabled(isEnabled) {
+    const ingestButton = document.getElementById('github_ingest_button');
+
+    if (!ingestButton) {
+        return;
+    }
+
+    ingestButton.disabled = !isEnabled;
+}
+
 function resetGitHubExamplePayload() {
     const input = document.getElementById('github_json_input');
     const statusBox = document.getElementById('github_ingest_status');
 
     input.value = GITHUB_EXAMPLE_PAYLOAD;
+    setGitHubIngestEnabled(false);
 
     statusBox.textContent = "Example GitHub payload restored.";
     statusBox.className = "success";
@@ -32,8 +43,9 @@ function clearGitHubPayload() {
     const statusBox = document.getElementById('github_ingest_status');
 
     input.value = "";
+    setGitHubIngestEnabled(false);
 
-    statusBox.textContent = "GitHub payload cleared.";
+    statusBox.textContent = "GitHub payload cleared. Validate before ingesting.";
     statusBox.className = "success";
 
     addActivity("GitHub payload cleared");
@@ -46,12 +58,15 @@ function formatGitHubPayload() {
     try {
         const payload = JSON.parse(input.value);
         input.value = JSON.stringify(payload, null, 2);
+        setGitHubIngestEnabled(false);
 
         statusBox.textContent = "GitHub payload formatted.";
         statusBox.className = "success";
 
         addActivity("GitHub payload formatted");
     } catch (error) {
+        setGitHubIngestEnabled(false);
+
         statusBox.textContent = "Cannot format invalid JSON.";
         statusBox.className = "error";
 
@@ -109,27 +124,35 @@ function validateGitHubPayload() {
     try {
         payload = JSON.parse(input.value);
     } catch (error) {
+        setGitHubIngestEnabled(false);
+
         statusBox.textContent = "Payload validation failed: invalid JSON.";
         statusBox.className = "error";
 
         addActivity("GitHub payload validation failed: invalid JSON");
-        return;
+        return false;
     }
 
     const errors = getGitHubPayloadValidationErrors(payload);
 
     if (errors.length > 0) {
+        setGitHubIngestEnabled(false);
+
         statusBox.textContent = `Payload validation failed: ${errors.join(", ")}.`;
         statusBox.className = "error";
 
         addActivity("GitHub payload validation failed");
-        return;
+        return false;
     }
 
-    statusBox.textContent = "Payload validation passed.";
+    setGitHubIngestEnabled(true);
+
+    statusBox.textContent = "Payload validation passed. Ingest is now enabled.";
     statusBox.className = "success";
 
     addActivity("GitHub payload validation passed");
+
+    return true;
 }
 
 function showGitHubIngestionResult(data) {
@@ -228,3 +251,22 @@ async function ingestGitHubEvidence() {
         addActivity("GitHub evidence import failed");
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('github_json_input');
+
+    if (!input) {
+        return;
+    }
+
+    input.addEventListener('input', () => {
+        setGitHubIngestEnabled(false);
+
+        const statusBox = document.getElementById('github_ingest_status');
+
+        if (statusBox) {
+            statusBox.textContent = "Payload changed. Validate before ingesting.";
+            statusBox.className = "";
+        }
+    });
+});

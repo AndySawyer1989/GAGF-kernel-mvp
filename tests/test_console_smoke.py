@@ -21,6 +21,8 @@ def test_console_page_loads():
     assert "Clear Payload" in response.text
     assert "Format Payload" in response.text
     assert "Validate Payload" in response.text
+    assert 'id="github_ingest_button"' in response.text
+    assert "disabled" in response.text
 
 def test_console_references_static_assets():
     response = client.get("/console")
