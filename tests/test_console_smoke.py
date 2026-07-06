@@ -43,3 +43,21 @@ def test_console_references_static_assets():
     assert "/static/js/github_ingest.js" in html
     assert "/static/js/console.js" in html
     assert "Reset Example Payload" in response.text
+
+def test_github_operator_buttons_are_in_safe_order():
+    response = client.get("/console")
+
+    assert response.status_code == 200
+
+    html = response.text
+
+    validate_index = html.index('<button onclick="validateGitHubPayload()">Validate Payload</button>')
+    ingest_index = html.index('id="github_ingest_button"')
+    format_index = html.index('<button onclick="formatGitHubPayload()">Format Payload</button>')
+    reset_index = html.index('<button onclick="resetGitHubExamplePayload()">Reset Example Payload</button>')
+    clear_index = html.index('<button onclick="clearGitHubPayload()">Clear Payload</button>')
+
+    assert validate_index < ingest_index
+    assert ingest_index < format_index
+    assert format_index < reset_index
+    assert reset_index < clear_index
