@@ -1,30 +1,43 @@
-function showImportResult(fileName, data) {
+function showImportResult(result) {
     const card = document.getElementById('import_result_card');
     const title = document.getElementById('import_result_title');
 
-    card.style.display = 'block';
+    card.classList.remove('hidden');
 
-    if (data.status === "ingested") {
+    if (result.status === "imported") {
         title.textContent = "✓ Import Successful";
         title.className = "result-title success";
 
-        document.getElementById('result_file').textContent = fileName;
-        document.getElementById('result_events').textContent = data.events_normalized;
-        document.getElementById('result_snapshot_status').textContent = data.snapshot_status;
-        document.getElementById('result_strategy').textContent = data.selected_strategy;
-        document.getElementById('result_kernel_decision').textContent = data.kernel_decision;
-        document.getElementById('result_reason').textContent = data.reason.join(", ");
+        document.getElementById('result_file').textContent =
+            result.file || "uploaded_csv";
+
+        document.getElementById('result_events').textContent =
+            result.events_imported;
+
+        document.getElementById('result_snapshot_status').textContent =
+            result.snapshot_status;
+
+        document.getElementById('result_strategy').textContent =
+            result.selected_strategy;
+
+        document.getElementById('result_kernel_decision').textContent =
+            result.kernel_decision;
+
+        document.getElementById('result_reason').textContent =
+            result.reason.join(", ");
     } else {
         title.textContent = "✕ Import Failed";
         title.className = "result-title error";
 
-        document.getElementById('result_file').textContent = fileName;
+        document.getElementById('result_file').textContent =
+            result.file || "uploaded_csv";
+
         document.getElementById('result_events').textContent = "0";
         document.getElementById('result_snapshot_status').textContent = "N/A";
         document.getElementById('result_strategy').textContent = "N/A";
         document.getElementById('result_kernel_decision').textContent = "N/A";
         document.getElementById('result_reason').textContent =
-            JSON.stringify(data.errors || data);
+            JSON.stringify(result.errors || result);
     }
 }
 

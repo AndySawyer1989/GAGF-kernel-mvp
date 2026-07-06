@@ -28,10 +28,15 @@ function setGitHubIngestEnabled(isEnabled) {
 
 
 function showGitHubValidationResult(isValid, errors) {
+    const card = document.getElementById('github_validation_card');
     const title = document.getElementById('github_validation_title');
     const status = document.getElementById('github_validation_status');
     const errorCount = document.getElementById('github_validation_error_count');
     const details = document.getElementById('github_validation_details');
+
+    if (card) {
+        card.classList.remove('hidden');
+    }
 
     if (!title || !status || !errorCount || !details) {
         return;
@@ -212,7 +217,7 @@ function showGitHubIngestionResult(data) {
     const card = document.getElementById('github_result_card');
     const title = document.getElementById('github_result_title');
 
-    card.style.display = 'block';
+    card.classList.remove('hidden');
 
     if (data.status === "ingested") {
         title.textContent = "✓ GitHub Ingestion Successful";

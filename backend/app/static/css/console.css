@@ -199,3 +199,7 @@ input {
 .schema-description {
     color: #d1d5db;
 }
+
+.hidden {
+    display: none;
+}

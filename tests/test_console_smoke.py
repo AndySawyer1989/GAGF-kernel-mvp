@@ -23,6 +23,9 @@ def test_console_page_loads():
     assert "Validate Payload" in response.text
     assert 'id="github_ingest_button"' in response.text
     assert "disabled" in response.text
+    assert 'id="github_validation_card" class="card result-card hidden"' in response.text
+    assert 'id="github_result_card" class="card result-card hidden"' in response.text
+    assert 'id="import_result_card" class="card result-card hidden"' in response.text
 
 def test_console_references_static_assets():
     response = client.get("/console")
