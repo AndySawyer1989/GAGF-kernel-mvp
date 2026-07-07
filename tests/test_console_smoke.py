@@ -33,6 +33,11 @@ def test_console_page_loads():
     assert 'id="github_validation_card" class="card result-card hidden"' in response.text
     assert 'id="github_result_card" class="card result-card hidden"' in response.text
     assert 'id="import_result_card" class="card result-card hidden"' in response.text
+    assert "Ingest ServiceNow Evidence" in response.text
+    assert "Required ServiceNow Payload Shape" in response.text
+    assert "ServiceNow Evidence Workflow" in response.text
+    assert "ServiceNow Payload Validation" in response.text
+    assert "ServiceNow Ingestion Result" in response.text
 
 def test_console_references_static_assets():
     response = client.get("/console")
@@ -48,6 +53,7 @@ def test_console_references_static_assets():
     assert "/static/js/activity.js" in html
     assert "/static/js/upload.js" in html
     assert "/static/js/github_ingest.js" in html
+    assert "/static/js/servicenow_ingest.js" in html
     assert "/static/js/console.js" in html
     assert "Reset Example Payload" in response.text
 
