@@ -77,6 +77,14 @@ def validate_github_payload(payload: dict):
 def health():
     return {"status": "ok"}
 
+@app.get("/version")
+def version():
+    return {
+        "version": "0.3.0",
+        "release": "operator-workstation",
+        "sprint": "3.2",
+        "status": "complete",
+    }
 
 @app.post("/arbitrate")
 def arbitrate(state: AdaptiveState):
