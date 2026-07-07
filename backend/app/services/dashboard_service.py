@@ -56,6 +56,9 @@ class DashboardService:
         if snapshot_id.startswith("github-"):
             return "GitHub"
 
+        if snapshot_id.startswith("servicenow-"):
+            return "ServiceNow"
+
         if snapshot_id.startswith("csv-"):
             return "CSV"
 
