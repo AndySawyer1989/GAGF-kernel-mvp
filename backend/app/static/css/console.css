@@ -203,3 +203,13 @@ input {
 .hidden {
     display: none;
 }
+
+.operator-guidance {
+    margin-top: 15px;
+    padding: 10px;
+    background: #111827;
+    border-left: 4px solid #facc15;
+    color: #d1d5db;
+    font-size: 14px;
+    border-radius: 4px;
+}

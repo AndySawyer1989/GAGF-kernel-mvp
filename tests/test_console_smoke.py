@@ -19,6 +19,7 @@ def test_console_page_loads():
     assert "event_name" in response.text
     assert "created_at" in response.text
     assert "Clear Payload" in response.text
+    assert "Validate the payload before ingesting" in response.text
     assert "Format Payload" in response.text
     assert "Validate Payload" in response.text
     assert 'id="github_ingest_button"' in response.text

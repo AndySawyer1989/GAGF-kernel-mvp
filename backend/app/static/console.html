@@ -105,6 +105,10 @@
     </div>
 </div>
 
+<div class="operator-guidance">
+    Validate the payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+</div>
+
 <br>
 <button onclick="validateGitHubPayload()">Validate Payload</button>
 <button id="github_ingest_button" onclick="ingestGitHubEvidence()" disabled>
@@ -114,8 +118,6 @@
 <button onclick="resetGitHubExamplePayload()">Reset Example Payload</button>
 <button onclick="clearGitHubPayload()">Clear Payload</button>
 <div id="github_ingest_status"></div>
-
-</div>
 
 <div id="github_validation_card" class="card result-card hidden">
     <div id="github_validation_title" class="result-title">GitHub Payload Validation</div>
