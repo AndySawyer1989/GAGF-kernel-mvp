@@ -213,3 +213,28 @@ input {
     font-size: 14px;
     border-radius: 4px;
 }
+
+.workflow-checklist {
+    margin-top: 12px;
+    padding: 12px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #d1d5db;
+    font-size: 14px;
+}
+
+.workflow-title {
+    color: #38bdf8;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.workflow-checklist ol {
+    margin: 0;
+    padding-left: 22px;
+}
+
+.workflow-checklist li {
+    margin-bottom: 6px;
+}

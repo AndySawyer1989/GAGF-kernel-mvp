@@ -24,6 +24,12 @@ def test_console_page_loads():
     assert "Validate Payload" in response.text
     assert 'id="github_ingest_button"' in response.text
     assert "disabled" in response.text
+    assert "GitHub Evidence Workflow" in response.text
+    assert "Paste or edit the GitHub payload" in response.text
+    assert "Format the payload if needed" in response.text
+    assert "Validate the payload" in response.text
+    assert "Ingest evidence after validation passes" in response.text
+    assert "Review validation and ingestion results" in response.text
     assert 'id="github_validation_card" class="card result-card hidden"' in response.text
     assert 'id="github_result_card" class="card result-card hidden"' in response.text
     assert 'id="import_result_card" class="card result-card hidden"' in response.text
