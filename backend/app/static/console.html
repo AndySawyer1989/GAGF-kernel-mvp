@@ -463,6 +463,282 @@
     </div>
 </div>
 
+<div class="card okta-card">
+    <div class="result-title">Ingest Okta Evidence</div>
+
+    <div class="label">Paste Okta-style JSON</div>
+
+<textarea id="okta_json_input" class="json-input">{
+  "events": [
+    {
+      "uuid": "okta-ui-001",
+      "eventType": "user.authentication.failed",
+      "published": "2026-07-08T12:00:00Z",
+      "outcome": {
+        "result": "FAILURE"
+      }
+    },
+    {
+      "uuid": "okta-ui-002",
+      "eventType": "user.session.start",
+      "published": "2026-07-08T12:05:00Z",
+      "outcome": {
+        "result": "SUCCESS"
+      }
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required Okta Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of Okta System Log evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">uuid</span>
+            <span class="schema-description">Required unique Okta event identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">eventType</span>
+            <span class="schema-description">Required Okta event type, such as user.authentication.failed.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">published</span>
+            <span class="schema-description">Required Okta event timestamp.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">outcome.result</span>
+            <span class="schema-description">Optional Okta outcome result, such as SUCCESS or FAILURE.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the Okta payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">Okta Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the Okta payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateOktaPayload()">Validate Payload</button>
+    <button id="okta_ingest_button" onclick="ingestOktaEvidence()" disabled>
+        Ingest Okta Evidence
+    </button>
+    <button onclick="formatOktaPayload()">Format Payload</button>
+    <button onclick="resetOktaExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearOktaPayload()">Clear Payload</button>
+    <div id="okta_ingest_status"></div>
+</div>
+
+<div id="okta_validation_card" class="card result-card hidden">
+    <div id="okta_validation_title" class="result-title">Okta Payload Validation</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="okta_validation_status" class="small-value">Not validated</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="okta_validation_error_count" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="okta_validation_details" class="small-value">Validate the payload before ingesting.</span>
+    </div>
+</div>
+
+<div class="card entra-card">
+    <div class="result-title">Ingest Entra ID Evidence</div>
+
+    <div class="label">Paste Entra ID-style JSON</div>
+
+<textarea id="entra_json_input" class="json-input">{
+  "events": [
+    {
+      "id": "entra-ui-001",
+      "activityDisplayName": "User sign-in failed",
+      "createdDateTime": "2026-07-08T12:00:00Z",
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Invalid username or password failure"
+      }
+    },
+    {
+      "id": "entra-ui-002",
+      "activityDisplayName": "User sign-in",
+      "createdDateTime": "2026-07-08T12:05:00Z",
+      "conditionalAccessStatus": "success",
+      "riskState": "none",
+      "riskLevelAggregated": "none",
+      "status": {
+        "errorCode": 0
+      }
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required Entra ID Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of Entra ID evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">id</span>
+            <span class="schema-description">Required unique Entra event identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">activityDisplayName</span>
+            <span class="schema-description">Required Entra activity name, such as User sign-in.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">createdDateTime</span>
+            <span class="schema-description">Required Entra event timestamp.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">status.errorCode</span>
+            <span class="schema-description">Optional Entra status code used for success or failure mapping.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the Entra ID payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">Entra ID Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the Entra ID payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateEntraPayload()">Validate Payload</button>
+    <button id="entra_ingest_button" onclick="ingestEntraEvidence()" disabled>
+        Ingest Entra ID Evidence
+    </button>
+    <button onclick="formatEntraPayload()">Format Payload</button>
+    <button onclick="resetEntraExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearEntraPayload()">Clear Payload</button>
+    <div id="entra_ingest_status"></div>
+</div>
+
+<div id="entra_validation_card" class="card result-card hidden">
+    <div id="entra_validation_title" class="result-title">Entra ID Payload Validation</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="entra_validation_status" class="small-value">Not validated</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="entra_validation_error_count" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="entra_validation_details" class="small-value">Validate the payload before ingesting.</span>
+    </div>
+</div>
+
+<div id="entra_result_card" class="card result-card hidden">
+    <div id="entra_result_title" class="result-title">Entra ID Ingestion Result</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="entra_result_source" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="entra_result_events" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="entra_result_snapshot_status" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="entra_result_strategy" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="entra_result_kernel_decision" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="entra_result_reason" class="small-value">—</span>
+    </div>
+</div>
+
+<div id="okta_result_card" class="card result-card hidden">
+    <div id="okta_result_title" class="result-title">Okta Ingestion Result</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="okta_result_source" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="okta_result_events" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="okta_result_snapshot_status" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="okta_result_strategy" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="okta_result_kernel_decision" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="okta_result_reason" class="small-value">—</span>
+    </div>
+</div>
+
     <div id="import_result_card" class="card result-card hidden">
         <div id="import_result_title" class="result-title">Import Result</div>
 
@@ -589,6 +865,8 @@
     <script src="/static/js/github_ingest.js"></script>
     <script src="/static/js/servicenow_ingest.js"></script>
     <script src="/static/js/jira_ingest.js"></script>
+    <script src="/static/js/okta_ingest.js"></script>
+    <script src="/static/js/entra_ingest.js"></script>
     <script src="/static/js/console.js"></script>
 </body>
 </html>

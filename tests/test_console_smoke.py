@@ -31,6 +31,16 @@ def test_console_page_loads():
     assert "Jira Evidence Workflow" in response.text
     assert "Jira Payload Validation" in response.text
     assert "Jira Ingestion Result" in response.text
+    assert "Ingest Okta Evidence" in response.text
+    assert "Required Okta Payload Shape" in response.text
+    assert "Okta Evidence Workflow" in response.text
+    assert "Okta Payload Validation" in response.text
+    assert "Okta Ingestion Result" in response.text
+    assert "Ingest Entra ID Evidence" in response.text
+    assert "Required Entra ID Payload Shape" in response.text
+    assert "Entra ID Evidence Workflow" in response.text
+    assert "Entra ID Payload Validation" in response.text
+    assert "Entra ID Ingestion Result" in response.text
     assert "Format the payload if needed" in response.text
     assert "Validate the payload" in response.text
     assert "Ingest evidence after validation passes" in response.text
@@ -60,6 +70,8 @@ def test_console_references_static_assets():
     assert "/static/js/github_ingest.js" in html
     assert "/static/js/servicenow_ingest.js" in html
     assert "/static/js/jira_ingest.js" in html
+    assert "/static/js/okta_ingest.js" in html
+    assert "/static/js/entra_ingest.js" in html
     assert "/static/js/console.js" in html
     assert "Reset Example Payload" in response.text
 
@@ -115,4 +127,28 @@ def test_jira_ingest_script_has_source_aware_activity_labels():
     assert "[Jira] Payload validation passed" in js
     assert "[Jira] Evidence ingested" in js
     assert "[Jira] Snapshot" in js
+    assert "[Kernel] Strategy selected" in js
+
+def test_okta_ingest_script_has_source_aware_activity_labels():
+    response = client.get("/static/js/okta_ingest.js")
+
+    assert response.status_code == 200
+
+    js = response.text
+
+    assert "[Okta] Payload validation passed" in js
+    assert "[Okta] Evidence ingested" in js
+    assert "[Okta] Snapshot" in js
+    assert "[Kernel] Strategy selected" in js
+
+def test_entra_ingest_script_has_source_aware_activity_labels():
+    response = client.get("/static/js/entra_ingest.js")
+
+    assert response.status_code == 200
+
+    js = response.text
+
+    assert "[Entra ID] Payload validation passed" in js
+    assert "[Entra ID] Evidence ingested" in js
+    assert "[Entra ID] Snapshot" in js
     assert "[Kernel] Strategy selected" in js
