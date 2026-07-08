@@ -16,6 +16,13 @@ def test_dashboard_detects_latest_evidence_source_servicenow():
 
     assert service._detect_latest_evidence_source(snapshot) == "ServiceNow"
 
+def test_dashboard_detects_latest_evidence_source_jira():
+    service = DashboardService()
+
+    snapshot = {"snapshot_id": "jira-abc123"}
+
+    assert service._detect_latest_evidence_source(snapshot) == "Jira"
+
 
 def test_dashboard_detects_latest_evidence_source_csv():
     service = DashboardService()

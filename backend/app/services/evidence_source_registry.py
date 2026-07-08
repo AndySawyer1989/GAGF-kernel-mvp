@@ -9,9 +9,10 @@ class EvidenceSourceRegistry:
     SOURCE_PREFIXES = {
         "github-": "GitHub",
         "servicenow-": "ServiceNow",
+        "jira-": "Jira",
         "csv-": "CSV",
         "api-": "API",
-    }
+}
 
     DEFAULT_SOURCE = "Local / Manual"
     EMPTY_SOURCE = "None"
