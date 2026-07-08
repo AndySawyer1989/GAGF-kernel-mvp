@@ -26,6 +26,11 @@ def test_console_page_loads():
     assert "disabled" in response.text
     assert "GitHub Evidence Workflow" in response.text
     assert "Paste or edit the GitHub payload" in response.text
+    assert "Ingest Jira Evidence" in response.text
+    assert "Required Jira Payload Shape" in response.text
+    assert "Jira Evidence Workflow" in response.text
+    assert "Jira Payload Validation" in response.text
+    assert "Jira Ingestion Result" in response.text
     assert "Format the payload if needed" in response.text
     assert "Validate the payload" in response.text
     assert "Ingest evidence after validation passes" in response.text
@@ -54,6 +59,7 @@ def test_console_references_static_assets():
     assert "/static/js/upload.js" in html
     assert "/static/js/github_ingest.js" in html
     assert "/static/js/servicenow_ingest.js" in html
+    assert "/static/js/jira_ingest.js" in html
     assert "/static/js/console.js" in html
     assert "Reset Example Payload" in response.text
 
@@ -98,3 +104,15 @@ def test_console_scripts_use_source_aware_activity_labels():
     assert "[Kernel] Strategy selected" in servicenow_js
 
     assert "[CSV]" in upload_js
+
+def test_jira_ingest_script_has_source_aware_activity_labels():
+    response = client.get("/static/js/jira_ingest.js")
+
+    assert response.status_code == 200
+
+    js = response.text
+
+    assert "[Jira] Payload validation passed" in js
+    assert "[Jira] Evidence ingested" in js
+    assert "[Jira] Snapshot" in js
+    assert "[Kernel] Strategy selected" in js

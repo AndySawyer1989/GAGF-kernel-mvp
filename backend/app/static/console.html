@@ -319,6 +319,150 @@
     </div>
 </div>
 
+<div class="card jira-card">
+    <div class="result-title">Ingest Jira Evidence</div>
+
+    <div class="label">Paste Jira-style JSON</div>
+
+<textarea id="jira_json_input" class="json-input">{
+  "events": [
+    {
+      "id": "jira-ui-001",
+      "key": "FIP-101",
+      "issue_type": "Story",
+      "status": "Blocked",
+      "priority": "Medium",
+      "blocked": true,
+      "created": "2026-07-07T12:00:00Z",
+      "updated": "2026-07-07T12:30:00Z"
+    },
+    {
+      "id": "jira-ui-002",
+      "key": "FIP-202",
+      "issue_type": "Bug",
+      "status": "Open",
+      "priority": "Critical",
+      "created": "2026-07-07T13:00:00Z",
+      "updated": "2026-07-07T13:15:00Z"
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required Jira Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of Jira evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">id</span>
+            <span class="schema-description">Required unique Jira event identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">key</span>
+            <span class="schema-description">Required Jira issue key, such as FIP-101.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">status</span>
+            <span class="schema-description">Required Jira workflow status.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">created</span>
+            <span class="schema-description">Timestamp used as source occurrence time when available.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">updated</span>
+            <span class="schema-description">Fallback timestamp if created is not available.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the Jira payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">Jira Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the Jira payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateJiraPayload()">Validate Payload</button>
+    <button id="jira_ingest_button" onclick="ingestJiraEvidence()" disabled>
+        Ingest Jira Evidence
+    </button>
+    <button onclick="formatJiraPayload()">Format Payload</button>
+    <button onclick="resetJiraExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearJiraPayload()">Clear Payload</button>
+    <div id="jira_ingest_status"></div>
+</div>
+
+<div id="jira_validation_card" class="card result-card hidden">
+    <div id="jira_validation_title" class="result-title">Jira Payload Validation</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="jira_validation_status" class="small-value">Not validated</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="jira_validation_error_count" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="jira_validation_details" class="small-value">Validate the payload before ingesting.</span>
+    </div>
+</div>
+
+<div id="jira_result_card" class="card result-card hidden">
+    <div id="jira_result_title" class="result-title">Jira Ingestion Result</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="jira_result_source" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="jira_result_events" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="jira_result_snapshot_status" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="jira_result_strategy" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="jira_result_kernel_decision" class="small-value">—</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="jira_result_reason" class="small-value">—</span>
+    </div>
+</div>
+
     <div id="import_result_card" class="card result-card hidden">
         <div id="import_result_title" class="result-title">Import Result</div>
 
@@ -444,6 +588,7 @@
     <script src="/static/js/upload.js"></script>
     <script src="/static/js/github_ingest.js"></script>
     <script src="/static/js/servicenow_ingest.js"></script>
+    <script src="/static/js/jira_ingest.js"></script>
     <script src="/static/js/console.js"></script>
 </body>
 </html>
