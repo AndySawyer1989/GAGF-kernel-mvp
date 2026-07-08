@@ -13,9 +13,10 @@ class EvidenceSourceRegistry:
         "okta-": "Okta",
         "entra-": "Entra ID",
         "sentinelone-": "SentinelOne",
+        "defender-": "Microsoft Defender",
         "csv-": "CSV",
         "api-": "API",
-    }
+}
 
     DEFAULT_SOURCE = "Local / Manual"
     EMPTY_SOURCE = "None"

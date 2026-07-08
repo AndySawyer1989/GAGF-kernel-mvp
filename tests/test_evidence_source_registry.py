@@ -24,6 +24,8 @@ def test_registry_detects_entra_snapshot_id():
 def test_registry_detects_sentinelone_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("sentinelone-abc123") == "SentinelOne"
 
+def test_registry_detects_defender_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("defender-abc123") == "Microsoft Defender"
 
 def test_registry_detects_csv_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("csv-abc123") == "CSV"

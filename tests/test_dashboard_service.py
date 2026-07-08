@@ -47,6 +47,13 @@ def test_dashboard_detects_latest_evidence_source_sentinelone():
 def test_dashboard_detects_latest_evidence_source_csv():
     service = DashboardService()
 
+def test_dashboard_detects_latest_evidence_source_defender():
+    service = DashboardService()
+
+    snapshot = {"snapshot_id": "defender-abc123"}
+
+    assert service._detect_latest_evidence_source(snapshot) == "Microsoft Defender"
+
     snapshot = {"snapshot_id": "csv-abc123"}
 
     assert service._detect_latest_evidence_source(snapshot) == "CSV"
