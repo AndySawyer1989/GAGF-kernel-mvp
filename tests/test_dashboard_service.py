@@ -64,6 +64,13 @@ def test_dashboard_detects_latest_evidence_source_wiz():
 
     assert service._detect_latest_evidence_source(snapshot) == "Wiz"
 
+def test_dashboard_detects_latest_evidence_source_crowdstrike():
+    service = DashboardService()
+
+    snapshot = {"snapshot_id": "crowdstrike-abc123"}
+
+    assert service._detect_latest_evidence_source(snapshot) == "CrowdStrike"
+
 
 def test_dashboard_detects_latest_evidence_source_csv():
     service = DashboardService()

@@ -30,6 +30,9 @@ def test_registry_detects_defender_snapshot_id():
 def test_registry_detects_wiz_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("wiz-abc123") == "Wiz"
 
+def test_registry_detects_crowdstrike_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("crowdstrike-abc123") == "CrowdStrike"
+
 def test_registry_detects_csv_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("csv-abc123") == "CSV"
 

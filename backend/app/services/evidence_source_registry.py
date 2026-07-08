@@ -15,6 +15,7 @@ class EvidenceSourceRegistry:
         "sentinelone-": "SentinelOne",
         "defender-": "Microsoft Defender",
         "wiz-": "Wiz",
+        "crowdstrike-": "CrowdStrike",
         "csv-": "CSV",
         "api-": "API",
 }
