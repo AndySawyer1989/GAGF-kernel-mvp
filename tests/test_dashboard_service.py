@@ -37,6 +37,13 @@ def test_dashboard_detects_latest_evidence_source_entra():
 
     assert service._detect_latest_evidence_source(snapshot) == "Entra ID"
 
+def test_dashboard_detects_latest_evidence_source_sentinelone():
+    service = DashboardService()
+
+    snapshot = {"snapshot_id": "sentinelone-abc123"}
+
+    assert service._detect_latest_evidence_source(snapshot) == "SentinelOne"
+
 def test_dashboard_detects_latest_evidence_source_csv():
     service = DashboardService()
 

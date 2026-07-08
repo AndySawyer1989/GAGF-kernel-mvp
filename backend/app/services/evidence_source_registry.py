@@ -12,6 +12,7 @@ class EvidenceSourceRegistry:
         "jira-": "Jira",
         "okta-": "Okta",
         "entra-": "Entra ID",
+        "sentinelone-": "SentinelOne",
         "csv-": "CSV",
         "api-": "API",
     }
