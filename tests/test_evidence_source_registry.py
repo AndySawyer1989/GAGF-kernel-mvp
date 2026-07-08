@@ -1,0 +1,31 @@
+from backend.app.services.evidence_source_registry import EvidenceSourceRegistry
+
+
+def test_registry_detects_github_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("github-abc123") == "GitHub"
+
+
+def test_registry_detects_servicenow_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("servicenow-abc123") == "ServiceNow"
+
+
+def test_registry_detects_csv_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("csv-abc123") == "CSV"
+
+
+def test_registry_detects_api_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("api-abc123") == "API"
+
+
+def test_registry_defaults_unknown_snapshot_id_to_local_manual():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("manual-abc123") == "Local / Manual"
+
+
+def test_registry_detects_none_snapshot_as_none():
+    assert EvidenceSourceRegistry.detect_from_snapshot(None) == "None"
+
+
+def test_registry_detects_source_from_snapshot_dict():
+    snapshot = {"snapshot_id": "servicenow-abc123"}
+
+    assert EvidenceSourceRegistry.detect_from_snapshot(snapshot) == "ServiceNow"

@@ -2,6 +2,7 @@ import json
 
 from backend.app.gagf.decision_ledger import DecisionLedger
 from backend.app.gagf.snapshot_ledger import SnapshotLedger
+from backend.app.services.evidence_source_registry import EvidenceSourceRegistry
 
 
 class DashboardService:
@@ -48,21 +49,4 @@ class DashboardService:
         }
 
     def _detect_latest_evidence_source(self, snapshot):
-        if snapshot is None:
-            return "None"
-
-        snapshot_id = snapshot.get("snapshot_id", "")
-
-        if snapshot_id.startswith("github-"):
-            return "GitHub"
-
-        if snapshot_id.startswith("servicenow-"):
-            return "ServiceNow"
-
-        if snapshot_id.startswith("csv-"):
-            return "CSV"
-
-        if snapshot_id.startswith("api-"):
-            return "API"
-
-        return "Local / Manual"
+        return EvidenceSourceRegistry.detect_from_snapshot(snapshot)
