@@ -2,9 +2,13 @@ function showImportResult(result) {
     const card = document.getElementById('import_result_card');
     const title = document.getElementById('import_result_title');
 
+    if (!card || !title) {
+        return;
+    }
+
     card.classList.remove('hidden');
 
-    if (result.status === "imported") {
+    if (result.status === "ingested" || result.status === "imported") {
         title.textContent = "✓ Import Successful";
         title.className = "result-title success";
 
@@ -12,19 +16,21 @@ function showImportResult(result) {
             result.file || "uploaded_csv";
 
         document.getElementById('result_events').textContent =
-            result.events_imported;
+            result.events_normalized || result.events_imported || 0;
 
         document.getElementById('result_snapshot_status').textContent =
-            result.snapshot_status;
+            result.snapshot_status || "N/A";
 
         document.getElementById('result_strategy').textContent =
-            result.selected_strategy;
+            result.selected_strategy || "N/A";
 
         document.getElementById('result_kernel_decision').textContent =
-            result.kernel_decision;
+            result.kernel_decision || "N/A";
 
         document.getElementById('result_reason').textContent =
-            result.reason.join(", ");
+            Array.isArray(result.reason)
+                ? result.reason.join(", ")
+                : JSON.stringify(result.reason || []);
     } else {
         title.textContent = "✕ Import Failed";
         title.className = "result-title error";
@@ -41,12 +47,14 @@ function showImportResult(result) {
     }
 }
 
+
 async function uploadCSV() {
     const fileInput = document.getElementById('csv_file');
     const statusBox = document.getElementById('upload_status');
 
     if (!fileInput.files.length) {
         statusBox.textContent = "Please choose a CSV file first.";
+        addActivity("[CSV] Upload blocked: no file selected");
         return;
     }
 
@@ -64,19 +72,27 @@ async function uploadCSV() {
 
     const data = await response.json();
 
-    showImportResult(fileName, data);
+    data.file = data.file || fileName;
 
-    if (data.status === "ingested") {
+    showImportResult(data);
+
+    if (data.status === "ingested" || data.status === "imported") {
+        const eventsProcessed =
+            data.events_normalized || data.events_imported || 0;
+
         statusBox.textContent = "Import complete.";
+        statusBox.className = "success";
 
-        addActivity(`${fileName} imported`);
-        addActivity(`${data.events_normalized} events normalized`);
-        addActivity(`Snapshot ${data.snapshot_status}`);
-        addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
+        addActivity(`[CSV] ${fileName} imported`);
+        addActivity(`[CSV] ${eventsProcessed} events normalized`);
+        addActivity(`[CSV] Snapshot ${data.snapshot_status}`);
+        addActivity(`[Kernel] Strategy selected: ${data.selected_strategy}`);
 
         await refreshConsole();
     } else {
         statusBox.textContent = "Import failed.";
-        addActivity(`${fileName} import failed`);
+        statusBox.className = "error";
+
+        addActivity(`[CSV] ${fileName} import failed`);
     }
 }

@@ -131,7 +131,7 @@ function validateServiceNowPayload() {
         statusBox.textContent = "Payload validation failed: invalid JSON.";
         statusBox.className = "error";
 
-        addActivity("ServiceNow payload validation failed: invalid JSON");
+        addActivity("[ServiceNow] Payload validation failed: invalid JSON");
         return false;
     }
 
@@ -144,7 +144,7 @@ function validateServiceNowPayload() {
         statusBox.textContent = `Payload validation failed: ${errors.join(", ")}.`;
         statusBox.className = "error";
 
-        addActivity("ServiceNow payload validation failed");
+        addActivity("[ServiceNow] Payload validation failed");
         return false;
     }
 
@@ -154,7 +154,7 @@ function validateServiceNowPayload() {
     statusBox.textContent = "Payload validation passed. Ingest is now enabled.";
     statusBox.className = "success";
 
-    addActivity("ServiceNow payload validation passed");
+    addActivity("[ServiceNow] Payload validation passed");
 
     return true;
 }
@@ -171,7 +171,7 @@ function resetServiceNowExamplePayload() {
     statusBox.textContent = "Example ServiceNow payload restored. Validate before ingesting.";
     statusBox.className = "success";
 
-    addActivity("ServiceNow example payload restored");
+    addActivity("[ServiceNow] Example payload restored");
 }
 
 
@@ -186,7 +186,7 @@ function clearServiceNowPayload() {
     statusBox.textContent = "ServiceNow payload cleared. Validate before ingesting.";
     statusBox.className = "success";
 
-    addActivity("ServiceNow payload cleared");
+    addActivity("[ServiceNow] Payload cleared");
 }
 
 
@@ -203,7 +203,7 @@ function formatServiceNowPayload() {
         statusBox.textContent = "ServiceNow payload formatted. Validate before ingesting.";
         statusBox.className = "success";
 
-        addActivity("ServiceNow payload formatted");
+        addActivity("[ServiceNow] Payload formatted");
     } catch (error) {
         setServiceNowIngestEnabled(false);
         showServiceNowValidationResult(false, ["invalid_json"]);
@@ -211,7 +211,7 @@ function formatServiceNowPayload() {
         statusBox.textContent = "Cannot format invalid JSON.";
         statusBox.className = "error";
 
-        addActivity("ServiceNow payload format failed: invalid JSON");
+        addActivity("[ServiceNow] Payload format failed: invalid JSON");
     }
 }
 
@@ -275,7 +275,7 @@ async function ingestServiceNowEvidence() {
         statusBox.textContent = "Invalid JSON. Please check the payload.";
         statusBox.className = "error";
 
-        addActivity("ServiceNow evidence import failed: invalid JSON");
+        addActivity("[ServiceNow] Evidence import failed: invalid JSON");
 
         showServiceNowIngestionResult({
             status: "failed",
@@ -308,10 +308,10 @@ async function ingestServiceNowEvidence() {
 
         statusBox.className = "success";
 
-        addActivity("ServiceNow evidence ingested");
-        addActivity(`${data.events_normalized} ServiceNow events normalized`);
-        addActivity(`ServiceNow snapshot ${data.snapshot_status}`);
-        addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
+        addActivity("[ServiceNow] Evidence ingested");
+        addActivity(`[ServiceNow] ${data.events_normalized} events normalized`);
+        addActivity(`[ServiceNow] Snapshot ${data.snapshot_status}`);
+        addActivity(`[Kernel] Strategy selected: ${data.selected_strategy}`);
 
         await refreshConsole();
     } else {
@@ -320,7 +320,7 @@ async function ingestServiceNowEvidence() {
         statusBox.textContent = "ServiceNow ingest failed.";
         statusBox.className = "error";
 
-        addActivity("ServiceNow evidence import failed");
+        addActivity("[ServiceNow] Evidence import failed");
     }
 }
 

@@ -81,7 +81,7 @@ function resetGitHubExamplePayload() {
     statusBox.textContent = "Example GitHub payload restored. Validate before ingesting.";
     statusBox.className = "success";
 
-    addActivity("GitHub example payload restored");
+    addActivity("[GitHub] Example payload restored");
 }
 
 
@@ -96,7 +96,7 @@ function clearGitHubPayload() {
     statusBox.textContent = "GitHub payload cleared. Validate before ingesting.";
     statusBox.className = "success";
 
-    addActivity("GitHub payload cleared");
+    addActivity("[GitHub] Payload cleared");
 }
 
 
@@ -113,7 +113,7 @@ function formatGitHubPayload() {
         statusBox.textContent = "GitHub payload formatted. Validate before ingesting.";
         statusBox.className = "success";
 
-        addActivity("GitHub payload formatted");
+        addActivity("[GitHub] Payload formatted");
     } catch (error) {
         setGitHubIngestEnabled(false);
         showGitHubValidationResult(false, ["invalid_json"]);
@@ -121,7 +121,7 @@ function formatGitHubPayload() {
         statusBox.textContent = "Cannot format invalid JSON.";
         statusBox.className = "error";
 
-        addActivity("GitHub payload format failed: invalid JSON");
+        addActivity("[GitHub] Payload format failed: invalid JSON");
     }
 }
 
@@ -184,7 +184,7 @@ function validateGitHubPayload() {
         statusBox.textContent = "Payload validation failed: invalid JSON.";
         statusBox.className = "error";
 
-        addActivity("GitHub payload validation failed: invalid JSON");
+        addActivity("[GitHub] Payload validation failed: invalid JSON");
         return false;
     }
 
@@ -197,7 +197,7 @@ function validateGitHubPayload() {
         statusBox.textContent = `Payload validation failed: ${errors.join(", ")}.`;
         statusBox.className = "error";
 
-        addActivity("GitHub payload validation failed");
+        addActivity("[GitHub] Payload validation failed");
         return false;
     }
 
@@ -207,7 +207,7 @@ function validateGitHubPayload() {
     statusBox.textContent = "Payload validation passed. Ingest is now enabled.";
     statusBox.className = "success";
 
-    addActivity("GitHub payload validation passed");
+    addActivity("[GitHub] Payload validation passed");
 
     return true;
 }
@@ -272,7 +272,7 @@ async function ingestGitHubEvidence() {
         statusBox.textContent = "Invalid JSON. Please check the payload.";
         statusBox.className = "error";
 
-        addActivity("GitHub evidence import failed: invalid JSON");
+        addActivity("[GitHub] Evidence import failed: invalid JSON");
 
         showGitHubIngestionResult({
             status: "failed",
@@ -305,10 +305,10 @@ async function ingestGitHubEvidence() {
 
         statusBox.className = "success";
 
-        addActivity("GitHub evidence ingested");
-        addActivity(`${data.events_normalized} GitHub events normalized`);
-        addActivity(`GitHub snapshot ${data.snapshot_status}`);
-        addActivity(`Kernel selected strategy: ${data.selected_strategy}`);
+        addActivity("[GitHub] Evidence ingested");
+        addActivity(`[GitHub] ${data.events_normalized} events normalized`);
+        addActivity(`[GitHub] Snapshot ${data.snapshot_status}`);
+        addActivity(`[Kernel] Strategy selected: ${data.selected_strategy}`);
 
         await refreshConsole();
     } else {
@@ -317,7 +317,7 @@ async function ingestGitHubEvidence() {
         statusBox.textContent = "GitHub ingest failed.";
         statusBox.className = "error";
 
-        addActivity("GitHub evidence import failed");
+        addActivity("[GitHub] Evidence import failed");
     }
 }
 

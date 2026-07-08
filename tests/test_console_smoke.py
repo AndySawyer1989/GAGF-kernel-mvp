@@ -74,3 +74,27 @@ def test_github_operator_buttons_are_in_safe_order():
     assert ingest_index < format_index
     assert format_index < reset_index
     assert reset_index < clear_index
+
+def test_console_scripts_use_source_aware_activity_labels():
+    github_response = client.get("/static/js/github_ingest.js")
+    servicenow_response = client.get("/static/js/servicenow_ingest.js")
+    upload_response = client.get("/static/js/upload.js")
+
+    assert github_response.status_code == 200
+    assert servicenow_response.status_code == 200
+    assert upload_response.status_code == 200
+
+    github_js = github_response.text
+    servicenow_js = servicenow_response.text
+    upload_js = upload_response.text
+
+    assert "[GitHub] Evidence ingested" in github_js
+    assert "[GitHub] Payload validation passed" in github_js
+
+    assert "[ServiceNow] Evidence ingested" in servicenow_js
+    assert "[ServiceNow] Payload validation passed" in servicenow_js
+
+    assert "[Kernel] Strategy selected" in github_js
+    assert "[Kernel] Strategy selected" in servicenow_js
+
+    assert "[CSV]" in upload_js
