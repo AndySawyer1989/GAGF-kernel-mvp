@@ -8,6 +8,7 @@ class EvidenceSourceRegistry:
 
     SOURCE_PREFIXES = {
         "github-": "GitHub",
+        "gitlab-": "GitLab",
         "servicenow-": "ServiceNow",
         "jira-": "Jira",
         "okta-": "Okta",

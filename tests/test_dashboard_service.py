@@ -8,6 +8,13 @@ def test_dashboard_detects_latest_evidence_source_github():
 
     assert service._detect_latest_evidence_source(snapshot) == "GitHub"
 
+def test_dashboard_detects_latest_evidence_source_gitlab():
+    service = DashboardService()
+
+    snapshot = {"snapshot_id": "gitlab-abc123"}
+
+    assert service._detect_latest_evidence_source(snapshot) == "GitLab"
+
 
 def test_dashboard_detects_latest_evidence_source_servicenow():
     service = DashboardService()
