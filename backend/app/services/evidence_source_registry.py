@@ -14,6 +14,7 @@ class EvidenceSourceRegistry:
         "entra-": "Entra ID",
         "sentinelone-": "SentinelOne",
         "defender-": "Microsoft Defender",
+        "wiz-": "Wiz",
         "csv-": "CSV",
         "api-": "API",
 }

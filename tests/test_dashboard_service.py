@@ -16,12 +16,14 @@ def test_dashboard_detects_latest_evidence_source_servicenow():
 
     assert service._detect_latest_evidence_source(snapshot) == "ServiceNow"
 
+
 def test_dashboard_detects_latest_evidence_source_jira():
     service = DashboardService()
 
     snapshot = {"snapshot_id": "jira-abc123"}
 
     assert service._detect_latest_evidence_source(snapshot) == "Jira"
+
 
 def test_dashboard_detects_latest_evidence_source_okta():
     service = DashboardService()
@@ -30,12 +32,14 @@ def test_dashboard_detects_latest_evidence_source_okta():
 
     assert service._detect_latest_evidence_source(snapshot) == "Okta"
 
+
 def test_dashboard_detects_latest_evidence_source_entra():
     service = DashboardService()
 
     snapshot = {"snapshot_id": "entra-abc123"}
 
     assert service._detect_latest_evidence_source(snapshot) == "Entra ID"
+
 
 def test_dashboard_detects_latest_evidence_source_sentinelone():
     service = DashboardService()
@@ -44,8 +48,6 @@ def test_dashboard_detects_latest_evidence_source_sentinelone():
 
     assert service._detect_latest_evidence_source(snapshot) == "SentinelOne"
 
-def test_dashboard_detects_latest_evidence_source_csv():
-    service = DashboardService()
 
 def test_dashboard_detects_latest_evidence_source_defender():
     service = DashboardService()
@@ -53,6 +55,18 @@ def test_dashboard_detects_latest_evidence_source_defender():
     snapshot = {"snapshot_id": "defender-abc123"}
 
     assert service._detect_latest_evidence_source(snapshot) == "Microsoft Defender"
+
+
+def test_dashboard_detects_latest_evidence_source_wiz():
+    service = DashboardService()
+
+    snapshot = {"snapshot_id": "wiz-abc123"}
+
+    assert service._detect_latest_evidence_source(snapshot) == "Wiz"
+
+
+def test_dashboard_detects_latest_evidence_source_csv():
+    service = DashboardService()
 
     snapshot = {"snapshot_id": "csv-abc123"}
 
