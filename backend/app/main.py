@@ -174,9 +174,18 @@ def health():
 @app.get("/version")
 def version():
     return {
-        "version": "0.3.0",
-        "release": "operator-workstation",
-        "sprint": "3.2",
+        "version": "0.4.0",
+        "release": "evidence-expansion",
+        "sprint": "3.3",
+        "status": "complete",
+    }
+
+@app.get("/version")
+def version():
+    return {
+        "version": "0.4.0",
+        "release": "evidence-expansion",
+        "sprint": "3.3",
         "status": "complete",
     }
 def validate_jira_payload(payload: dict):
