@@ -7,6 +7,7 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.app.connectors.entra_connector import EntraConnector
 from backend.app.connectors.github_connector import GitHubConnector
 from backend.app.connectors.jira_connector import JiraConnector
 from backend.app.connectors.okta_connector import OktaConnector
@@ -180,6 +181,38 @@ def validate_okta_payload(payload: dict):
 
     return errors
 
+def validate_entra_payload(payload: dict):
+    errors = []
+
+    if "events" not in payload:
+        errors.append("missing_events_field")
+        return errors
+
+    events = payload.get("events")
+
+    if not isinstance(events, list):
+        errors.append("events_must_be_a_list")
+        return errors
+
+    if len(events) == 0:
+        errors.append("events_list_is_empty")
+        return errors
+
+    for index, event in enumerate(events):
+        if not isinstance(event, dict):
+            errors.append(f"event_{index}_must_be_an_object")
+            continue
+
+        if not event.get("id"):
+            errors.append(f"event_{index}_missing_id")
+
+        if not event.get("activityDisplayName"):
+            errors.append(f"event_{index}_missing_activityDisplayName")
+
+        if not event.get("createdDateTime"):
+            errors.append(f"event_{index}_missing_createdDateTime")
+
+    return errors
 
 @app.get("/health")
 def health():
@@ -546,6 +579,66 @@ def ingest_okta(payload: dict):
     return {
         "status": "ingested",
         "source_system": "okta",
+        "events_normalized": len(events),
+        "snapshot_id": snapshot.snapshot_id,
+        "snapshot_status": snapshot.status,
+        "decision_id": decision_id,
+        "selected_strategy": decision.selected_strategy,
+        "kernel_decision": decision.kernel_decision,
+        "reason": decision.reason,
+    }
+
+@app.post("/ingest/entra")
+def ingest_entra(payload: dict):
+    validation_errors = validate_entra_payload(payload)
+
+    if validation_errors:
+        return {
+            "status": "failed",
+            "source_system": "entra",
+            "events_normalized": 0,
+            "errors": validation_errors,
+        }
+
+    connector = EntraConnector()
+    events = connector.normalize_events(payload.get("events", []))
+
+    adapter_result = MetricAdapter().build_snapshot(events)
+
+    snapshot = AdaptiveStateSnapshot(
+        snapshot_id=f"entra-{uuid4()}",
+        tenant_id="demo",
+        work_item_id="entra-ingestion",
+        status="VALID",
+        adaptive_state=adapter_result.adaptive_state,
+        evidence_confidence=adapter_result.evidence_confidence,
+        evidence=[event.event_id for event in events],
+        timestamp_quality_distribution={
+            "SOURCE_OCCURRED_AT": len(events),
+            "BACKFILLED_FROM_CREATED_AT": 0,
+            "MISSING_TIMESTAMP": 0,
+        },
+    )
+
+    SnapshotLedger().save_snapshot(
+        snapshot,
+        normalization_applied=adapter_result.normalization_applied,
+    )
+
+    decision = get_arbiter().arbitrate(
+        snapshot=snapshot,
+        active_strategy="Normal",
+        proposal="continue",
+    )
+
+    decision_id = DecisionLedger().save_decision(
+        decision,
+        snapshot.snapshot_id,
+    )
+
+    return {
+        "status": "ingested",
+        "source_system": "entra",
         "events_normalized": len(events),
         "snapshot_id": snapshot.snapshot_id,
         "snapshot_status": snapshot.status,
