@@ -9,6 +9,14 @@ def test_registry_detects_servicenow_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("servicenow-abc123") == "ServiceNow"
 
 
+def test_registry_detects_jira_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("jira-abc123") == "Jira"
+
+
+def test_registry_detects_okta_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("okta-abc123") == "Okta"
+
+
 def test_registry_detects_csv_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("csv-abc123") == "CSV"
 
@@ -29,6 +37,3 @@ def test_registry_detects_source_from_snapshot_dict():
     snapshot = {"snapshot_id": "servicenow-abc123"}
 
     assert EvidenceSourceRegistry.detect_from_snapshot(snapshot) == "ServiceNow"
-
-def test_registry_detects_jira_snapshot_id():
-    assert EvidenceSourceRegistry.detect_from_snapshot_id("jira-abc123") == "Jira"
