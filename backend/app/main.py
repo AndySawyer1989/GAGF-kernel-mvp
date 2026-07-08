@@ -11,6 +11,7 @@ from backend.app.connectors.entra_connector import EntraConnector
 from backend.app.connectors.github_connector import GitHubConnector
 from backend.app.connectors.jira_connector import JiraConnector
 from backend.app.connectors.okta_connector import OktaConnector
+from backend.app.connectors.sentinelone_connector import SentinelOneConnector
 from backend.app.connectors.servicenow_connector import ServiceNowConnector
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.decision_ledger import DecisionLedger
@@ -211,6 +212,39 @@ def validate_entra_payload(payload: dict):
 
         if not event.get("createdDateTime"):
             errors.append(f"event_{index}_missing_createdDateTime")
+
+    return errors
+
+def validate_sentinelone_payload(payload: dict):
+    errors = []
+
+    if "events" not in payload:
+        errors.append("missing_events_field")
+        return errors
+
+    events = payload.get("events")
+
+    if not isinstance(events, list):
+        errors.append("events_must_be_a_list")
+        return errors
+
+    if len(events) == 0:
+        errors.append("events_list_is_empty")
+        return errors
+
+    for index, event in enumerate(events):
+        if not isinstance(event, dict):
+            errors.append(f"event_{index}_must_be_an_object")
+            continue
+
+        if not event.get("id"):
+            errors.append(f"event_{index}_missing_id")
+
+        if not event.get("eventType"):
+            errors.append(f"event_{index}_missing_eventType")
+
+        if not event.get("createdAt"):
+            errors.append(f"event_{index}_missing_createdAt")
 
     return errors
 
@@ -639,6 +673,66 @@ def ingest_entra(payload: dict):
     return {
         "status": "ingested",
         "source_system": "entra",
+        "events_normalized": len(events),
+        "snapshot_id": snapshot.snapshot_id,
+        "snapshot_status": snapshot.status,
+        "decision_id": decision_id,
+        "selected_strategy": decision.selected_strategy,
+        "kernel_decision": decision.kernel_decision,
+        "reason": decision.reason,
+    }
+
+@app.post("/ingest/sentinelone")
+def ingest_sentinelone(payload: dict):
+    validation_errors = validate_sentinelone_payload(payload)
+
+    if validation_errors:
+        return {
+            "status": "failed",
+            "source_system": "sentinelone",
+            "events_normalized": 0,
+            "errors": validation_errors,
+        }
+
+    connector = SentinelOneConnector()
+    events = connector.normalize_events(payload.get("events", []))
+
+    adapter_result = MetricAdapter().build_snapshot(events)
+
+    snapshot = AdaptiveStateSnapshot(
+        snapshot_id=f"sentinelone-{uuid4()}",
+        tenant_id="demo",
+        work_item_id="sentinelone-ingestion",
+        status="VALID",
+        adaptive_state=adapter_result.adaptive_state,
+        evidence_confidence=adapter_result.evidence_confidence,
+        evidence=[event.event_id for event in events],
+        timestamp_quality_distribution={
+            "SOURCE_OCCURRED_AT": len(events),
+            "BACKFILLED_FROM_CREATED_AT": 0,
+            "MISSING_TIMESTAMP": 0,
+        },
+    )
+
+    SnapshotLedger().save_snapshot(
+        snapshot,
+        normalization_applied=adapter_result.normalization_applied,
+    )
+
+    decision = get_arbiter().arbitrate(
+        snapshot=snapshot,
+        active_strategy="Normal",
+        proposal="continue",
+    )
+
+    decision_id = DecisionLedger().save_decision(
+        decision,
+        snapshot.snapshot_id,
+    )
+
+    return {
+        "status": "ingested",
+        "source_system": "sentinelone",
         "events_normalized": len(events),
         "snapshot_id": snapshot.snapshot_id,
         "snapshot_status": snapshot.status,
