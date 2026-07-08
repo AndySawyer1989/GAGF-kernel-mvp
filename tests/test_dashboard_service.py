@@ -30,6 +30,12 @@ def test_dashboard_detects_latest_evidence_source_okta():
 
     assert service._detect_latest_evidence_source(snapshot) == "Okta"
 
+def test_dashboard_detects_latest_evidence_source_entra():
+    service = DashboardService()
+
+    snapshot = {"snapshot_id": "entra-abc123"}
+
+    assert service._detect_latest_evidence_source(snapshot) == "Entra ID"
 
 def test_dashboard_detects_latest_evidence_source_csv():
     service = DashboardService()

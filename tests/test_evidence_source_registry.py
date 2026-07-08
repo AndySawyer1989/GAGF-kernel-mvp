@@ -16,6 +16,9 @@ def test_registry_detects_jira_snapshot_id():
 def test_registry_detects_okta_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("okta-abc123") == "Okta"
 
+def test_registry_detects_entra_snapshot_id():
+    assert EvidenceSourceRegistry.detect_from_snapshot_id("entra-abc123") == "Entra ID"
+
 
 def test_registry_detects_csv_snapshot_id():
     assert EvidenceSourceRegistry.detect_from_snapshot_id("csv-abc123") == "CSV"
