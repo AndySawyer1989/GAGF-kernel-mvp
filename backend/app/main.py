@@ -426,16 +426,25 @@ def arbitrate(state: AdaptiveState):
 @app.post("/snapshot")
 def create_snapshot(events: List[RawSecurityEvent]):
     adapter_result = MetricAdapter().build_snapshot(events)
+    confidence_result = EvidenceConfidenceAdapter().build_confidence(events)
+
+    def timestamp_quality_value(event: RawSecurityEvent) -> str:
+        value = event.timestamp_quality
+
+        if hasattr(value, "value"):
+            return str(value.value)
+
+        return str(value)
 
     timestamp_quality_distribution = {
         "SOURCE_OCCURRED_AT": sum(
-            1 for event in events if event.timestamp_quality == "SOURCE_OCCURRED_AT"
+            1 for event in events if timestamp_quality_value(event) == "SOURCE_OCCURRED_AT"
         ),
         "BACKFILLED_FROM_CREATED_AT": sum(
-            1 for event in events if event.timestamp_quality == "BACKFILLED_FROM_CREATED_AT"
+            1 for event in events if timestamp_quality_value(event) == "BACKFILLED_FROM_CREATED_AT"
         ),
         "MISSING_TIMESTAMP": sum(
-            1 for event in events if event.timestamp_quality == "MISSING_TIMESTAMP"
+            1 for event in events if timestamp_quality_value(event) == "MISSING_TIMESTAMP"
         ),
     }
 
@@ -451,7 +460,7 @@ def create_snapshot(events: List[RawSecurityEvent]):
         work_item_id="demo",
         status=status,
         adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
+        evidence_confidence=confidence_result["evidence_confidence"],
         evidence=adapter_result.evidence,
         timestamp_quality_distribution=timestamp_quality_distribution,
     )
