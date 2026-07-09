@@ -376,6 +376,11 @@ def ingest_source(
         "selected_strategy": decision.selected_strategy,
         "kernel_decision": decision.kernel_decision,
         "reason": decision.reason,
+        "evidence_confidence_score": confidence_result["confidence_score"],
+        "evidence_confidence_band": confidence_result["confidence_band"],
+        "evidence_confidence_factors": confidence_result[
+            "evidence_confidence"
+        ].factors,
     }
 
 
