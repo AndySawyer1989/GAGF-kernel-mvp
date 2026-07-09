@@ -510,6 +510,11 @@ def source_trust_tiers():
     return SourceTrustTierService().get_trust_tier_summary()
 
 
+@app.get("/sources/trust-tiers/{trust_tier}")
+def source_trust_tier_detail(trust_tier: str):
+    return SourceTrustTierService().get_trust_tier_detail(trust_tier)
+
+
 @app.get("/sources/{source_system}")
 def get_source(source_system: str):
     source = SourceRegistry().get_source(source_system)

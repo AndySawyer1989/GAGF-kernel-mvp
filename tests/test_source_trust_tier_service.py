@@ -65,6 +65,33 @@ def test_source_trust_tier_service_gets_sources_for_trust_tier():
     assert "sentinelone" in source_systems
 
 
+def test_source_trust_tier_service_gets_trust_tier_detail():
+    service = SourceTrustTierService()
+
+    detail = service.get_trust_tier_detail("security")
+    source_systems = {source["source_system"] for source in detail["sources"]}
+
+    assert detail["status"] == "ok"
+    assert detail["trust_tier"] == "security"
+    assert detail["source_count"] == 4
+    assert "okta" in source_systems
+    assert "entra" in source_systems
+    assert "defender" in source_systems
+    assert "sentinelone" in source_systems
+
+
+def test_source_trust_tier_service_returns_failure_for_unknown_trust_tier_detail():
+    service = SourceTrustTierService()
+
+    detail = service.get_trust_tier_detail("unknown-tier")
+
+    assert detail["status"] == "failed"
+    assert detail["error"] == "trust_tier_not_found"
+    assert detail["trust_tier"] == "unknown-tier"
+    assert detail["source_count"] == 0
+    assert detail["sources"] == []
+
+
 def test_source_trust_tier_service_returns_empty_list_for_unknown_trust_tier():
     service = SourceTrustTierService()
 

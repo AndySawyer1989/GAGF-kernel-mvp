@@ -38,3 +38,22 @@ class SourceTrustTierService:
             for source in sources
             if source["trust_tier"] == trust_tier
         ]
+
+    def get_trust_tier_detail(self, trust_tier: str) -> dict:
+        sources = self.get_sources_for_trust_tier(trust_tier)
+
+        if not sources:
+            return {
+                "status": "failed",
+                "error": "trust_tier_not_found",
+                "trust_tier": trust_tier,
+                "source_count": 0,
+                "sources": [],
+            }
+
+        return {
+            "status": "ok",
+            "trust_tier": trust_tier,
+            "source_count": len(sources),
+            "sources": sources,
+        }
