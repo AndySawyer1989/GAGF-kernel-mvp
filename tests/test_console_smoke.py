@@ -41,6 +41,11 @@ def test_console_page_loads():
     assert "Entra ID Evidence Workflow" in response.text
     assert "Entra ID Payload Validation" in response.text
     assert "Entra ID Ingestion Result" in response.text
+    assert "Ingest SentinelOne Evidence" in response.text
+    assert "Required SentinelOne Payload Shape" in response.text
+    assert "SentinelOne Evidence Workflow" in response.text
+    assert "SentinelOne Payload Validation" in response.text
+    assert "SentinelOne Ingestion Result" in response.text
     assert "Format the payload if needed" in response.text
     assert "Validate the payload" in response.text
     assert "Ingest evidence after validation passes" in response.text
@@ -72,6 +77,7 @@ def test_console_references_static_assets():
     assert "/static/js/jira_ingest.js" in html
     assert "/static/js/okta_ingest.js" in html
     assert "/static/js/entra_ingest.js" in html
+    assert "/static/js/sentinelone_ingest.js" in html
     assert "/static/js/console.js" in html
     assert "Reset Example Payload" in response.text
 
@@ -151,4 +157,16 @@ def test_entra_ingest_script_has_source_aware_activity_labels():
     assert "[Entra ID] Payload validation passed" in js
     assert "[Entra ID] Evidence ingested" in js
     assert "[Entra ID] Snapshot" in js
+    assert "[Kernel] Strategy selected" in js
+
+def test_sentinelone_ingest_script_has_source_aware_activity_labels():
+    response = client.get("/static/js/sentinelone_ingest.js")
+
+    assert response.status_code == 200
+
+    js = response.text
+
+    assert "[SentinelOne] Payload validation passed" in js
+    assert "[SentinelOne] Evidence ingested" in js
+    assert "[SentinelOne] Snapshot" in js
     assert "[Kernel] Strategy selected" in js
