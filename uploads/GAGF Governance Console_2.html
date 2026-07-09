@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<!-- saved from url=(0029)http://127.0.0.1:8001/console -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>GAGF Governance Console</title>
+    <link rel="stylesheet" href="./GAGF Governance Console_2_files/console.css">
+</head>
+
+<body>
+    <h1>GAGF Governance Console</h1>
+
+    <div class="grid">
+        <div class="card">
+            <div class="label">Kernel Status</div>
+            <div id="kernel_status" class="value online">ONLINE</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Latest Strategy</div>
+            <div id="latest_strategy" class="value strategy">Normal</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Snapshot Count</div>
+            <div id="snapshot_count" class="value">202</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Decision Count</div>
+            <div id="decision_count" class="value">406</div>
+        </div>
+
+        <div class="card">
+            <div class="label">Risk Index</div>
+            <div id="risk_index" class="value">0.4</div>
+        </div>
+
+      <div class="card">
+    <div class="label">Uncertainty</div>
+    <div id="uncertainty" class="value">0.1</div>
+</div>
+
+<div class="card">
+    <div class="label">Latest Evidence Source</div>
+    <div id="latest_evidence_source" class="value">GitHub</div>
+</div>
+</div>
+    <div class="card upload-card">
+        <div class="label">Upload Evidence CSV</div>
+        <input type="file" id="csv_file" accept=".csv">
+        <br>
+        <button onclick="uploadCSV()">Upload CSV</button>
+        <div id="upload_status"></div>
+    </div>
+
+<div class="card github-card">
+    <div class="result-title">Ingest GitHub Evidence</div>
+
+    <div class="label">Paste GitHub-style JSON</div>
+
+<textarea id="github_json_input" class="json-input">{
+  "events": [
+    {
+      "id": "gh-ui-001",
+      "event_name": "pull_request",
+      "action": "opened",
+      "created_at": "2026-07-03T18:00:00Z"
+    },
+    {
+      "id": "gh-ui-002",
+      "event_name": "push",
+      "action": "created",
+      "created_at": "2026-07-03T18:05:00Z"
+    }
+  ]
+}
+</textarea>
+
+<div class="schema-help">
+    <div class="schema-title">Required GitHub Payload Shape</div>
+
+    <div class="schema-row">
+        <span class="schema-field">events</span>
+        <span class="schema-description">Required list of GitHub evidence events.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">id</span>
+        <span class="schema-description">Required unique event identifier.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">event_name</span>
+        <span class="schema-description">Required GitHub event type, such as pull_request or push.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">created_at</span>
+        <span class="schema-description">Required ISO timestamp from the source event.</span>
+    </div>
+
+    <div class="schema-row">
+        <span class="schema-field">action</span>
+        <span class="schema-description">Optional GitHub action, such as opened, closed, or review_requested.</span>
+    </div>
+</div>
+
+<div class="operator-guidance">
+    Validate the payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+</div>
+
+<div class="workflow-checklist">
+    <div class="workflow-title">GitHub Evidence Workflow</div>
+
+    <ol>
+        <li>Paste or edit the GitHub payload.</li>
+        <li>Format the payload if needed.</li>
+        <li>Validate the payload.</li>
+        <li>Ingest evidence after validation passes.</li>
+        <li>Review validation and ingestion results.</li>
+    </ol>
+</div>
+
+<br>
+<button onclick="validateGitHubPayload()">Validate Payload</button>
+<button id="github_ingest_button" onclick="ingestGitHubEvidence()" disabled="">
+    Ingest GitHub Evidence
+</button>
+<button onclick="formatGitHubPayload()">Format Payload</button>
+<button onclick="resetGitHubExamplePayload()">Reset Example Payload</button>
+<button onclick="clearGitHubPayload()">Clear Payload</button>
+<div id="github_ingest_status" class="success">GitHub ingest complete: 2 events processed. Validate again before the next ingest.</div>
+
+<div id="github_validation_card" class="card result-card">
+    <div id="github_validation_title" class="result-title success">✓ GitHub Payload Validation Passed</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="github_validation_status" class="small-value">Valid</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="github_validation_error_count" class="small-value">0</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="github_validation_details" class="small-value">Payload is valid and ready for ingestion.</span>
+    </div>
+</div>
+
+<div id="github_result_card" class="card result-card">
+    <div id="github_result_title" class="result-title success">✓ GitHub Ingestion Successful</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="github_result_source" class="small-value">github</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="github_result_events" class="small-value">2</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="github_result_snapshot_status" class="small-value">VALID</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="github_result_strategy" class="small-value">Normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="github_result_kernel_decision" class="small-value">transition_to_normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="github_result_reason" class="small-value">all_indicators_stable</span>
+    </div>
+</div>
+
+<div class="card servicenow-card">
+    <div class="result-title">Ingest ServiceNow Evidence</div>
+
+    <div class="label">Paste ServiceNow-style JSON</div>
+
+<textarea id="servicenow_json_input" class="json-input">{
+  "events": [
+    {
+      "sys_id": "sn-ui-001",
+      "table": "incident",
+      "category": "security",
+      "state": "new",
+      "opened_at": "2026-07-06T12:00:00Z",
+      "sys_created_on": "2026-07-06T12:01:00Z"
+    },
+    {
+      "sys_id": "sn-ui-002",
+      "table": "change_request",
+      "state": "authorize",
+      "opened_at": "2026-07-06T13:00:00Z",
+      "sys_created_on": "2026-07-06T13:01:00Z"
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required ServiceNow Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of ServiceNow evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">sys_id</span>
+            <span class="schema-description">Required unique ServiceNow record identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">table</span>
+            <span class="schema-description">Required ServiceNow table, such as incident or change_request.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">opened_at</span>
+            <span class="schema-description">Timestamp used as source occurrence time when available.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">sys_created_on</span>
+            <span class="schema-description">Timestamp used as fallback created time.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the ServiceNow payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">ServiceNow Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the ServiceNow payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateServiceNowPayload()">Validate Payload</button>
+    <button id="servicenow_ingest_button" onclick="ingestServiceNowEvidence()" disabled="">
+        Ingest ServiceNow Evidence
+    </button>
+    <button onclick="formatServiceNowPayload()">Format Payload</button>
+    <button onclick="resetServiceNowExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearServiceNowPayload()">Clear Payload</button>
+    <div id="servicenow_ingest_status" class="success">ServiceNow ingest complete: 2 events processed. Validate again before the next ingest.</div>
+</div>
+
+<div id="servicenow_validation_card" class="card result-card">
+    <div id="servicenow_validation_title" class="result-title success">✓ ServiceNow Payload Validation Passed</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="servicenow_validation_status" class="small-value">Valid</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="servicenow_validation_error_count" class="small-value">0</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="servicenow_validation_details" class="small-value">Payload is valid and ready for ingestion.</span>
+    </div>
+</div>
+
+<div id="servicenow_result_card" class="card result-card">
+    <div id="servicenow_result_title" class="result-title success">✓ ServiceNow Ingestion Successful</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="servicenow_result_source" class="small-value">servicenow</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="servicenow_result_events" class="small-value">2</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="servicenow_result_snapshot_status" class="small-value">VALID</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="servicenow_result_strategy" class="small-value">Normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="servicenow_result_kernel_decision" class="small-value">transition_to_normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="servicenow_result_reason" class="small-value">all_indicators_stable</span>
+    </div>
+</div>
+
+<div class="card jira-card">
+    <div class="result-title">Ingest Jira Evidence</div>
+
+    <div class="label">Paste Jira-style JSON</div>
+
+<textarea id="jira_json_input" class="json-input">{
+  "events": [
+    {
+      "id": "jira-ui-001",
+      "key": "FIP-101",
+      "issue_type": "Story",
+      "status": "Blocked",
+      "priority": "Medium",
+      "blocked": true,
+      "created": "2026-07-07T12:00:00Z",
+      "updated": "2026-07-07T12:30:00Z"
+    },
+    {
+      "id": "jira-ui-002",
+      "key": "FIP-202",
+      "issue_type": "Bug",
+      "status": "Open",
+      "priority": "Critical",
+      "created": "2026-07-07T13:00:00Z",
+      "updated": "2026-07-07T13:15:00Z"
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required Jira Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of Jira evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">id</span>
+            <span class="schema-description">Required unique Jira event identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">key</span>
+            <span class="schema-description">Required Jira issue key, such as FIP-101.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">status</span>
+            <span class="schema-description">Required Jira workflow status.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">created</span>
+            <span class="schema-description">Timestamp used as source occurrence time when available.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">updated</span>
+            <span class="schema-description">Fallback timestamp if created is not available.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the Jira payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">Jira Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the Jira payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateJiraPayload()">Validate Payload</button>
+    <button id="jira_ingest_button" onclick="ingestJiraEvidence()" disabled="">
+        Ingest Jira Evidence
+    </button>
+    <button onclick="formatJiraPayload()">Format Payload</button>
+    <button onclick="resetJiraExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearJiraPayload()">Clear Payload</button>
+    <div id="jira_ingest_status" class="success">Jira ingest complete: 2 events processed. Validate again before the next ingest.</div>
+</div>
+
+<div id="jira_validation_card" class="card result-card">
+    <div id="jira_validation_title" class="result-title success">✓ Jira Payload Validation Passed</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="jira_validation_status" class="small-value">Valid</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="jira_validation_error_count" class="small-value">0</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="jira_validation_details" class="small-value">Payload is valid and ready for ingestion.</span>
+    </div>
+</div>
+
+<div id="jira_result_card" class="card result-card">
+    <div id="jira_result_title" class="result-title success">✓ Jira Ingestion Successful</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="jira_result_source" class="small-value">jira</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="jira_result_events" class="small-value">2</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="jira_result_snapshot_status" class="small-value">VALID</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="jira_result_strategy" class="small-value">Normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="jira_result_kernel_decision" class="small-value">transition_to_normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="jira_result_reason" class="small-value">all_indicators_stable</span>
+    </div>
+</div>
+
+<div class="card okta-card">
+    <div class="result-title">Ingest Okta Evidence</div>
+
+    <div class="label">Paste Okta-style JSON</div>
+
+<textarea id="okta_json_input" class="json-input">{
+  "events": [
+    {
+      "uuid": "okta-ui-001",
+      "eventType": "user.authentication.failed",
+      "published": "2026-07-08T12:00:00Z",
+      "outcome": {
+        "result": "FAILURE"
+      }
+    },
+    {
+      "uuid": "okta-ui-002",
+      "eventType": "user.session.start",
+      "published": "2026-07-08T12:05:00Z",
+      "outcome": {
+        "result": "SUCCESS"
+      }
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required Okta Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of Okta System Log evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">uuid</span>
+            <span class="schema-description">Required unique Okta event identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">eventType</span>
+            <span class="schema-description">Required Okta event type, such as user.authentication.failed.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">published</span>
+            <span class="schema-description">Required Okta event timestamp.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">outcome.result</span>
+            <span class="schema-description">Optional Okta outcome result, such as SUCCESS or FAILURE.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the Okta payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">Okta Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the Okta payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateOktaPayload()">Validate Payload</button>
+    <button id="okta_ingest_button" onclick="ingestOktaEvidence()" disabled="">
+        Ingest Okta Evidence
+    </button>
+    <button onclick="formatOktaPayload()">Format Payload</button>
+    <button onclick="resetOktaExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearOktaPayload()">Clear Payload</button>
+    <div id="okta_ingest_status" class="success">Okta ingest complete: 2 events processed. Validate again before the next ingest.</div>
+</div>
+
+<div id="okta_validation_card" class="card result-card">
+    <div id="okta_validation_title" class="result-title success">✓ Okta Payload Validation Passed</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="okta_validation_status" class="small-value">Valid</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="okta_validation_error_count" class="small-value">0</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="okta_validation_details" class="small-value">Payload is valid and ready for ingestion.</span>
+    </div>
+</div>
+
+<div class="card entra-card">
+    <div class="result-title">Ingest Entra ID Evidence</div>
+
+    <div class="label">Paste Entra ID-style JSON</div>
+
+<textarea id="entra_json_input" class="json-input">{
+  "events": [
+    {
+      "id": "entra-ui-001",
+      "activityDisplayName": "User sign-in failed",
+      "createdDateTime": "2026-07-08T12:00:00Z",
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Invalid username or password failure"
+      }
+    },
+    {
+      "id": "entra-ui-002",
+      "activityDisplayName": "User sign-in",
+      "createdDateTime": "2026-07-08T12:05:00Z",
+      "conditionalAccessStatus": "success",
+      "riskState": "none",
+      "riskLevelAggregated": "none",
+      "status": {
+        "errorCode": 0
+      }
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required Entra ID Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of Entra ID evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">id</span>
+            <span class="schema-description">Required unique Entra event identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">activityDisplayName</span>
+            <span class="schema-description">Required Entra activity name, such as User sign-in.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">createdDateTime</span>
+            <span class="schema-description">Required Entra event timestamp.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">status.errorCode</span>
+            <span class="schema-description">Optional Entra status code used for success or failure mapping.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the Entra ID payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">Entra ID Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the Entra ID payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateEntraPayload()">Validate Payload</button>
+    <button id="entra_ingest_button" onclick="ingestEntraEvidence()" disabled="">
+        Ingest Entra ID Evidence
+    </button>
+    <button onclick="formatEntraPayload()">Format Payload</button>
+    <button onclick="resetEntraExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearEntraPayload()">Clear Payload</button>
+    <div id="entra_ingest_status" class="success">Entra ID ingest complete: 2 events processed. Validate again before the next ingest.</div>
+</div>
+
+<div id="entra_validation_card" class="card result-card">
+    <div id="entra_validation_title" class="result-title success">✓ Entra ID Payload Validation Passed</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="entra_validation_status" class="small-value">Valid</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="entra_validation_error_count" class="small-value">0</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="entra_validation_details" class="small-value">Payload is valid and ready for ingestion.</span>
+    </div>
+</div>
+
+<div id="entra_result_card" class="card result-card">
+    <div id="entra_result_title" class="result-title success">✓ Entra ID Ingestion Successful</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="entra_result_source" class="small-value">entra</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="entra_result_events" class="small-value">2</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="entra_result_snapshot_status" class="small-value">VALID</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="entra_result_strategy" class="small-value">Normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="entra_result_kernel_decision" class="small-value">transition_to_normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="entra_result_reason" class="small-value">all_indicators_stable</span>
+    </div>
+</div>
+
+<div id="okta_result_card" class="card result-card">
+    <div id="okta_result_title" class="result-title success">✓ Okta Ingestion Successful</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="okta_result_source" class="small-value">okta</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="okta_result_events" class="small-value">2</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="okta_result_snapshot_status" class="small-value">VALID</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="okta_result_strategy" class="small-value">Normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="okta_result_kernel_decision" class="small-value">transition_to_normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="okta_result_reason" class="small-value">all_indicators_stable</span>
+    </div>
+</div>
+
+<div class="card sentinelone-card">
+    <div class="result-title">Ingest SentinelOne Evidence</div>
+
+    <div class="label">Paste SentinelOne-style JSON</div>
+
+<textarea id="sentinelone_json_input" class="json-input">{
+  "events": [
+    {
+      "id": "s1-ui-001",
+      "eventType": "threat_detected",
+      "threatName": "Suspicious PowerShell",
+      "classification": "malware",
+      "confidenceLevel": "high",
+      "mitigationStatus": "not_mitigated",
+      "incidentStatus": "unresolved",
+      "createdAt": "2026-07-08T12:00:00Z"
+    },
+    {
+      "id": "s1-ui-002",
+      "eventType": "agent_online",
+      "agentName": "workstation-001",
+      "createdAt": "2026-07-08T12:05:00Z"
+    }
+  ]
+}
+</textarea>
+
+    <div class="schema-help">
+        <div class="schema-title">Required SentinelOne Payload Shape</div>
+
+        <div class="schema-row">
+            <span class="schema-field">events</span>
+            <span class="schema-description">Required list of SentinelOne evidence events.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">id</span>
+            <span class="schema-description">Required unique SentinelOne event identifier.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">eventType</span>
+            <span class="schema-description">Required event type, such as threat_detected or agent_online.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">createdAt</span>
+            <span class="schema-description">Required SentinelOne event timestamp.</span>
+        </div>
+
+        <div class="schema-row">
+            <span class="schema-field">mitigationStatus</span>
+            <span class="schema-description">Optional mitigation state used for threat/control mapping.</span>
+        </div>
+    </div>
+
+    <div class="operator-guidance">
+        Validate the SentinelOne payload before ingesting. Editing, formatting, resetting, or clearing requires validation again.
+    </div>
+
+    <div class="workflow-checklist">
+        <div class="workflow-title">SentinelOne Evidence Workflow</div>
+
+        <ol>
+            <li>Paste or edit the SentinelOne payload.</li>
+            <li>Format the payload if needed.</li>
+            <li>Validate the payload.</li>
+            <li>Ingest evidence after validation passes.</li>
+            <li>Review validation and ingestion results.</li>
+        </ol>
+    </div>
+
+    <br>
+    <button onclick="validateSentinelOnePayload()">Validate Payload</button>
+    <button id="sentinelone_ingest_button" onclick="ingestSentinelOneEvidence()" disabled="">
+        Ingest SentinelOne Evidence
+    </button>
+    <button onclick="formatSentinelOnePayload()">Format Payload</button>
+    <button onclick="resetSentinelOneExamplePayload()">Reset Example Payload</button>
+    <button onclick="clearSentinelOnePayload()">Clear Payload</button>
+    <div id="sentinelone_ingest_status" class="success">SentinelOne ingest complete: 2 events processed. Validate again before the next ingest.</div>
+</div>
+
+<div id="sentinelone_validation_card" class="card result-card">
+    <div id="sentinelone_validation_title" class="result-title success">✓ SentinelOne Payload Validation Passed</div>
+
+    <div class="result-row">
+        <span class="label">Validation Status</span>
+        <span id="sentinelone_validation_status" class="small-value">Valid</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Error Count</span>
+        <span id="sentinelone_validation_error_count" class="small-value">0</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Validation Details</span>
+        <span id="sentinelone_validation_details" class="small-value">Payload is valid and ready for ingestion.</span>
+    </div>
+</div>
+
+<div id="sentinelone_result_card" class="card result-card">
+    <div id="sentinelone_result_title" class="result-title success">✓ SentinelOne Ingestion Successful</div>
+
+    <div class="result-row">
+        <span class="label">Source</span>
+        <span id="sentinelone_result_source" class="small-value">sentinelone</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Events Processed</span>
+        <span id="sentinelone_result_events" class="small-value">2</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Snapshot Status</span>
+        <span id="sentinelone_result_snapshot_status" class="small-value">VALID</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Selected Strategy</span>
+        <span id="sentinelone_result_strategy" class="small-value">Normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Kernel Decision</span>
+        <span id="sentinelone_result_kernel_decision" class="small-value">transition_to_normal</span>
+    </div>
+
+    <div class="result-row">
+        <span class="label">Reason</span>
+        <span id="sentinelone_result_reason" class="small-value">all_indicators_stable</span>
+    </div>
+</div>
+
+    <div id="import_result_card" class="card result-card hidden">
+        <div id="import_result_title" class="result-title">Import Result</div>
+
+        <div class="result-row">
+            <span class="label">File</span>
+            <span id="result_file" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Events Imported</span>
+            <span id="result_events" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Snapshot Status</span>
+            <span id="result_snapshot_status" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Selected Strategy</span>
+            <span id="result_strategy" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Kernel Decision</span>
+            <span id="result_kernel_decision" class="small-value">—</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Reason</span>
+            <span id="result_reason" class="small-value">—</span>
+        </div>
+    </div>
+
+    <div class="card decision-card">
+        <div class="result-title">Latest Decision</div>
+
+        <div class="result-row">
+            <span class="label">Selected Strategy</span>
+            <span id="decision_strategy" class="small-value">Normal</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Kernel Decision</span>
+            <span id="decision_kernel" class="small-value">transition_to_normal</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Reason</span>
+            <span id="decision_reason" class="small-value">all_indicators_stable</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Policy Version</span>
+            <span id="decision_policy" class="small-value">0.1</span>
+        </div>
+
+        <div class="result-row">
+            <span class="label">Override Triggered</span>
+            <span id="decision_override" class="small-value">No</span>
+        </div>
+    </div>
+
+    <div class="card activity-card">
+        <div class="result-title">Recent Activity</div>
+        <div id="activity_timeline"><div class="activity-item">
+        <div class="activity-time">8:21:02 PM</div>
+        <div class="activity-text">[Kernel] Strategy selected: Normal</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:21:02 PM</div>
+        <div class="activity-text">[GitHub] Snapshot VALID</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:21:02 PM</div>
+        <div class="activity-text">[GitHub] 2 events normalized</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:21:02 PM</div>
+        <div class="activity-text">[GitHub] Evidence ingested</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:21:01 PM</div>
+        <div class="activity-text">[GitHub] Payload validation passed</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:57 PM</div>
+        <div class="activity-text">[Kernel] Strategy selected: Normal</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:57 PM</div>
+        <div class="activity-text">[ServiceNow] Snapshot VALID</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:57 PM</div>
+        <div class="activity-text">[ServiceNow] 2 events normalized</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:57 PM</div>
+        <div class="activity-text">[ServiceNow] Evidence ingested</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:56 PM</div>
+        <div class="activity-text">[ServiceNow] Payload validation passed</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:53 PM</div>
+        <div class="activity-text">[Kernel] Strategy selected: Normal</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:53 PM</div>
+        <div class="activity-text">[Jira] Snapshot VALID</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:53 PM</div>
+        <div class="activity-text">[Jira] 2 events normalized</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:53 PM</div>
+        <div class="activity-text">[Jira] Evidence ingested</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:52 PM</div>
+        <div class="activity-text">[Jira] Payload validation passed</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:49 PM</div>
+        <div class="activity-text">[Kernel] Strategy selected: Normal</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:49 PM</div>
+        <div class="activity-text">[Okta] Snapshot VALID</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:49 PM</div>
+        <div class="activity-text">[Okta] 2 events normalized</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:49 PM</div>
+        <div class="activity-text">[Okta] Evidence ingested</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:49 PM</div>
+        <div class="activity-text">[Okta] Payload validation passed</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:44 PM</div>
+        <div class="activity-text">[Kernel] Strategy selected: Normal</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:44 PM</div>
+        <div class="activity-text">[SentinelOne] Snapshot VALID</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:44 PM</div>
+        <div class="activity-text">[SentinelOne] 2 events normalized</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:44 PM</div>
+        <div class="activity-text">[SentinelOne] Evidence ingested</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:43 PM</div>
+        <div class="activity-text">[SentinelOne] Payload validation passed</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:37 PM</div>
+        <div class="activity-text">[Kernel] Strategy selected: Normal</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:37 PM</div>
+        <div class="activity-text">[Entra ID] Snapshot VALID</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:37 PM</div>
+        <div class="activity-text">[Entra ID] 2 events normalized</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:37 PM</div>
+        <div class="activity-text">[Entra ID] Evidence ingested</div>
+    </div><div class="activity-item">
+        <div class="activity-time">8:20:36 PM</div>
+        <div class="activity-text">[Entra ID] Payload validation passed</div>
+    </div></div>
+    </div>
+
+    <div class="card snapshots-card">
+        <div class="result-title">Recent Snapshots</div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Snapshot ID</th>
+                    <th>Status</th>
+                    <th>Risk</th>
+                    <th>Uncertainty</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody id="snapshots_table_body"><tr>
+            <td>github-e...</td>
+            <td>VALID</td>
+            <td>0.4</td>
+            <td>0.1</td>
+            <td>8:21:02 PM</td>
+        </tr><tr>
+            <td>servicen...</td>
+            <td>VALID</td>
+            <td>0.6000000000000001</td>
+            <td>0.1</td>
+            <td>8:20:57 PM</td>
+        </tr><tr>
+            <td>jira-b4f...</td>
+            <td>VALID</td>
+            <td>0.30000000000000004</td>
+            <td>0.5</td>
+            <td>8:20:53 PM</td>
+        </tr><tr>
+            <td>okta-b53...</td>
+            <td>VALID</td>
+            <td>0.30000000000000004</td>
+            <td>0</td>
+            <td>8:20:49 PM</td>
+        </tr><tr>
+            <td>sentinel...</td>
+            <td>VALID</td>
+            <td>0.4</td>
+            <td>0</td>
+            <td>8:20:44 PM</td>
+        </tr></tbody>
+        </table>
+    </div>
+
+    <div class="card decisions-card">
+        <div class="result-title">Recent Decisions</div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Decision ID</th>
+                    <th>Strategy</th>
+                    <th>Decision</th>
+                    <th>Override</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody id="decisions_table_body"><tr>
+            <td>b9af2179...</td>
+            <td>Normal</td>
+            <td>transition_to_normal</td>
+            <td>No</td>
+            <td>8:21:02 PM</td>
+        </tr><tr>
+            <td>94465c4b...</td>
+            <td>Normal</td>
+            <td>transition_to_normal</td>
+            <td>No</td>
+            <td>8:20:57 PM</td>
+        </tr><tr>
+            <td>07bd454c...</td>
+            <td>Normal</td>
+            <td>transition_to_normal</td>
+            <td>No</td>
+            <td>8:20:53 PM</td>
+        </tr><tr>
+            <td>3f9b1859...</td>
+            <td>Normal</td>
+            <td>transition_to_normal</td>
+            <td>No</td>
+            <td>8:20:49 PM</td>
+        </tr><tr>
+            <td>adc18aea...</td>
+            <td>Normal</td>
+            <td>transition_to_normal</td>
+            <td>No</td>
+            <td>8:20:44 PM</td>
+        </tr></tbody>
+        </table>
+    </div>
+
+    <div class="card refresh-card">
+        <div class="label">System Refresh</div>
+        <div id="refresh_status" class="small-value">Last refreshed at 8:21:08 PM</div>
+        <button onclick="refreshConsole()">Refresh Now</button>
+    </div>
+
+    <script src="./GAGF Governance Console_2_files/dashboard.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/snapshots.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/decisions.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/activity.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/upload.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/github_ingest.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/sentinelone_ingest.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/servicenow_ingest.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/jira_ingest.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/okta_ingest.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/entra_ingest.js.download"></script>
+    <script src="./GAGF Governance Console_2_files/console.js.download"></script>
+
+</div></body></html>
