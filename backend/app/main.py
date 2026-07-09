@@ -18,7 +18,6 @@ from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.decision_ledger import DecisionLedger
 from backend.app.gagf.gpl_loader import GPLLoader
 from backend.app.gagf.metric_adapter import MetricAdapter
-from backend.app.gagf.source_registry import SourceRegistry
 from backend.app.gagf.schemas import (
     AdaptiveState,
     AdaptiveStateSnapshot,
@@ -26,6 +25,8 @@ from backend.app.gagf.schemas import (
     RawSecurityEvent,
 )
 from backend.app.gagf.snapshot_ledger import SnapshotLedger
+from backend.app.gagf.source_health_service import SourceHealthService
+from backend.app.gagf.source_registry import SourceRegistry
 from backend.app.services.dashboard_service import DashboardService
 from backend.app.services.ingestion_service import IngestionService
 
@@ -304,6 +305,7 @@ def validate_sentinelone_payload(payload: dict):
 
     return errors
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -414,12 +416,20 @@ def get_decision(decision_id: str):
 def dashboard():
     return DashboardService().get_dashboard_summary()
 
+
 @app.get("/sources")
 def list_sources():
     return {
         "status": "ok",
         "sources": SourceRegistry().list_sources(),
     }
+
+
+@app.get("/sources/health")
+def source_health():
+    return SourceHealthService().get_health_summary()
+
+
 @app.get("/sources/{source_system}")
 def get_source(source_system: str):
     source = SourceRegistry().get_source(source_system)
@@ -435,6 +445,7 @@ def get_source(source_system: str):
         "status": "ok",
         "source": source,
     }
+
 
 @app.get("/console")
 def console():
