@@ -25,6 +25,7 @@ from backend.app.gagf.schemas import (
     RawSecurityEvent,
 )
 from backend.app.gagf.snapshot_ledger import SnapshotLedger
+from backend.app.gagf.source_category_service import SourceCategoryService
 from backend.app.gagf.source_health_service import SourceHealthService
 from backend.app.gagf.source_registry import SourceRegistry
 from backend.app.services.dashboard_service import DashboardService
@@ -306,6 +307,69 @@ def validate_sentinelone_payload(payload: dict):
     return errors
 
 
+def ingest_source(
+    payload: dict,
+    validation_errors: list[str],
+    connector,
+    source_system: str,
+    snapshot_prefix: str,
+    work_item_id: str,
+):
+    if validation_errors:
+        return {
+            "status": "failed",
+            "source_system": source_system,
+            "events_normalized": 0,
+            "errors": validation_errors,
+        }
+
+    events = connector.normalize_events(payload.get("events", []))
+    adapter_result = MetricAdapter().build_snapshot(events)
+
+    snapshot = AdaptiveStateSnapshot(
+        snapshot_id=f"{snapshot_prefix}-{uuid4()}",
+        tenant_id="demo",
+        work_item_id=work_item_id,
+        status="VALID",
+        adaptive_state=adapter_result.adaptive_state,
+        evidence_confidence=adapter_result.evidence_confidence,
+        evidence=[event.event_id for event in events],
+        timestamp_quality_distribution={
+            "SOURCE_OCCURRED_AT": len(events),
+            "BACKFILLED_FROM_CREATED_AT": 0,
+            "MISSING_TIMESTAMP": 0,
+        },
+    )
+
+    SnapshotLedger().save_snapshot(
+        snapshot,
+        normalization_applied=adapter_result.normalization_applied,
+    )
+
+    decision = get_arbiter().arbitrate(
+        snapshot=snapshot,
+        active_strategy="Normal",
+        proposal="continue",
+    )
+
+    decision_id = DecisionLedger().save_decision(
+        decision,
+        snapshot.snapshot_id,
+    )
+
+    return {
+        "status": "ingested",
+        "source_system": source_system,
+        "events_normalized": len(events),
+        "snapshot_id": snapshot.snapshot_id,
+        "snapshot_status": snapshot.status,
+        "decision_id": decision_id,
+        "selected_strategy": decision.selected_strategy,
+        "kernel_decision": decision.kernel_decision,
+        "reason": decision.reason,
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -425,6 +489,11 @@ def list_sources():
     }
 
 
+@app.get("/sources/categories")
+def source_categories():
+    return SourceCategoryService().get_category_summary()
+
+
 @app.get("/sources/health")
 def source_health():
     return SourceHealthService().get_health_summary()
@@ -469,426 +538,83 @@ def upload_csv(file: UploadFile = File(...)):
 
 @app.post("/ingest/github")
 def ingest_github(payload: dict):
-    validation_errors = validate_github_payload(payload)
-
-    if validation_errors:
-        return {
-            "status": "failed",
-            "source_system": "github",
-            "events_normalized": 0,
-            "errors": validation_errors,
-        }
-
-    connector = GitHubConnector()
-    events = connector.normalize_events(payload.get("events", []))
-
-    adapter_result = MetricAdapter().build_snapshot(events)
-
-    snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"github-{uuid4()}",
-        tenant_id="demo",
+    return ingest_source(
+        payload=payload,
+        validation_errors=validate_github_payload(payload),
+        connector=GitHubConnector(),
+        source_system="github",
+        snapshot_prefix="github",
         work_item_id="github-ingestion",
-        status="VALID",
-        adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
-        evidence=[event.event_id for event in events],
-        timestamp_quality_distribution={
-            "SOURCE_OCCURRED_AT": len(events),
-            "BACKFILLED_FROM_CREATED_AT": 0,
-            "MISSING_TIMESTAMP": 0,
-        },
     )
-
-    SnapshotLedger().save_snapshot(
-        snapshot,
-        normalization_applied=adapter_result.normalization_applied,
-    )
-
-    decision = get_arbiter().arbitrate(
-        snapshot=snapshot,
-        active_strategy="Normal",
-        proposal="continue",
-    )
-
-    decision_id = DecisionLedger().save_decision(
-        decision,
-        snapshot.snapshot_id,
-    )
-
-    return {
-        "status": "ingested",
-        "source_system": "github",
-        "events_normalized": len(events),
-        "snapshot_id": snapshot.snapshot_id,
-        "snapshot_status": snapshot.status,
-        "decision_id": decision_id,
-        "selected_strategy": decision.selected_strategy,
-        "kernel_decision": decision.kernel_decision,
-        "reason": decision.reason,
-    }
 
 
 @app.post("/ingest/servicenow")
 def ingest_servicenow(payload: dict):
-    validation_errors = validate_servicenow_payload(payload)
-
-    if validation_errors:
-        return {
-            "status": "failed",
-            "source_system": "servicenow",
-            "events_normalized": 0,
-            "errors": validation_errors,
-        }
-
-    connector = ServiceNowConnector()
-    events = connector.normalize_events(payload.get("events", []))
-
-    adapter_result = MetricAdapter().build_snapshot(events)
-
-    snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"servicenow-{uuid4()}",
-        tenant_id="demo",
+    return ingest_source(
+        payload=payload,
+        validation_errors=validate_servicenow_payload(payload),
+        connector=ServiceNowConnector(),
+        source_system="servicenow",
+        snapshot_prefix="servicenow",
         work_item_id="servicenow-ingestion",
-        status="VALID",
-        adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
-        evidence=[event.event_id for event in events],
-        timestamp_quality_distribution={
-            "SOURCE_OCCURRED_AT": len(events),
-            "BACKFILLED_FROM_CREATED_AT": 0,
-            "MISSING_TIMESTAMP": 0,
-        },
     )
-
-    SnapshotLedger().save_snapshot(
-        snapshot,
-        normalization_applied=adapter_result.normalization_applied,
-    )
-
-    decision = get_arbiter().arbitrate(
-        snapshot=snapshot,
-        active_strategy="Normal",
-        proposal="continue",
-    )
-
-    decision_id = DecisionLedger().save_decision(
-        decision,
-        snapshot.snapshot_id,
-    )
-
-    return {
-        "status": "ingested",
-        "source_system": "servicenow",
-        "events_normalized": len(events),
-        "snapshot_id": snapshot.snapshot_id,
-        "snapshot_status": snapshot.status,
-        "decision_id": decision_id,
-        "selected_strategy": decision.selected_strategy,
-        "kernel_decision": decision.kernel_decision,
-        "reason": decision.reason,
-    }
 
 
 @app.post("/ingest/jira")
 def ingest_jira(payload: dict):
-    validation_errors = validate_jira_payload(payload)
-
-    if validation_errors:
-        return {
-            "status": "failed",
-            "source_system": "jira",
-            "events_normalized": 0,
-            "errors": validation_errors,
-        }
-
-    connector = JiraConnector()
-    events = connector.normalize_events(payload.get("events", []))
-
-    adapter_result = MetricAdapter().build_snapshot(events)
-
-    snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"jira-{uuid4()}",
-        tenant_id="demo",
+    return ingest_source(
+        payload=payload,
+        validation_errors=validate_jira_payload(payload),
+        connector=JiraConnector(),
+        source_system="jira",
+        snapshot_prefix="jira",
         work_item_id="jira-ingestion",
-        status="VALID",
-        adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
-        evidence=[event.event_id for event in events],
-        timestamp_quality_distribution={
-            "SOURCE_OCCURRED_AT": len(events),
-            "BACKFILLED_FROM_CREATED_AT": 0,
-            "MISSING_TIMESTAMP": 0,
-        },
     )
-
-    SnapshotLedger().save_snapshot(
-        snapshot,
-        normalization_applied=adapter_result.normalization_applied,
-    )
-
-    decision = get_arbiter().arbitrate(
-        snapshot=snapshot,
-        active_strategy="Normal",
-        proposal="continue",
-    )
-
-    decision_id = DecisionLedger().save_decision(
-        decision,
-        snapshot.snapshot_id,
-    )
-
-    return {
-        "status": "ingested",
-        "source_system": "jira",
-        "events_normalized": len(events),
-        "snapshot_id": snapshot.snapshot_id,
-        "snapshot_status": snapshot.status,
-        "decision_id": decision_id,
-        "selected_strategy": decision.selected_strategy,
-        "kernel_decision": decision.kernel_decision,
-        "reason": decision.reason,
-    }
 
 
 @app.post("/ingest/okta")
 def ingest_okta(payload: dict):
-    validation_errors = validate_okta_payload(payload)
-
-    if validation_errors:
-        return {
-            "status": "failed",
-            "source_system": "okta",
-            "events_normalized": 0,
-            "errors": validation_errors,
-        }
-
-    connector = OktaConnector()
-    events = connector.normalize_events(payload.get("events", []))
-
-    adapter_result = MetricAdapter().build_snapshot(events)
-
-    snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"okta-{uuid4()}",
-        tenant_id="demo",
+    return ingest_source(
+        payload=payload,
+        validation_errors=validate_okta_payload(payload),
+        connector=OktaConnector(),
+        source_system="okta",
+        snapshot_prefix="okta",
         work_item_id="okta-ingestion",
-        status="VALID",
-        adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
-        evidence=[event.event_id for event in events],
-        timestamp_quality_distribution={
-            "SOURCE_OCCURRED_AT": len(events),
-            "BACKFILLED_FROM_CREATED_AT": 0,
-            "MISSING_TIMESTAMP": 0,
-        },
     )
-
-    SnapshotLedger().save_snapshot(
-        snapshot,
-        normalization_applied=adapter_result.normalization_applied,
-    )
-
-    decision = get_arbiter().arbitrate(
-        snapshot=snapshot,
-        active_strategy="Normal",
-        proposal="continue",
-    )
-
-    decision_id = DecisionLedger().save_decision(
-        decision,
-        snapshot.snapshot_id,
-    )
-
-    return {
-        "status": "ingested",
-        "source_system": "okta",
-        "events_normalized": len(events),
-        "snapshot_id": snapshot.snapshot_id,
-        "snapshot_status": snapshot.status,
-        "decision_id": decision_id,
-        "selected_strategy": decision.selected_strategy,
-        "kernel_decision": decision.kernel_decision,
-        "reason": decision.reason,
-    }
 
 
 @app.post("/ingest/entra")
 def ingest_entra(payload: dict):
-    validation_errors = validate_entra_payload(payload)
-
-    if validation_errors:
-        return {
-            "status": "failed",
-            "source_system": "entra",
-            "events_normalized": 0,
-            "errors": validation_errors,
-        }
-
-    connector = EntraConnector()
-    events = connector.normalize_events(payload.get("events", []))
-
-    adapter_result = MetricAdapter().build_snapshot(events)
-
-    snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"entra-{uuid4()}",
-        tenant_id="demo",
+    return ingest_source(
+        payload=payload,
+        validation_errors=validate_entra_payload(payload),
+        connector=EntraConnector(),
+        source_system="entra",
+        snapshot_prefix="entra",
         work_item_id="entra-ingestion",
-        status="VALID",
-        adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
-        evidence=[event.event_id for event in events],
-        timestamp_quality_distribution={
-            "SOURCE_OCCURRED_AT": len(events),
-            "BACKFILLED_FROM_CREATED_AT": 0,
-            "MISSING_TIMESTAMP": 0,
-        },
     )
-
-    SnapshotLedger().save_snapshot(
-        snapshot,
-        normalization_applied=adapter_result.normalization_applied,
-    )
-
-    decision = get_arbiter().arbitrate(
-        snapshot=snapshot,
-        active_strategy="Normal",
-        proposal="continue",
-    )
-
-    decision_id = DecisionLedger().save_decision(
-        decision,
-        snapshot.snapshot_id,
-    )
-
-    return {
-        "status": "ingested",
-        "source_system": "entra",
-        "events_normalized": len(events),
-        "snapshot_id": snapshot.snapshot_id,
-        "snapshot_status": snapshot.status,
-        "decision_id": decision_id,
-        "selected_strategy": decision.selected_strategy,
-        "kernel_decision": decision.kernel_decision,
-        "reason": decision.reason,
-    }
 
 
 @app.post("/ingest/sentinelone")
 def ingest_sentinelone(payload: dict):
-    validation_errors = validate_sentinelone_payload(payload)
-
-    if validation_errors:
-        return {
-            "status": "failed",
-            "source_system": "sentinelone",
-            "events_normalized": 0,
-            "errors": validation_errors,
-        }
-
-    connector = SentinelOneConnector()
-    events = connector.normalize_events(payload.get("events", []))
-
-    adapter_result = MetricAdapter().build_snapshot(events)
-
-    snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"sentinelone-{uuid4()}",
-        tenant_id="demo",
+    return ingest_source(
+        payload=payload,
+        validation_errors=validate_sentinelone_payload(payload),
+        connector=SentinelOneConnector(),
+        source_system="sentinelone",
+        snapshot_prefix="sentinelone",
         work_item_id="sentinelone-ingestion",
-        status="VALID",
-        adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
-        evidence=[event.event_id for event in events],
-        timestamp_quality_distribution={
-            "SOURCE_OCCURRED_AT": len(events),
-            "BACKFILLED_FROM_CREATED_AT": 0,
-            "MISSING_TIMESTAMP": 0,
-        },
     )
-
-    SnapshotLedger().save_snapshot(
-        snapshot,
-        normalization_applied=adapter_result.normalization_applied,
-    )
-
-    decision = get_arbiter().arbitrate(
-        snapshot=snapshot,
-        active_strategy="Normal",
-        proposal="continue",
-    )
-
-    decision_id = DecisionLedger().save_decision(
-        decision,
-        snapshot.snapshot_id,
-    )
-
-    return {
-        "status": "ingested",
-        "source_system": "sentinelone",
-        "events_normalized": len(events),
-        "snapshot_id": snapshot.snapshot_id,
-        "snapshot_status": snapshot.status,
-        "decision_id": decision_id,
-        "selected_strategy": decision.selected_strategy,
-        "kernel_decision": decision.kernel_decision,
-        "reason": decision.reason,
-    }
 
 
 @app.post("/ingest/defender")
 def ingest_defender(payload: dict):
-    validation_errors = validate_defender_payload(payload)
-
-    if validation_errors:
-        return {
-            "status": "failed",
-            "source_system": "defender",
-            "events_normalized": 0,
-            "errors": validation_errors,
-        }
-
-    connector = DefenderConnector()
-    events = connector.normalize_events(payload.get("events", []))
-
-    adapter_result = MetricAdapter().build_snapshot(events)
-
-    snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"defender-{uuid4()}",
-        tenant_id="demo",
+    return ingest_source(
+        payload=payload,
+        validation_errors=validate_defender_payload(payload),
+        connector=DefenderConnector(),
+        source_system="defender",
+        snapshot_prefix="defender",
         work_item_id="defender-ingestion",
-        status="VALID",
-        adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
-        evidence=[event.event_id for event in events],
-        timestamp_quality_distribution={
-            "SOURCE_OCCURRED_AT": len(events),
-            "BACKFILLED_FROM_CREATED_AT": 0,
-            "MISSING_TIMESTAMP": 0,
-        },
     )
-
-    SnapshotLedger().save_snapshot(
-        snapshot,
-        normalization_applied=adapter_result.normalization_applied,
-    )
-
-    decision = get_arbiter().arbitrate(
-        snapshot=snapshot,
-        active_strategy="Normal",
-        proposal="continue",
-    )
-
-    decision_id = DecisionLedger().save_decision(
-        decision,
-        snapshot.snapshot_id,
-    )
-
-    return {
-        "status": "ingested",
-        "source_system": "defender",
-        "events_normalized": len(events),
-        "snapshot_id": snapshot.snapshot_id,
-        "snapshot_status": snapshot.status,
-        "decision_id": decision_id,
-        "selected_strategy": decision.selected_strategy,
-        "kernel_decision": decision.kernel_decision,
-        "reason": decision.reason,
-    }
