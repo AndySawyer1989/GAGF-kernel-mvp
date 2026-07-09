@@ -17,6 +17,7 @@ from backend.app.connectors.servicenow_connector import ServiceNowConnector
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
 from backend.app.gagf.decision_ledger import DecisionLedger
+from backend.app.gagf.evidence_confidence_adapter import EvidenceConfidenceAdapter
 from backend.app.gagf.evidence_conflict_service import EvidenceConflictService
 from backend.app.gagf.evidence_diagnostics_service import EvidenceDiagnosticsService
 from backend.app.gagf.evidence_quality_service import EvidenceQualityService
@@ -481,6 +482,11 @@ def detect_evidence_conflicts(events: List[RawSecurityEvent]):
 @app.post("/evidence/diagnostics")
 def diagnose_evidence(events: List[RawSecurityEvent]):
     return EvidenceDiagnosticsService().diagnose_events(events)
+
+
+@app.post("/evidence/confidence")
+def build_evidence_confidence(events: List[RawSecurityEvent]):
+    return EvidenceConfidenceAdapter().build_confidence(events)
 
 
 @app.get("/snapshots")
