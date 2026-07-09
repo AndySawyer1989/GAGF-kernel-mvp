@@ -333,6 +333,7 @@ def ingest_source(
 
     events = connector.normalize_events(payload.get("events", []))
     adapter_result = MetricAdapter().build_snapshot(events)
+    confidence_result = EvidenceConfidenceAdapter().build_confidence(events)
 
     snapshot = AdaptiveStateSnapshot(
         snapshot_id=f"{snapshot_prefix}-{uuid4()}",
@@ -340,7 +341,7 @@ def ingest_source(
         work_item_id=work_item_id,
         status="VALID",
         adaptive_state=adapter_result.adaptive_state,
-        evidence_confidence=adapter_result.evidence_confidence,
+        evidence_confidence=confidence_result["evidence_confidence"],
         evidence=[event.event_id for event in events],
         timestamp_quality_distribution={
             "SOURCE_OCCURRED_AT": len(events),
