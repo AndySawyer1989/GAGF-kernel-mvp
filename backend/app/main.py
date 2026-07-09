@@ -494,6 +494,11 @@ def source_categories():
     return SourceCategoryService().get_category_summary()
 
 
+@app.get("/sources/categories/{category}")
+def source_category_detail(category: str):
+    return SourceCategoryService().get_category_detail(category)
+
+
 @app.get("/sources/health")
 def source_health():
     return SourceHealthService().get_health_summary()
