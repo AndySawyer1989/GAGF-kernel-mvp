@@ -7,13 +7,13 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.app.connectors.defender_connector import DefenderConnector
 from backend.app.connectors.entra_connector import EntraConnector
 from backend.app.connectors.github_connector import GitHubConnector
 from backend.app.connectors.jira_connector import JiraConnector
 from backend.app.connectors.okta_connector import OktaConnector
 from backend.app.connectors.sentinelone_connector import SentinelOneConnector
 from backend.app.connectors.servicenow_connector import ServiceNowConnector
-from backend.app.connectors.defender_connector import DefenderConnector
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.decision_ledger import DecisionLedger
 from backend.app.gagf.gpl_loader import GPLLoader
@@ -112,6 +112,7 @@ def validate_servicenow_payload(payload: dict):
 
     return errors
 
+
 def validate_defender_payload(payload: dict):
     errors = []
 
@@ -144,6 +145,7 @@ def validate_defender_payload(payload: dict):
             errors.append(f"event_{index}_missing_timestamp")
 
     return errors
+
 
 def validate_jira_payload(payload: dict):
     errors = []
@@ -215,6 +217,7 @@ def validate_okta_payload(payload: dict):
 
     return errors
 
+
 def validate_entra_payload(payload: dict):
     errors = []
 
@@ -248,6 +251,7 @@ def validate_entra_payload(payload: dict):
 
     return errors
 
+
 def validate_sentinelone_payload(payload: dict):
     errors = []
 
@@ -270,14 +274,32 @@ def validate_sentinelone_payload(payload: dict):
             errors.append(f"event_{index}_must_be_an_object")
             continue
 
-        if not event.get("id"):
+        if (
+            not event.get("id")
+            and not event.get("threatId")
+            and not event.get("activityUuid")
+            and not event.get("uuid")
+        ):
             errors.append(f"event_{index}_missing_id")
 
         if not event.get("eventType"):
             errors.append(f"event_{index}_missing_eventType")
 
-        if not event.get("createdAt"):
+        if (
+            not event.get("threatName")
+            and not event.get("classification")
+            and not event.get("eventType")
+        ):
+            errors.append(f"event_{index}_missing_threat_context")
+
+        if (
+            not event.get("createdAt")
+            and not event.get("updatedAt")
+            and not event.get("detectedAt")
+            and not event.get("mitigatedAt")
+        ):
             errors.append(f"event_{index}_missing_createdAt")
+            errors.append(f"event_{index}_missing_timestamp")
 
     return errors
 
@@ -655,6 +677,7 @@ def ingest_okta(payload: dict):
         "reason": decision.reason,
     }
 
+
 @app.post("/ingest/entra")
 def ingest_entra(payload: dict):
     validation_errors = validate_entra_payload(payload)
@@ -715,6 +738,7 @@ def ingest_entra(payload: dict):
         "reason": decision.reason,
     }
 
+
 @app.post("/ingest/sentinelone")
 def ingest_sentinelone(payload: dict):
     validation_errors = validate_sentinelone_payload(payload)
@@ -774,6 +798,7 @@ def ingest_sentinelone(payload: dict):
         "kernel_decision": decision.kernel_decision,
         "reason": decision.reason,
     }
+
 
 @app.post("/ingest/defender")
 def ingest_defender(payload: dict):
