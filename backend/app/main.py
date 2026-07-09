@@ -18,6 +18,7 @@ from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.decision_ledger import DecisionLedger
 from backend.app.gagf.gpl_loader import GPLLoader
 from backend.app.gagf.metric_adapter import MetricAdapter
+from backend.app.gagf.source_registry import SourceRegistry
 from backend.app.gagf.schemas import (
     AdaptiveState,
     AdaptiveStateSnapshot,
@@ -413,6 +414,12 @@ def get_decision(decision_id: str):
 def dashboard():
     return DashboardService().get_dashboard_summary()
 
+@app.get("/sources")
+def list_sources():
+    return {
+        "status": "ok",
+        "sources": SourceRegistry().list_sources(),
+    }
 
 @app.get("/console")
 def console():
