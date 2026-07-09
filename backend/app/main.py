@@ -420,6 +420,21 @@ def list_sources():
         "status": "ok",
         "sources": SourceRegistry().list_sources(),
     }
+@app.get("/sources/{source_system}")
+def get_source(source_system: str):
+    source = SourceRegistry().get_source(source_system)
+
+    if source is None:
+        return {
+            "status": "failed",
+            "error": "source_not_found",
+            "source_system": source_system,
+        }
+
+    return {
+        "status": "ok",
+        "source": source,
+    }
 
 @app.get("/console")
 def console():
