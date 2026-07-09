@@ -17,6 +17,7 @@ from backend.app.connectors.servicenow_connector import ServiceNowConnector
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
 from backend.app.gagf.decision_ledger import DecisionLedger
+from backend.app.gagf.evidence_conflict_service import EvidenceConflictService
 from backend.app.gagf.evidence_quality_service import EvidenceQualityService
 from backend.app.gagf.gpl_loader import GPLLoader
 from backend.app.gagf.metric_adapter import MetricAdapter
@@ -469,6 +470,11 @@ def score_evidence_quality(events: List[RawSecurityEvent]):
 @app.post("/evidence/agreement")
 def evaluate_evidence_agreement(events: List[RawSecurityEvent]):
     return CrossSourceAgreementService().evaluate_agreement(events)
+
+
+@app.post("/evidence/conflicts")
+def detect_evidence_conflicts(events: List[RawSecurityEvent]):
+    return EvidenceConflictService().detect_conflicts(events)
 
 
 @app.get("/snapshots")
