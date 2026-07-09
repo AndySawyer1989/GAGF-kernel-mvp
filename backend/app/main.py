@@ -511,6 +511,11 @@ def source_kernel_roles():
     return SourceKernelRoleService().get_kernel_role_summary()
 
 
+@app.get("/sources/kernel-roles/{kernel_role}")
+def source_kernel_role_detail(kernel_role: str):
+    return SourceKernelRoleService().get_kernel_role_detail(kernel_role)
+
+
 @app.get("/sources/trust-tiers")
 def source_trust_tiers():
     return SourceTrustTierService().get_trust_tier_summary()

@@ -78,6 +78,31 @@ def test_source_kernel_role_service_gets_sources_for_kernel_role():
     assert "sentinelone" in source_systems
 
 
+def test_source_kernel_role_service_gets_kernel_role_detail():
+    service = SourceKernelRoleService()
+
+    detail = service.get_kernel_role_detail("threat_evidence")
+    source_systems = {source["source_system"] for source in detail["sources"]}
+
+    assert detail["status"] == "ok"
+    assert detail["kernel_role"] == "threat_evidence"
+    assert detail["source_count"] == 2
+    assert "defender" in source_systems
+    assert "sentinelone" in source_systems
+
+
+def test_source_kernel_role_service_returns_failure_for_unknown_kernel_role_detail():
+    service = SourceKernelRoleService()
+
+    detail = service.get_kernel_role_detail("unknown-role")
+
+    assert detail["status"] == "failed"
+    assert detail["error"] == "kernel_role_not_found"
+    assert detail["kernel_role"] == "unknown-role"
+    assert detail["source_count"] == 0
+    assert detail["sources"] == []
+
+
 def test_source_kernel_role_service_returns_empty_list_for_unknown_kernel_role():
     service = SourceKernelRoleService()
 

@@ -38,3 +38,22 @@ class SourceKernelRoleService:
             for source in sources
             if source["kernel_role"] == kernel_role
         ]
+
+    def get_kernel_role_detail(self, kernel_role: str) -> dict:
+        sources = self.get_sources_for_kernel_role(kernel_role)
+
+        if not sources:
+            return {
+                "status": "failed",
+                "error": "kernel_role_not_found",
+                "kernel_role": kernel_role,
+                "source_count": 0,
+                "sources": [],
+            }
+
+        return {
+            "status": "ok",
+            "kernel_role": kernel_role,
+            "source_count": len(sources),
+            "sources": sources,
+        }
