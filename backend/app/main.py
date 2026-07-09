@@ -16,6 +16,7 @@ from backend.app.connectors.sentinelone_connector import SentinelOneConnector
 from backend.app.connectors.servicenow_connector import ServiceNowConnector
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.decision_ledger import DecisionLedger
+from backend.app.gagf.evidence_quality_service import EvidenceQualityService
 from backend.app.gagf.gpl_loader import GPLLoader
 from backend.app.gagf.metric_adapter import MetricAdapter
 from backend.app.gagf.schemas import (
@@ -457,6 +458,11 @@ def create_snapshot(events: List[RawSecurityEvent]):
     )
 
     return snapshot
+
+
+@app.post("/evidence/quality")
+def score_evidence_quality(events: List[RawSecurityEvent]):
+    return EvidenceQualityService().score_events(events)
 
 
 @app.get("/snapshots")
