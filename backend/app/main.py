@@ -26,6 +26,7 @@ from backend.app.gagf.schemas import (
 )
 from backend.app.gagf.snapshot_ledger import SnapshotLedger
 from backend.app.gagf.source_category_service import SourceCategoryService
+from backend.app.gagf.source_coverage_service import SourceCoverageService
 from backend.app.gagf.source_health_service import SourceHealthService
 from backend.app.gagf.source_kernel_role_service import SourceKernelRoleService
 from backend.app.gagf.source_registry import SourceRegistry
@@ -499,6 +500,11 @@ def source_categories():
 @app.get("/sources/categories/{category}")
 def source_category_detail(category: str):
     return SourceCategoryService().get_category_detail(category)
+
+
+@app.get("/sources/coverage")
+def source_coverage():
+    return SourceCoverageService().get_coverage_summary()
 
 
 @app.get("/sources/health")
