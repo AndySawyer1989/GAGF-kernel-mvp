@@ -502,6 +502,11 @@ def source_category_detail(category: str):
     return SourceCategoryService().get_category_detail(category)
 
 
+@app.get("/sources/coverage/gaps")
+def source_coverage_gaps():
+    return SourceCoverageService().get_coverage_gaps()
+
+
 @app.get("/sources/coverage")
 def source_coverage():
     return SourceCoverageService().get_coverage_summary()

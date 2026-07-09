@@ -45,6 +45,16 @@ class SourceCoverageService:
             "coverage_gaps": coverage_gaps,
         }
 
+    def get_coverage_gaps(self) -> dict:
+        coverage_summary = self.get_coverage_summary()
+        gaps = coverage_summary["coverage_gaps"]
+
+        return {
+            "status": "ok",
+            "gap_count": len(gaps),
+            "gaps": gaps,
+        }
+
     def build_health_counts(self, health_records: list[dict]) -> dict:
         counts = {
             "available": 0,

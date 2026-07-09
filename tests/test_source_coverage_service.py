@@ -40,6 +40,14 @@ def test_source_coverage_service_has_no_coverage_gaps_for_complete_registry():
     assert summary["coverage_gaps"] == []
 
 
+def test_source_coverage_service_returns_gap_summary():
+    gap_summary = SourceCoverageService().get_coverage_gaps()
+
+    assert gap_summary["status"] == "ok"
+    assert gap_summary["gap_count"] == 0
+    assert gap_summary["gaps"] == []
+
+
 def test_source_coverage_service_detects_custom_health_counts():
     service = SourceCoverageService()
 
@@ -55,3 +63,54 @@ def test_source_coverage_service_detects_custom_health_counts():
     assert counts["available"] == 2
     assert counts["disabled"] == 1
     assert counts["misconfigured"] == 1
+
+
+def test_source_coverage_service_detects_unhealthy_source_gap():
+    service = SourceCoverageService()
+
+    gaps = service.detect_coverage_gaps(
+        sources=[{"source_system": "broken-source"}],
+        health_summary={
+            "unhealthy_sources": 1,
+        },
+        category_summary={
+            "category_count": 1,
+        },
+        trust_tier_summary={
+            "trust_tier_count": 1,
+        },
+        kernel_role_summary={
+            "kernel_role_count": 1,
+        },
+    )
+
+    gap_types = {gap["gap_type"] for gap in gaps}
+
+    assert "unhealthy_sources_present" in gap_types
+
+
+def test_source_coverage_service_detects_empty_registry_gap():
+    service = SourceCoverageService()
+
+    gaps = service.detect_coverage_gaps(
+        sources=[],
+        health_summary={
+            "unhealthy_sources": 0,
+        },
+        category_summary={
+            "category_count": 0,
+        },
+        trust_tier_summary={
+            "trust_tier_count": 0,
+        },
+        kernel_role_summary={
+            "kernel_role_count": 0,
+        },
+    )
+
+    gap_types = {gap["gap_type"] for gap in gaps}
+
+    assert "source_registry_empty" in gap_types
+    assert "missing_categories" in gap_types
+    assert "missing_trust_tiers" in gap_types
+    assert "missing_kernel_roles" in gap_types
