@@ -30,6 +30,9 @@ from backend.app.gagf.schemas import (
     RawSecurityEvent,
 )
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
+from backend.app.gagf.snapshot_diagnostics_summary_service import (
+    SnapshotDiagnosticsSummaryService,
+)
 from backend.app.gagf.snapshot_ledger import SnapshotLedger
 from backend.app.gagf.source_category_service import SourceCategoryService
 from backend.app.gagf.source_coverage_service import SourceCoverageService
@@ -551,6 +554,11 @@ def list_snapshot_diagnostics():
         "status": "ok",
         "diagnostics": SnapshotDiagnosticsLedger().list_diagnostics(),
     }
+
+
+@app.get("/snapshot-diagnostics/summary")
+def snapshot_diagnostics_summary():
+    return SnapshotDiagnosticsSummaryService().get_summary()
 
 
 @app.get("/snapshot-diagnostics/{snapshot_id}")
