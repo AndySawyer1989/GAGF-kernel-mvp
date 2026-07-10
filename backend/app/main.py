@@ -29,6 +29,7 @@ from backend.app.gagf.schemas import (
     EvidenceConfidence,
     RawSecurityEvent,
 )
+from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_ledger import SnapshotLedger
 from backend.app.gagf.source_category_service import SourceCategoryService
 from backend.app.gagf.source_coverage_service import SourceCoverageService
@@ -54,6 +55,35 @@ app.mount(
 def get_arbiter() -> ArbitrationService:
     gpl = GPLLoader(GPL_POLICY_PATH)
     return ArbitrationService(gpl)
+
+
+def build_snapshot_diagnostics_record(confidence_result: dict) -> dict:
+    return {
+        "confidence_score": confidence_result["confidence_score"],
+        "confidence_band": confidence_result["confidence_band"],
+        "evidence_confidence_factors": confidence_result[
+            "evidence_confidence"
+        ].factors,
+        "diagnostics": confidence_result["diagnostics"],
+    }
+
+
+def save_snapshot_diagnostics(snapshot_id: str, confidence_result: dict) -> dict:
+    diagnostics_record = build_snapshot_diagnostics_record(confidence_result)
+
+    return SnapshotDiagnosticsLedger().save_diagnostics(
+        snapshot_id=snapshot_id,
+        diagnostics=diagnostics_record,
+    )
+
+
+def timestamp_quality_value(event: RawSecurityEvent) -> str:
+    value = event.timestamp_quality
+
+    if hasattr(value, "value"):
+        return str(value.value)
+
+    return str(value)
 
 
 def validate_github_payload(payload: dict):
@@ -335,8 +365,10 @@ def ingest_source(
     adapter_result = MetricAdapter().build_snapshot(events)
     confidence_result = EvidenceConfidenceAdapter().build_confidence(events)
 
+    snapshot_id = f"{snapshot_prefix}-{uuid4()}"
+
     snapshot = AdaptiveStateSnapshot(
-        snapshot_id=f"{snapshot_prefix}-{uuid4()}",
+        snapshot_id=snapshot_id,
         tenant_id="demo",
         work_item_id=work_item_id,
         status="VALID",
@@ -353,6 +385,11 @@ def ingest_source(
     SnapshotLedger().save_snapshot(
         snapshot,
         normalization_applied=adapter_result.normalization_applied,
+    )
+
+    save_snapshot_diagnostics(
+        snapshot_id=snapshot.snapshot_id,
+        confidence_result=confidence_result,
     )
 
     decision = get_arbiter().arbitrate(
@@ -434,14 +471,6 @@ def create_snapshot(events: List[RawSecurityEvent]):
     adapter_result = MetricAdapter().build_snapshot(events)
     confidence_result = EvidenceConfidenceAdapter().build_confidence(events)
 
-    def timestamp_quality_value(event: RawSecurityEvent) -> str:
-        value = event.timestamp_quality
-
-        if hasattr(value, "value"):
-            return str(value.value)
-
-        return str(value)
-
     timestamp_quality_distribution = {
         "SOURCE_OCCURRED_AT": sum(
             1 for event in events if timestamp_quality_value(event) == "SOURCE_OCCURRED_AT"
@@ -460,8 +489,10 @@ def create_snapshot(events: List[RawSecurityEvent]):
         else "VALID"
     )
 
+    snapshot_id = str(uuid4())
+
     snapshot = AdaptiveStateSnapshot(
-        snapshot_id=str(uuid4()),
+        snapshot_id=snapshot_id,
         tenant_id="demo",
         work_item_id="demo",
         status=status,
@@ -474,6 +505,11 @@ def create_snapshot(events: List[RawSecurityEvent]):
     SnapshotLedger().save_snapshot(
         snapshot,
         normalization_applied=adapter_result.normalization_applied,
+    )
+
+    save_snapshot_diagnostics(
+        snapshot_id=snapshot.snapshot_id,
+        confidence_result=confidence_result,
     )
 
     return snapshot
@@ -507,6 +543,32 @@ def build_evidence_confidence(events: List[RawSecurityEvent]):
 @app.get("/snapshots")
 def list_snapshots():
     return SnapshotLedger().list_snapshots()
+
+
+@app.get("/snapshot-diagnostics")
+def list_snapshot_diagnostics():
+    return {
+        "status": "ok",
+        "diagnostics": SnapshotDiagnosticsLedger().list_diagnostics(),
+    }
+
+
+@app.get("/snapshot-diagnostics/{snapshot_id}")
+def get_snapshot_diagnostics(snapshot_id: str):
+    diagnostics = SnapshotDiagnosticsLedger().get_diagnostics(snapshot_id)
+
+    if diagnostics is None:
+        return {
+            "status": "failed",
+            "error": "snapshot_diagnostics_not_found",
+            "snapshot_id": snapshot_id,
+        }
+
+    return {
+        "status": "ok",
+        "snapshot_id": snapshot_id,
+        "diagnostics": diagnostics,
+    }
 
 
 @app.get("/decisions")
