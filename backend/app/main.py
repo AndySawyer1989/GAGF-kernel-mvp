@@ -33,6 +33,7 @@ from backend.app.gagf.schemas import (
     EvidenceConfidence,
     RawSecurityEvent,
 )
+from backend.app.gagf.signal_correlation_service import SignalCorrelationService
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_diagnostics_risk_service import (
     SnapshotDiagnosticsRiskService,
@@ -558,6 +559,11 @@ def classify_governance_signals(events: List[RawSecurityEvent]):
 @app.post("/governance/signals/summary")
 def summarize_governance_signals(events: List[RawSecurityEvent]):
     return GovernanceSignalSummaryService().summarize_events(events)
+
+
+@app.post("/governance/signals/correlations")
+def correlate_governance_signals(events: List[RawSecurityEvent]):
+    return SignalCorrelationService().correlate_events(events)
 
 
 @app.get("/snapshots")
