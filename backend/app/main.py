@@ -30,6 +30,9 @@ from backend.app.gagf.schemas import (
     RawSecurityEvent,
 )
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
+from backend.app.gagf.snapshot_diagnostics_risk_service import (
+    SnapshotDiagnosticsRiskService,
+)
 from backend.app.gagf.snapshot_diagnostics_summary_service import (
     SnapshotDiagnosticsSummaryService,
 )
@@ -559,6 +562,11 @@ def list_snapshot_diagnostics():
 @app.get("/snapshot-diagnostics/summary")
 def snapshot_diagnostics_summary():
     return SnapshotDiagnosticsSummaryService().get_summary()
+
+
+@app.get("/snapshot-diagnostics/risk")
+def snapshot_diagnostics_risk():
+    return SnapshotDiagnosticsRiskService().get_risk_summary()
 
 
 @app.get("/snapshot-diagnostics/{snapshot_id}")
