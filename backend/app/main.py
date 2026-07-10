@@ -199,13 +199,20 @@ def validate_defender_payload(payload: dict):
             errors.append(f"event_{index}_must_be_an_object")
             continue
 
-        if not event.get("id") and not event.get("alertId") and not event.get("incidentId"):
+        if (
+            not event.get("id")
+            and not event.get("alertId")
+            and not event.get("incidentId")
+        ):
             errors.append(f"event_{index}_missing_id")
 
         if not event.get("title"):
             errors.append(f"event_{index}_missing_title")
 
-        if not event.get("createdDateTime") and not event.get("lastUpdateDateTime"):
+        if (
+            not event.get("createdDateTime")
+            and not event.get("lastUpdateDateTime")
+        ):
             errors.append(f"event_{index}_missing_timestamp")
 
     return errors
@@ -452,9 +459,9 @@ def health():
 @app.get("/version")
 def version():
     return {
-        "version": "0.5.0",
-        "release": "evidence-intelligence",
-        "sprint": "3.4",
+        "version": "0.6.0",
+        "release": "governance-diagnostic-chain",
+        "sprint": "3.5",
         "status": "complete",
     }
 
@@ -496,13 +503,19 @@ def create_snapshot(events: List[RawSecurityEvent]):
 
     timestamp_quality_distribution = {
         "SOURCE_OCCURRED_AT": sum(
-            1 for event in events if timestamp_quality_value(event) == "SOURCE_OCCURRED_AT"
+            1
+            for event in events
+            if timestamp_quality_value(event) == "SOURCE_OCCURRED_AT"
         ),
         "BACKFILLED_FROM_CREATED_AT": sum(
-            1 for event in events if timestamp_quality_value(event) == "BACKFILLED_FROM_CREATED_AT"
+            1
+            for event in events
+            if timestamp_quality_value(event) == "BACKFILLED_FROM_CREATED_AT"
         ),
         "MISSING_TIMESTAMP": sum(
-            1 for event in events if timestamp_quality_value(event) == "MISSING_TIMESTAMP"
+            1
+            for event in events
+            if timestamp_quality_value(event) == "MISSING_TIMESTAMP"
         ),
     }
 
