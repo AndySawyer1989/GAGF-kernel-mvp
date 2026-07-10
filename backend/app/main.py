@@ -32,6 +32,9 @@ from backend.app.gagf.governance_signal_summary_service import (
     GovernanceSignalSummaryService,
 )
 from backend.app.gagf.gpl_loader import GPLLoader
+from backend.app.gagf.intervention_candidate_service import (
+    InterventionCandidateService,
+)
 from backend.app.gagf.metric_adapter import MetricAdapter
 from backend.app.gagf.schemas import (
     AdaptiveState,
@@ -580,6 +583,11 @@ def detect_friction_signals(events: List[RawSecurityEvent]):
 @app.post("/governance/debt/indicators")
 def assess_governance_debt_indicators(events: List[RawSecurityEvent]):
     return GovernanceDebtIndicatorService().assess_events(events)
+
+
+@app.post("/governance/interventions/candidates")
+def recommend_intervention_candidates(events: List[RawSecurityEvent]):
+    return InterventionCandidateService().recommend_events(events)
 
 
 @app.get("/snapshots")
