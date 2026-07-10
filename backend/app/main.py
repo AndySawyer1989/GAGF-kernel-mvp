@@ -24,6 +24,9 @@ from backend.app.gagf.evidence_quality_service import EvidenceQualityService
 from backend.app.gagf.friction_signal_detection_service import (
     FrictionSignalDetectionService,
 )
+from backend.app.gagf.governance_debt_indicator_service import (
+    GovernanceDebtIndicatorService,
+)
 from backend.app.gagf.governance_signal_service import GovernanceSignalService
 from backend.app.gagf.governance_signal_summary_service import (
     GovernanceSignalSummaryService,
@@ -572,6 +575,11 @@ def correlate_governance_signals(events: List[RawSecurityEvent]):
 @app.post("/governance/friction/signals")
 def detect_friction_signals(events: List[RawSecurityEvent]):
     return FrictionSignalDetectionService().detect_events(events)
+
+
+@app.post("/governance/debt/indicators")
+def assess_governance_debt_indicators(events: List[RawSecurityEvent]):
+    return GovernanceDebtIndicatorService().assess_events(events)
 
 
 @app.get("/snapshots")
