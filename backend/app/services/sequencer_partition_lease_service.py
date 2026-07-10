@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Sequence
+from uuid import UUID
 
 from backend.app.contracts.constitutional_sequencer import (
     CanonicalEvidenceCandidate,
@@ -16,51 +17,35 @@ from backend.app.services.constitutional_sequencer_service import (
 
 
 class PartitionLeaseError(ValueError):
-    """
-    Base exception for partition lease and epoch-fencing failures.
-    """
+    """Base exception for partition lease and epoch-fencing failures."""
 
 
 class PartitionLeaseConflictError(PartitionLeaseError):
-    """
-    Raised when an active partition lease is already owned.
-    """
+    """Raised when an active partition lease is already owned."""
 
 
 class PartitionLeaseNotFoundError(PartitionLeaseError):
-    """
-    Raised when a requested partition lease does not exist.
-    """
+    """Raised when a requested partition lease does not exist."""
 
 
 class PartitionLeaseExpiredError(PartitionLeaseError):
-    """
-    Raised when an operation references an expired lease.
-    """
+    """Raised when an operation references an expired lease."""
 
 
 class PartitionLeaseOwnerMismatchError(PartitionLeaseError):
-    """
-    Raised when the caller is not the active partition owner.
-    """
+    """Raised when the caller is not the active partition owner."""
 
 
 class StaleSequencerEpochError(PartitionLeaseError):
-    """
-    Raised when a sequencer attempts to act under an obsolete epoch.
-    """
+    """Raised when a sequencer attempts to act under an obsolete epoch."""
 
 
 class PartitionLeaseReleasedError(PartitionLeaseError):
-    """
-    Raised when a released lease is presented as active authority.
-    """
+    """Raised when a released lease is presented as active authority."""
 
 
 class InvalidLeaseDurationError(PartitionLeaseError):
-    """
-    Raised when a lease duration is invalid.
-    """
+    """Raised when a lease duration is invalid."""
 
 
 class PartitionLeaseStatus(str, Enum):
@@ -135,9 +120,7 @@ class SequencerPartitionLeaseService:
     """
     Enforces exclusive, epoch-fenced ownership of sequencer partitions.
 
-    Constitutional rule:
-
-    A sequencer may issue authoritative sequence receipts only when:
+    A sequencer may issue sequence receipts only when:
 
     - it owns the active partition lease;
     - its epoch equals the partition's current epoch;
@@ -161,18 +144,14 @@ class SequencerPartitionLeaseService:
         acquired_at: datetime,
         lease_duration_seconds: int,
     ) -> SequencerPartitionLease:
-        """
-        Acquire exclusive ownership of a partition.
-
-        Every successful acquisition receives a new monotonically increasing
-        epoch, including reacquisition by the same sequencer.
-        """
         normalized_now = self._normalize_datetime(
             acquired_at,
             "acquired_at",
         )
+
         self._validate_partition_key(partition_key)
         self._validate_identity(owner_identity)
+
         duration = self._validate_duration(
             lease_duration_seconds
         )
@@ -214,15 +193,11 @@ class SequencerPartitionLeaseService:
         renewed_at: datetime,
         lease_duration_seconds: int,
     ) -> SequencerPartitionLease:
-        """
-        Renew the current lease without changing its epoch.
-
-        Renewal proves continuity of the same ownership term.
-        """
         normalized_now = self._normalize_datetime(
             renewed_at,
             "renewed_at",
         )
+
         duration = self._validate_duration(
             lease_duration_seconds
         )
@@ -252,15 +227,11 @@ class SequencerPartitionLeaseService:
         epoch: int,
         released_at: datetime,
     ) -> SequencerPartitionLease:
-        """
-        Voluntarily release current partition authority.
-
-        The released epoch can never become active again.
-        """
         normalized_now = self._normalize_datetime(
             released_at,
             "released_at",
         )
+
         current = self._require_current_lease(partition_key)
 
         self._assert_lease_authority(
@@ -288,19 +259,15 @@ class SequencerPartitionLeaseService:
         transferred_at: datetime,
         lease_duration_seconds: int,
     ) -> SequencerPartitionLease:
-        """
-        Transfer partition authority to another sequencer.
-
-        Transfer always creates a new epoch, fencing the previous owner
-        immediately.
-        """
         normalized_now = self._normalize_datetime(
             transferred_at,
             "transferred_at",
         )
+
         duration = self._validate_duration(
             lease_duration_seconds
         )
+
         self._validate_identity(new_owner_identity)
 
         if new_owner_identity == current_owner_identity:
@@ -338,12 +305,14 @@ class SequencerPartitionLeaseService:
         partition_key: str,
         at: datetime,
     ) -> SequencerPartitionLease:
-        """
-        Return the lease with expiration reflected at the requested time.
-        """
         normalized_at = self._normalize_datetime(at, "at")
+
         lease = self._require_current_lease(partition_key)
-        effective = self._effective_lease(lease, normalized_at)
+
+        effective = self._effective_lease(
+            lease,
+            normalized_at,
+        )
 
         if effective != lease:
             self.repository.save(effective)
@@ -358,10 +327,8 @@ class SequencerPartitionLeaseService:
         epoch: int,
         at: datetime,
     ) -> SequencerPartitionLease:
-        """
-        Verify that a sequencer currently holds valid partition authority.
-        """
         normalized_at = self._normalize_datetime(at, "at")
+
         current = self._require_current_lease(partition_key)
 
         self._assert_lease_authority(
@@ -384,10 +351,14 @@ class SequencerPartitionLeaseService:
         ordering_policy_version: str = "OPV-1.0",
         starting_sequence: int = 1,
         previous_receipt_hash: str = GENESIS_RECEIPT_HASH,
+        batch_id: UUID | None = None,
         issued_at: datetime | None = None,
     ) -> SequencingOutcome:
         """
         Issue sequence receipts only after validating partition authority.
+
+        batch_id may be supplied so deterministic tests, replays, and upstream
+        batch coordinators can bind sequencing to a stable batch identity.
         """
         normalized_authorized_at = self._normalize_datetime(
             authorized_at,
@@ -402,7 +373,10 @@ class SequencerPartitionLeaseService:
         )
 
         resolved_issued_at = (
-            self._normalize_datetime(issued_at, "issued_at")
+            self._normalize_datetime(
+                issued_at,
+                "issued_at",
+            )
             if issued_at is not None
             else normalized_authorized_at
         )
@@ -415,6 +389,7 @@ class SequencerPartitionLeaseService:
             ordering_policy_version=ordering_policy_version,
             starting_sequence=starting_sequence,
             previous_receipt_hash=previous_receipt_hash,
+            batch_id=batch_id,
             issued_at=resolved_issued_at,
         )
 
@@ -429,7 +404,10 @@ class SequencerPartitionLeaseService:
         self._validate_identity(owner_identity)
         self._validate_epoch(epoch)
 
-        effective = self._effective_lease(lease, at)
+        effective = self._effective_lease(
+            lease,
+            at,
+        )
 
         if effective.status == PartitionLeaseStatus.RELEASED:
             raise PartitionLeaseReleasedError(
