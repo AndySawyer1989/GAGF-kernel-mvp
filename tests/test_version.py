@@ -6,14 +6,14 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_version_endpoint_reports_sprint_3_3_complete():
+def test_version_endpoint_reports_sprint_3_4_complete():
     response = client.get("/version")
 
     assert response.status_code == 200
 
-    data = response.json()
-
-    assert data["version"] == "0.4.0"
-    assert data["release"] == "evidence-expansion"
-    assert data["sprint"] == "3.3"
-    assert data["status"] == "complete"
+    assert response.json() == {
+        "version": "0.5.0",
+        "release": "evidence-intelligence",
+        "sprint": "3.4",
+        "status": "complete",
+    }
