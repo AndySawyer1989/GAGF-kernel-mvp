@@ -22,6 +22,9 @@ from backend.app.gagf.evidence_conflict_service import EvidenceConflictService
 from backend.app.gagf.evidence_diagnostics_service import EvidenceDiagnosticsService
 from backend.app.gagf.evidence_quality_service import EvidenceQualityService
 from backend.app.gagf.governance_signal_service import GovernanceSignalService
+from backend.app.gagf.governance_signal_summary_service import (
+    GovernanceSignalSummaryService,
+)
 from backend.app.gagf.gpl_loader import GPLLoader
 from backend.app.gagf.metric_adapter import MetricAdapter
 from backend.app.gagf.schemas import (
@@ -550,6 +553,11 @@ def build_evidence_confidence(events: List[RawSecurityEvent]):
 @app.post("/governance/signals")
 def classify_governance_signals(events: List[RawSecurityEvent]):
     return GovernanceSignalService().classify_events(events)
+
+
+@app.post("/governance/signals/summary")
+def summarize_governance_signals(events: List[RawSecurityEvent]):
+    return GovernanceSignalSummaryService().summarize_events(events)
 
 
 @app.get("/snapshots")
