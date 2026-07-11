@@ -44,6 +44,9 @@ from backend.app.gagf.product_packaging_recommendation_service import (
 from backend.app.gagf.product_packaging_dashboard_service import (
     ProductPackagingDashboardService,
 )
+from backend.app.gagf.product_packaging_checkpoint_service import (
+    ProductPackagingCheckpointService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -764,6 +767,46 @@ def product_packaging_dashboard(payload: dict):
     )
 
 
+@app.post("/products/packaging/checkpoint")
+def product_packaging_checkpoint(payload: dict):
+    packaging_dashboard = payload.get("packaging_dashboard")
+
+    if packaging_dashboard is None:
+        packaging_recommendation = payload.get("packaging_recommendation")
+
+        if packaging_recommendation is None:
+            portfolio_dashboard = payload.get("portfolio_dashboard")
+
+            if portfolio_dashboard is None:
+                product_profiles = payload.get("product_profiles", [])
+                portfolio_result = (
+                    ProductSecurityPortfolioService().classify_portfolio(
+                        product_profiles
+                    )
+                )
+                portfolio_dashboard = (
+                    ProductSecurityPortfolioDashboardService().build_summary(
+                        portfolio_result
+                    )
+                )
+
+            packaging_recommendation = (
+                ProductPackagingRecommendationService().recommend(
+                    portfolio_dashboard
+                )
+            )
+
+        packaging_dashboard = (
+            ProductPackagingDashboardService().build_summary(
+                packaging_recommendation
+            )
+        )
+
+    return ProductPackagingCheckpointService().build_checkpoint(
+        packaging_dashboard
+    )
+
+
 @app.post("/products/zta-controls")
 def map_product_zta_controls(product_security_result: dict):
     return ZTAControlMappingService().map_product_tier(
@@ -1004,6 +1047,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
