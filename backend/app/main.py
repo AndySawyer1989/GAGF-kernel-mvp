@@ -1,4 +1,4 @@
-import shutil
+﻿import shutil
 from pathlib import Path
 from typing import List
 from uuid import uuid4
@@ -16,6 +16,9 @@ from backend.app.connectors.sentinelone_connector import SentinelOneConnector
 from backend.app.connectors.servicenow_connector import ServiceNowConnector
 from backend.app.gagf.architectural_diversity_diagnostic_service import (
     ArchitecturalDiversityDiagnosticService,
+)
+from backend.app.gagf.architectural_diversity_dashboard_service import (
+    ArchitecturalDiversityDashboardService,
 )
 from backend.app.gagf.architectural_diversity_platform_service import (
     ArchitecturalDiversityPlatformService,
@@ -627,6 +630,11 @@ def diagnose_architectural_diversity(components: List[dict]):
 @app.get("/governance/architecture/platform")
 def diagnose_platform_architecture():
     return ArchitecturalDiversityPlatformService().diagnose_platform()
+
+
+@app.get("/governance/architecture/dashboard")
+def architectural_diversity_dashboard():
+    return ArchitecturalDiversityDashboardService().get_summary()
 
 
 @app.get("/snapshots")
