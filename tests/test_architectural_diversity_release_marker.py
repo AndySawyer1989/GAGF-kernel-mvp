@@ -1,0 +1,42 @@
+from fastapi.testclient import TestClient
+
+from backend.app.main import app
+
+
+client = TestClient(app)
+
+
+def test_architectural_diversity_release_marker_version_contract():
+    response = client.get("/version")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "version": "0.7.0",
+        "release": "architectural-diversity-diagnostics",
+        "sprint": "3.6",
+        "status": "complete",
+    }
+
+
+def test_architectural_diversity_release_marker_preserves_manual_architecture_route():
+    actual_routes = {route.path for route in app.routes}
+
+    assert "/governance/architecture/diversity" in actual_routes
+
+
+def test_architectural_diversity_release_marker_preserves_platform_architecture_route():
+    actual_routes = {route.path for route in app.routes}
+
+    assert "/governance/architecture/platform" in actual_routes
+
+
+def test_architectural_diversity_release_marker_preserves_diagnostic_chain_route():
+    actual_routes = {route.path for route in app.routes}
+
+    assert "/governance/diagnostics/chain" in actual_routes
+
+
+def test_architectural_diversity_release_marker_preserves_version_route():
+    actual_routes = {route.path for route in app.routes}
+
+    assert "/version" in actual_routes

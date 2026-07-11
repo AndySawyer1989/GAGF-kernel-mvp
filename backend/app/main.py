@@ -465,9 +465,9 @@ def health():
 @app.get("/version")
 def version():
     return {
-        "version": "0.6.0",
-        "release": "governance-diagnostic-chain",
-        "sprint": "3.5",
+        "version": "0.7.0",
+        "release": "architectural-diversity-diagnostics",
+        "sprint": "3.6",
         "status": "complete",
     }
 

@@ -200,8 +200,8 @@ def test_architectural_diversity_endpoint_preserves_current_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "0.6.0",
-        "release": "governance-diagnostic-chain",
-        "sprint": "3.5",
+        "version": "0.7.0",
+        "release": "architectural-diversity-diagnostics",
+        "sprint": "3.6",
         "status": "complete",
     }
