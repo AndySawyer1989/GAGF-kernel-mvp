@@ -32,6 +32,9 @@ from backend.app.gagf.architecture_drift_dashboard_service import (
 from backend.app.gagf.product_security_tier_service import (
     ProductSecurityTierService,
 )
+from backend.app.gagf.product_security_portfolio_service import (
+    ProductSecurityPortfolioService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -679,6 +682,13 @@ def classify_product_security_tier(product_profile: dict):
     return ProductSecurityTierService().classify_product(product_profile)
 
 
+@app.post("/products/security-portfolio")
+def classify_product_security_portfolio(product_profiles: List[dict]):
+    return ProductSecurityPortfolioService().classify_portfolio(
+        product_profiles
+    )
+
+
 @app.post("/products/zta-controls")
 def map_product_zta_controls(product_security_result: dict):
     return ZTAControlMappingService().map_product_tier(
@@ -919,6 +929,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
