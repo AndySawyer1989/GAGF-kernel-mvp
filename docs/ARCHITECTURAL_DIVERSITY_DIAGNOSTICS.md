@@ -28,10 +28,10 @@ Is the platform trending toward adaptive architecture or mononal risk?
 
 ADI measures how diverse the architecture is across four dimensions:
 
-- component_type_diversity
-- subsystem_diversity
-- authority_zone_diversity
-- redundancy_diversity
+component_type_diversity
+subsystem_diversity
+authority_zone_diversity
+redundancy_diversity
 
 Current formula:
 
@@ -79,14 +79,14 @@ Lower mononal risk means greater architectural diversity.
 
 Architectural Diversity Diagnostics expects component records with the following fields:
 
-- component_id
-- component_type
-- subsystem
-- authority_zone
-- redundancy_group
-- dependencies
-- interfaces
-- criticality
+component_id
+component_type
+subsystem
+authority_zone
+redundancy_group
+dependencies
+interfaces
+criticality
 
 Example:
 
@@ -107,31 +107,31 @@ The diagnostic service normalizes several aliases.
 
 Component identity:
 
-- component_id
-- id
-- name
+component_id
+id
+name
 
 Component type:
 
-- component_type
-- type
+component_type
+type
 
 Subsystem:
 
-- subsystem
-- domain
+subsystem
+domain
 
 Authority zone:
 
-- authority_zone
-- decision_authority
-- owner_zone
+authority_zone
+decision_authority
+owner_zone
 
 Redundancy group:
 
-- redundancy_group
-- partition
-- component_id fallback
+redundancy_group
+partition
+component_id fallback
 
 This allows manual architecture inputs and platform-generated telemetry to share the same diagnostic path.
 
@@ -139,11 +139,11 @@ This allows manual architecture inputs and platform-generated telemetry to share
 
 The diagnostic service may return:
 
-- none
-- adaptive_diverse_architecture
-- mixed_resilience_architecture
-- concentrated_architecture
-- mononal_architecture_risk
+none
+adaptive_diverse_architecture
+mixed_resilience_architecture
+concentrated_architecture
+mononal_architecture_risk
 
 Interpretation:
 
@@ -161,11 +161,11 @@ mononal_architecture_risk means architecture is collapsing toward a single domin
 
 The diagnostic service may return:
 
-- none
-- low
-- moderate
-- high
-- critical
+none
+low
+moderate
+high
+critical
 
 Current logic:
 
@@ -179,12 +179,12 @@ greater than or equal to 0.75 means critical
 
 The platform diagnostic service converts architecture posture and concentration risk into a platform-level status:
 
-- platform_architecture_resilient
-- platform_architecture_balanced
-- platform_architecture_concentrated
-- platform_architecture_mononal_risk
-- platform_architecture_review
-- none
+platform_architecture_resilient
+platform_architecture_balanced
+platform_architecture_concentrated
+platform_architecture_mononal_risk
+platform_architecture_review
+none
 
 Priority rule:
 
@@ -226,20 +226,20 @@ SourceRegistry
 
 Platform kernel components currently include:
 
-- gagf-kernel
-- snapshot-ledger
-- decision-ledger
-- governance-diagnostic-chain
+gagf-kernel
+snapshot-ledger
+decision-ledger
+governance-diagnostic-chain
 
 Source systems currently mapped include:
 
-- github
-- jira
-- servicenow
-- okta
-- entra
-- defender
-- sentinelone
+github
+jira
+servicenow
+okta
+entra
+defender
+sentinelone
 
 ### ArchitecturalDiversityPlatformService
 
@@ -254,6 +254,23 @@ ArchitecturalDiversityTelemetryAdapter
 → platform architecture diagnosis
 
 This service produces platform-level ADI, CRR, mononal risk, component counts, diversity breakdowns, and component diagnostics.
+
+### ArchitecturalDiversityDashboardService
+
+File:
+
+backend/app/gagf/architectural_diversity_dashboard_service.py
+
+Purpose:
+
+ArchitecturalDiversityPlatformService
+→ dashboard-ready scorecards
+→ component summary
+→ risk summary
+→ operator message
+→ recommended action
+
+This service converts platform diagnostics into an operator-facing dashboard summary.
 
 ## Endpoints
 
@@ -295,6 +312,34 @@ SourceRegistry
 + ArchitecturalDiversityTelemetryAdapter
 + ArchitecturalDiversityDiagnosticService
 
+### Architecture Dashboard Endpoint
+
+GET /governance/architecture/dashboard
+
+Purpose:
+
+Builds a dashboard-ready summary from platform architecture diagnostics.
+
+This endpoint uses:
+
+ArchitecturalDiversityDashboardService
++ ArchitecturalDiversityPlatformService
++ ArchitecturalDiversityTelemetryAdapter
++ ArchitecturalDiversityDiagnosticService
+
+It returns:
+
+platform_architecture_status
+architecture_posture
+concentration_risk
+operator_message
+recommended_action
+scorecards
+component_summary
+risk_summary
+
+The dashboard endpoint is read-only. It does not change architecture, modify evidence, or override the deterministic GAGF Kernel.
+
 ## Integration Contract
 
 The platform endpoint must remain round-trip compatible with the manual endpoint.
@@ -308,24 +353,73 @@ GET /governance/architecture/platform
 
 This guarantees that platform-generated architecture telemetry and manual component input use the same deterministic diagnostic logic.
 
+## Dashboard Contract
+
+The dashboard endpoint must align with the platform endpoint.
+
+The following values must match between platform diagnostics and dashboard summary:
+
+platform_architecture_status
+architecture_posture
+concentration_risk
+component_count
+kernel_component_count
+source_component_count
+
+The dashboard endpoint may summarize and repackage platform diagnostics, but it must not alter the underlying ADI, CRR, mononal risk, architecture posture, or concentration-risk logic.
+
 ## Product Meaning
 
 Architectural Diversity Diagnostics gives FIP/GAGF an architecture-level view of governance resilience.
 
 It can identify whether the platform or a customer system is:
 
-- diverse and adaptive
-- balanced but concentrated
-- over-concentrated
-- mononal and brittle
+diverse and adaptive
+balanced but concentrated
+over-concentrated
+mononal and brittle
 
 This supports the larger Governance Alpha Engine by preparing later stages:
 
-- Adaptive Capacity
-- Resilience
-- Friction Dividend
-- Governance Alpha
-- Governance Learning
+Adaptive Capacity
+Resilience
+Friction Dividend
+Governance Alpha
+Governance Learning
+
+## Test Contract Keywords
+
+These exact terms are intentionally preserved for documentation contract tests.
+
+mononal_risk_score = 1.0 - ADI
+
+component_id
+component_type
+subsystem
+authority_zone
+redundancy_group
+dependencies
+interfaces
+criticality
+
+adaptive_diverse_architecture
+mixed_resilience_architecture
+concentrated_architecture
+mononal_architecture_risk
+
+platform_architecture_resilient
+platform_architecture_balanced
+platform_architecture_concentrated
+platform_architecture_mononal_risk
+
+POST /governance/architecture/diversity
+GET /governance/architecture/platform
+GET /governance/architecture/dashboard
+
+ArchitecturalDiversityDiagnosticService
+ArchitecturalDiversityTelemetryAdapter
+ArchitecturalDiversityPlatformService
+ArchitecturalDiversityDashboardService
 
 ## Constitutional Boundary
 
