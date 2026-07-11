@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -15,9 +15,9 @@ def test_architectural_diversity_sprint_closeout_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "0.7.0",
-        "release": "architectural-diversity-diagnostics",
-        "sprint": "3.6",
+        "version": "0.8.0",
+        "release": "product-security-portfolio",
+        "sprint": "3.7",
         "status": "complete",
     }
 
@@ -165,3 +165,4 @@ def test_architectural_diversity_sprint_closeout_documentation_mentions_release_
     assert "POST /governance/architecture/diversity" in content
     assert "GET /governance/architecture/platform" in content
     assert "GET /governance/architecture/dashboard" in content
+

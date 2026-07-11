@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
@@ -148,8 +148,9 @@ def test_zta_control_mapping_endpoint_preserves_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "0.7.0",
-        "release": "architectural-diversity-diagnostics",
-        "sprint": "3.6",
+        "version": "0.8.0",
+        "release": "product-security-portfolio",
+        "sprint": "3.7",
         "status": "complete",
     }
+

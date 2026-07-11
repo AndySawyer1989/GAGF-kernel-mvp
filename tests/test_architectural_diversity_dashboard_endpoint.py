@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.gagf.architectural_diversity_dashboard_service import (
     ArchitecturalDiversityDashboardService,
@@ -12,7 +12,7 @@ client = TestClient(app)
 def fake_dashboard_summary():
     return {
         "status": "ok",
-        "summary_type": "architectural_diversity_dashboard",
+        "summary_type": "product_security_portfolio_dashboard",
         "platform_architecture_status": "platform_architecture_balanced",
         "architecture_posture": "mixed_resilience_architecture",
         "concentration_risk": "moderate",
@@ -22,8 +22,8 @@ def fake_dashboard_summary():
         "recommended_action": "monitor_architecture_concentration",
         "scorecards": [
             {
-                "label": "Architectural Diversity Index",
-                "metric": "architectural_diversity_index",
+                "label": "product security portfolio Index",
+                "metric": "product_security_portfolio_index",
                 "value": 0.5682,
                 "interpretation": "moderate_diversity",
             },
@@ -77,7 +77,7 @@ def fake_dashboard_summary():
     }
 
 
-def test_architectural_diversity_dashboard_endpoint_exists(monkeypatch):
+def test_product_security_portfolio_dashboard_endpoint_exists(monkeypatch):
     monkeypatch.setattr(
         ArchitecturalDiversityDashboardService,
         "get_summary",
@@ -90,7 +90,7 @@ def test_architectural_diversity_dashboard_endpoint_exists(monkeypatch):
     assert response.json()["status"] == "ok"
 
 
-def test_architectural_diversity_dashboard_endpoint_returns_summary_header(
+def test_product_security_portfolio_dashboard_endpoint_returns_summary_header(
     monkeypatch,
 ):
     monkeypatch.setattr(
@@ -101,7 +101,7 @@ def test_architectural_diversity_dashboard_endpoint_returns_summary_header(
 
     payload = client.get("/governance/architecture/dashboard").json()
 
-    assert payload["summary_type"] == "architectural_diversity_dashboard"
+    assert payload["summary_type"] == "product_security_portfolio_dashboard"
     assert payload["platform_architecture_status"] == (
         "platform_architecture_balanced"
     )
@@ -109,7 +109,7 @@ def test_architectural_diversity_dashboard_endpoint_returns_summary_header(
     assert payload["concentration_risk"] == "moderate"
 
 
-def test_architectural_diversity_dashboard_endpoint_returns_operator_guidance(
+def test_product_security_portfolio_dashboard_endpoint_returns_operator_guidance(
     monkeypatch,
 ):
     monkeypatch.setattr(
@@ -128,7 +128,7 @@ def test_architectural_diversity_dashboard_endpoint_returns_operator_guidance(
     )
 
 
-def test_architectural_diversity_dashboard_endpoint_returns_scorecards(
+def test_product_security_portfolio_dashboard_endpoint_returns_scorecards(
     monkeypatch,
 ):
     monkeypatch.setattr(
@@ -147,13 +147,13 @@ def test_architectural_diversity_dashboard_endpoint_returns_scorecards(
     }
 
     assert metrics == {
-        "architectural_diversity_index",
+        "product_security_portfolio_index",
         "complexity_resilience_ratio",
         "mononal_risk_score",
     }
 
 
-def test_architectural_diversity_dashboard_endpoint_returns_component_and_risk_summary(
+def test_product_security_portfolio_dashboard_endpoint_returns_component_and_risk_summary(
     monkeypatch,
 ):
     monkeypatch.setattr(
@@ -177,13 +177,14 @@ def test_architectural_diversity_dashboard_endpoint_returns_component_and_risk_s
     assert payload["risk_summary"]["mononal_risk_score"] == 0.4318
 
 
-def test_architectural_diversity_dashboard_endpoint_preserves_release_marker():
+def test_product_security_portfolio_dashboard_endpoint_preserves_release_marker():
     response = client.get("/version")
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "0.7.0",
-        "release": "architectural-diversity-diagnostics",
-        "sprint": "3.6",
+        "version": "0.8.0",
+        "release": "product-security-portfolio",
+        "sprint": "3.7",
         "status": "complete",
     }
+
