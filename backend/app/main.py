@@ -50,6 +50,9 @@ from backend.app.gagf.product_packaging_checkpoint_service import (
 from backend.app.gagf.assessment_factory_lite_demo_profile_service import (
     AssessmentFactoryLiteDemoProfileService,
 )
+from backend.app.gagf.assessment_factory_lite_dataset_contract_service import (
+    AssessmentFactoryLiteDatasetContractService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -810,6 +813,17 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.get("/products/assessment-factory-lite/dataset-contract")
+def assessment_factory_lite_dataset_contract():
+    return AssessmentFactoryLiteDatasetContractService().get_contract()
+
+
+@app.post("/products/assessment-factory-lite/dataset-contract/validate")
+def validate_assessment_factory_lite_dataset(payload: dict):
+    rows = payload.get("rows", [])
+    return AssessmentFactoryLiteDatasetContractService().validate_rows(rows)
+
+
 @app.post("/products/assessment-factory-lite/demo-profile")
 def assessment_factory_lite_demo_profile(payload: dict):
     checkpoint = payload.get("checkpoint")
@@ -1097,6 +1111,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
