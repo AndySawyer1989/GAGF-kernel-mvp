@@ -38,6 +38,9 @@ from backend.app.gagf.product_security_portfolio_service import (
 from backend.app.gagf.product_security_portfolio_dashboard_service import (
     ProductSecurityPortfolioDashboardService,
 )
+from backend.app.gagf.product_packaging_recommendation_service import (
+    ProductPackagingRecommendationService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -707,6 +710,26 @@ def product_security_portfolio_dashboard(payload: dict):
     )
 
 
+@app.post("/products/packaging/recommendation")
+def product_packaging_recommendation(payload: dict):
+    portfolio_dashboard = payload.get("portfolio_dashboard")
+
+    if portfolio_dashboard is None:
+        product_profiles = payload.get("product_profiles", [])
+        portfolio_result = ProductSecurityPortfolioService().classify_portfolio(
+            product_profiles
+        )
+        portfolio_dashboard = (
+            ProductSecurityPortfolioDashboardService().build_summary(
+                portfolio_result
+            )
+        )
+
+    return ProductPackagingRecommendationService().recommend(
+        portfolio_dashboard
+    )
+
+
 @app.post("/products/zta-controls")
 def map_product_zta_controls(product_security_result: dict):
     return ZTAControlMappingService().map_product_tier(
@@ -947,6 +970,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
