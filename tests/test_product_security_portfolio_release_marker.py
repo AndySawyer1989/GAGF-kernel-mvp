@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
@@ -6,14 +6,14 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_product_security_portfolio_release_marker():
+def test_product_packaging_release_marker():
     response = client.get("/version")
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "0.8.0",
-        "release": "product-security-portfolio",
-        "sprint": "3.7",
+        "version": "0.9.0",
+        "release": "product-packaging",
+        "sprint": "3.8",
         "status": "complete",
     }
 

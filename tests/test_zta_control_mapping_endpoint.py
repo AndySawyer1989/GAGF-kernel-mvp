@@ -148,9 +148,10 @@ def test_zta_control_mapping_endpoint_preserves_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "0.8.0",
-        "release": "product-security-portfolio",
-        "sprint": "3.7",
+        "version": "0.9.0",
+        "release": "product-packaging",
+        "sprint": "3.8",
         "status": "complete",
     }
+
 

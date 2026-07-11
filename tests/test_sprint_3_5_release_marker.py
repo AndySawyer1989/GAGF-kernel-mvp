@@ -6,14 +6,14 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_current_release_marker_reports_product_security_portfolio_complete():
+def test_current_release_marker_reports_product_packaging_complete():
     response = client.get("/version")
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "0.8.0",
-        "release": "product-security-portfolio",
-        "sprint": "3.7",
+        "version": "0.9.0",
+        "release": "product-packaging",
+        "sprint": "3.8",
         "status": "complete",
     }
 
@@ -40,15 +40,15 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_current_release_marker_is_product_security_portfolio_complete():
+def test_current_release_marker_is_product_packaging_complete():
     response = client.get("/version")
 
     assert response.status_code == 200
 
     assert response.json() == {
-        "version": "0.8.0",
-        "release": "product-security-portfolio",
-        "sprint": "3.7",
+        "version": "0.9.0",
+        "release": "product-packaging",
+        "sprint": "3.8",
         "status": "complete",
     }
 
@@ -62,3 +62,4 @@ def test_current_release_marker_preserves_core_routes():
     assert "/governance/debt/indicators" in actual_routes
     assert "/governance/architecture/diversity" in actual_routes
     assert "/governance/architecture/platform" in actual_routes
+
