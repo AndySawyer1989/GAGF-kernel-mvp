@@ -47,6 +47,9 @@ from backend.app.gagf.product_packaging_dashboard_service import (
 from backend.app.gagf.product_packaging_checkpoint_service import (
     ProductPackagingCheckpointService,
 )
+from backend.app.gagf.assessment_factory_lite_demo_profile_service import (
+    AssessmentFactoryLiteDemoProfileService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -807,6 +810,53 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.post("/products/assessment-factory-lite/demo-profile")
+def assessment_factory_lite_demo_profile(payload: dict):
+    checkpoint = payload.get("checkpoint")
+
+    if checkpoint is None:
+        packaging_dashboard = payload.get("packaging_dashboard")
+
+        if packaging_dashboard is None:
+            packaging_recommendation = payload.get("packaging_recommendation")
+
+            if packaging_recommendation is None:
+                portfolio_dashboard = payload.get("portfolio_dashboard")
+
+                if portfolio_dashboard is None:
+                    product_profiles = payload.get("product_profiles", [])
+                    portfolio_result = (
+                        ProductSecurityPortfolioService().classify_portfolio(
+                            product_profiles
+                        )
+                    )
+                    portfolio_dashboard = (
+                        ProductSecurityPortfolioDashboardService().build_summary(
+                            portfolio_result
+                        )
+                    )
+
+                packaging_recommendation = (
+                    ProductPackagingRecommendationService().recommend(
+                        portfolio_dashboard
+                    )
+                )
+
+            packaging_dashboard = (
+                ProductPackagingDashboardService().build_summary(
+                    packaging_recommendation
+                )
+            )
+
+        checkpoint = ProductPackagingCheckpointService().build_checkpoint(
+            packaging_dashboard
+        )
+
+    return AssessmentFactoryLiteDemoProfileService().build_profile(
+        checkpoint
+    )
+
+
 @app.post("/products/zta-controls")
 def map_product_zta_controls(product_security_result: dict):
     return ZTAControlMappingService().map_product_tier(
@@ -1047,6 +1097,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
