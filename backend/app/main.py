@@ -17,6 +17,9 @@ from backend.app.connectors.servicenow_connector import ServiceNowConnector
 from backend.app.gagf.architectural_diversity_diagnostic_service import (
     ArchitecturalDiversityDiagnosticService,
 )
+from backend.app.gagf.architectural_diversity_platform_service import (
+    ArchitecturalDiversityPlatformService,
+)
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
 from backend.app.gagf.decision_ledger import DecisionLedger
@@ -619,6 +622,11 @@ def diagnose_architectural_diversity(components: List[dict]):
     return ArchitecturalDiversityDiagnosticService().diagnose_components(
         components
     )
+
+
+@app.get("/governance/architecture/platform")
+def diagnose_platform_architecture():
+    return ArchitecturalDiversityPlatformService().diagnose_platform()
 
 
 @app.get("/snapshots")
