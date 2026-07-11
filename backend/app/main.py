@@ -26,6 +26,9 @@ from backend.app.gagf.architectural_diversity_platform_service import (
 from backend.app.gagf.architecture_drift_detection_service import (
     ArchitectureDriftDetectionService,
 )
+from backend.app.gagf.architecture_drift_dashboard_service import (
+    ArchitectureDriftDashboardService,
+)
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
 from backend.app.gagf.decision_ledger import DecisionLedger
@@ -658,6 +661,13 @@ def detect_platform_architecture_drift(payload: dict):
     )
 
 
+@app.post("/governance/architecture/drift/dashboard")
+def architecture_drift_dashboard(payload: dict):
+    return ArchitectureDriftDashboardService().build_summary(
+        payload.get("drift_result", {})
+    )
+
+
 @app.get("/snapshots")
 def list_snapshots():
     return SnapshotLedger().list_snapshots()
@@ -891,5 +901,6 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
