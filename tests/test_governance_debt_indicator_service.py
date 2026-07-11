@@ -1,4 +1,4 @@
-from backend.app.gagf.governance_debt_indicator_service import (
+﻿from backend.app.gagf.governance_debt_indicator_service import (
     GovernanceDebtIndicatorService,
 )
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality

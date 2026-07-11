@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 import backend.app.main as main
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger

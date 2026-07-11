@@ -1,4 +1,4 @@
-from backend.app.gagf.source_trust_tier_service import SourceTrustTierService
+﻿from backend.app.gagf.source_trust_tier_service import SourceTrustTierService
 
 
 def test_source_trust_tier_service_returns_summary():

@@ -1,4 +1,4 @@
-from backend.app.gagf.architectural_diversity_diagnostic_service import (
+﻿from backend.app.gagf.architectural_diversity_diagnostic_service import (
     ArchitecturalDiversityDiagnosticService,
 )
 

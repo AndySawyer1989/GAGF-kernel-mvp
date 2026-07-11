@@ -1,4 +1,4 @@
-from backend.app.gagf.source_registry import SourceRegistry
+﻿from backend.app.gagf.source_registry import SourceRegistry
 
 
 def test_source_registry_lists_supported_sources():

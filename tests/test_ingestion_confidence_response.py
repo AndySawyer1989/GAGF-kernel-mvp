@@ -1,4 +1,4 @@
-from types import SimpleNamespace
+﻿from types import SimpleNamespace
 
 import backend.app.main as main
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality

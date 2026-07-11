@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+﻿from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -378,3 +378,4 @@ def test_divergent_replay_requires_divergence_code():
             replay_started_at=utc_time(12, 8),
             replay_completed_at=utc_time(12, 9),
         )
+

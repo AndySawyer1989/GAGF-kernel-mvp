@@ -1,4 +1,4 @@
-from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
+﻿from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality
 
 

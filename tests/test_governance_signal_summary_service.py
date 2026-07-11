@@ -1,4 +1,4 @@
-from backend.app.gagf.governance_signal_summary_service import (
+﻿from backend.app.gagf.governance_signal_summary_service import (
     GovernanceSignalSummaryService,
 )
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality

@@ -1,4 +1,4 @@
-from backend.app.gagf.friction_signal_detection_service import (
+﻿from backend.app.gagf.friction_signal_detection_service import (
     FrictionSignalDetectionService,
 )
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality

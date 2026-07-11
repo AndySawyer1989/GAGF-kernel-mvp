@@ -1,4 +1,4 @@
-from backend.app.gagf.metric_adapter import MetricAdapter
+﻿from backend.app.gagf.metric_adapter import MetricAdapter
 from backend.app.gagf.schemas import RawSecurityEvent, AdaptiveStateSnapshot
 from backend.app.gagf.snapshot_ledger import SnapshotLedger
 from backend.app.gagf.gpl_loader import GPLLoader

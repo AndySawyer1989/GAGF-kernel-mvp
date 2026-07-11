@@ -1,4 +1,4 @@
-from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
+﻿from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 
 
 def test_snapshot_diagnostics_ledger_saves_and_reads_diagnostics(tmp_path):

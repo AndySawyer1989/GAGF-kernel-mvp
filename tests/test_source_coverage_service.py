@@ -1,4 +1,4 @@
-from backend.app.gagf.source_coverage_service import SourceCoverageService
+﻿from backend.app.gagf.source_coverage_service import SourceCoverageService
 
 
 def test_source_coverage_service_returns_summary():

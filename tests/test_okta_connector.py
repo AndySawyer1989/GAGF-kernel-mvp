@@ -1,4 +1,4 @@
-from backend.app.connectors.okta_connector import OktaConnector
+﻿from backend.app.connectors.okta_connector import OktaConnector
 
 
 def test_okta_connector_maps_failed_authentication_to_failed_auth_burst():

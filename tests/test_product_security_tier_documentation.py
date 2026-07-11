@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 
 DOC_PATH = Path("docs/PRODUCT_SECURITY_TIERING.md")

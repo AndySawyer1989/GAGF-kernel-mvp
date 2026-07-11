@@ -52,7 +52,7 @@ Builds a dashboard-ready product packaging summary from product profiles, an exi
 
 The endpoint supports three input modes.
 
-### Mode 1 — Product Profiles
+### Mode 1 - Product Profiles
 
 The endpoint may receive product_profiles.
 
@@ -94,7 +94,7 @@ ProductSecurityPortfolioService
 → ProductPackagingRecommendationService
 → ProductPackagingDashboardService
 
-### Mode 2 — Existing Portfolio Dashboard
+### Mode 2 - Existing Portfolio Dashboard
 
 The endpoint may receive portfolio_dashboard.
 
@@ -139,7 +139,7 @@ In this mode, the endpoint runs:
 ProductPackagingRecommendationService
 → ProductPackagingDashboardService
 
-### Mode 3 — Existing Packaging Recommendation
+### Mode 3 - Existing Packaging Recommendation
 
 The endpoint may receive packaging_recommendation.
 
@@ -224,7 +224,7 @@ Example:
   "track": "fast_productization",
   "reason": "lowest_security_burden",
   "is_available": true,
-  "display_label": "assessment_factory_lite — Fast Productization"
+  "display_label": "assessment_factory_lite - Fast Productization"
 }
 
 ## Packaging Track Summary
@@ -407,3 +407,4 @@ It provides deterministic dashboard guidance from product security and packaging
 The deterministic GAGF Kernel remains the authoritative decision and verification layer.
 
 AI may explain packaging dashboard recommendations later, but AI must not override deterministic product packaging guidance without human-approved policy changes.
+

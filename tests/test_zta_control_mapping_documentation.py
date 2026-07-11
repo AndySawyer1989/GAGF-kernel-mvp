@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 
 DOC_PATH = Path("docs/ZTA_CONTROL_MAPPING.md")

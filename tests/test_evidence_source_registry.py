@@ -1,4 +1,4 @@
-from backend.app.services.evidence_source_registry import EvidenceSourceRegistry
+﻿from backend.app.services.evidence_source_registry import EvidenceSourceRegistry
 
 
 def test_registry_detects_github_snapshot_id():

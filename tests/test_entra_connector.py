@@ -1,4 +1,4 @@
-from backend.app.connectors.entra_connector import EntraConnector
+﻿from backend.app.connectors.entra_connector import EntraConnector
 
 
 def test_entra_connector_maps_failed_sign_in_to_failed_auth_burst():

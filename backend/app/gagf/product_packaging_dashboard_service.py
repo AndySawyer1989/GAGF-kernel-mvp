@@ -1,4 +1,4 @@
-class ProductPackagingDashboardService:
+﻿class ProductPackagingDashboardService:
     """Build dashboard-ready summaries for product packaging recommendations."""
 
     def build_summary(self, recommendation: dict) -> dict:
@@ -71,7 +71,7 @@ class ProductPackagingDashboardService:
             "none": "None",
         }
 
-        return f"{product_name} — {track_labels.get(track, 'Review')}"
+        return f"{product_name} - {track_labels.get(track, 'Review')}"
 
     def _packaging_track_summary(self, result: dict) -> dict:
         return {

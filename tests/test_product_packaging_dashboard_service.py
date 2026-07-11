@@ -1,4 +1,4 @@
-from backend.app.gagf.product_packaging_dashboard_service import (
+﻿from backend.app.gagf.product_packaging_dashboard_service import (
     ProductPackagingDashboardService,
 )
 from backend.app.gagf.product_packaging_recommendation_service import (
@@ -76,7 +76,7 @@ def test_product_packaging_dashboard_builds_first_candidate_card():
         "reason": "lowest_security_burden",
         "is_available": True,
         "display_label": (
-            "assessment_factory_lite — Fast Productization"
+            "assessment_factory_lite - Fast Productization"
         ),
     }
 
@@ -152,3 +152,4 @@ def test_product_packaging_dashboard_handles_empty_result():
     }
     assert summary["recommended_action"] == "add_product_candidates"
     assert summary["blocker_summary"]["blocker_count"] == 0
+

@@ -144,3 +144,4 @@ def test_product_security_portfolio_dashboard_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/products/security-portfolio/dashboard" in actual_routes
+

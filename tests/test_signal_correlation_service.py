@@ -1,4 +1,4 @@
-from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality
+﻿from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality
 from backend.app.gagf.signal_correlation_service import SignalCorrelationService
 
 

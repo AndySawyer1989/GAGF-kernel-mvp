@@ -1,4 +1,4 @@
-from backend.app.connectors.sentinelone_connector import SentinelOneConnector
+﻿from backend.app.connectors.sentinelone_connector import SentinelOneConnector
 
 
 def test_sentinelone_connector_maps_active_threat_to_unauthorized_api_call():

@@ -1,4 +1,4 @@
-from backend.app.gagf.governance_diagnostic_chain_service import (
+﻿from backend.app.gagf.governance_diagnostic_chain_service import (
     GovernanceDiagnosticChainService,
 )
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality

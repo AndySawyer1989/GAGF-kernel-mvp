@@ -1,4 +1,4 @@
-from backend.app.connectors.jira_connector import JiraConnector
+﻿from backend.app.connectors.jira_connector import JiraConnector
 from backend.app.gagf.schemas import TimestampQuality
 
 

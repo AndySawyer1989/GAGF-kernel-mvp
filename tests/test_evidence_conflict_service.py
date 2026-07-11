@@ -1,4 +1,4 @@
-from backend.app.gagf.evidence_conflict_service import EvidenceConflictService
+﻿from backend.app.gagf.evidence_conflict_service import EvidenceConflictService
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality
 
 

@@ -1,4 +1,4 @@
-from backend.app.gagf.intervention_candidate_service import (
+﻿from backend.app.gagf.intervention_candidate_service import (
     InterventionCandidateService,
 )
 from backend.app.gagf.schemas import RawSecurityEvent, TimestampQuality

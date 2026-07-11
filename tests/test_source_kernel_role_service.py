@@ -1,4 +1,4 @@
-from backend.app.gagf.source_kernel_role_service import SourceKernelRoleService
+﻿from backend.app.gagf.source_kernel_role_service import SourceKernelRoleService
 
 
 def test_source_kernel_role_service_returns_summary():

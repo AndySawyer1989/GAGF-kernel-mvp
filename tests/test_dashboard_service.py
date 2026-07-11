@@ -1,4 +1,4 @@
-from backend.app.services.dashboard_service import DashboardService
+﻿from backend.app.services.dashboard_service import DashboardService
 
 
 def test_dashboard_detects_latest_evidence_source_github():

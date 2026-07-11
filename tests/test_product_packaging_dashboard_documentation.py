@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 
 DOC_PATH = Path("docs/PRODUCT_PACKAGING_DASHBOARD.md")
@@ -47,7 +47,7 @@ def test_product_packaging_dashboard_document_names_first_candidate_card():
     assert "reason" in content
     assert "is_available" in content
     assert "display_label" in content
-    assert "assessment_factory_lite — Fast Productization" in content
+    assert "assessment_factory_lite - Fast Productization" in content
 
 
 def test_product_packaging_dashboard_document_names_blockers_and_actions():
@@ -80,3 +80,4 @@ def test_product_packaging_dashboard_document_preserves_boundaries():
         "The deterministic GAGF Kernel remains the authoritative decision "
         "and verification layer."
     ) in content
+

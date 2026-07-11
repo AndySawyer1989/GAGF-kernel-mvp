@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 
 DOC_PATH = Path("docs/ARCHITECTURAL_DIVERSITY_DIAGNOSTICS.md")
@@ -11,8 +11,8 @@ def test_architectural_diversity_document_exists():
 def test_architectural_diversity_document_names_core_metrics():
     content = DOC_PATH.read_text(encoding="utf-8")
 
-    assert "ADI — Architectural Diversity Index" in content
-    assert "CRR — Complexity Resilience Ratio" in content
+    assert "ADI - Architectural Diversity Index" in content
+    assert "CRR - Complexity Resilience Ratio" in content
     assert "Mononal Risk Score" in content
     assert "mononal_risk_score = 1.0 - ADI" in content
 
@@ -68,3 +68,4 @@ def test_architectural_diversity_document_preserves_kernel_boundary():
     assert (
         "AI must not override ADI, CRR, or mononal-risk calculations."
     ) in content
+

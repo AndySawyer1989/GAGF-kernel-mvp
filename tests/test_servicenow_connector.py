@@ -1,4 +1,4 @@
-from backend.app.connectors.servicenow_connector import ServiceNowConnector
+﻿from backend.app.connectors.servicenow_connector import ServiceNowConnector
 from backend.app.gagf.schemas import TimestampQuality
 
 

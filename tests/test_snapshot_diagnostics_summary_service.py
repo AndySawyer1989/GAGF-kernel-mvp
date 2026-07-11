@@ -1,4 +1,4 @@
-from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
+﻿from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_diagnostics_summary_service import (
     SnapshotDiagnosticsSummaryService,
 )

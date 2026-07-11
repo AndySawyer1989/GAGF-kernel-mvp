@@ -1,4 +1,4 @@
-from backend.app.gagf.architectural_diversity_telemetry_adapter import (
+﻿from backend.app.gagf.architectural_diversity_telemetry_adapter import (
     ArchitecturalDiversityTelemetryAdapter,
 )
 
@@ -241,3 +241,4 @@ def test_architectural_diversity_telemetry_adapter_normalizes_strings():
     assert adapter.normalize_string("Kernel Zone") == "kernel_zone"
     assert adapter.normalize_string("") == "unknown"
     assert adapter.normalize_string(None) == "unknown"
+

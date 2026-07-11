@@ -1,4 +1,4 @@
-from backend.app.connectors.defender_connector import DefenderConnector
+﻿from backend.app.connectors.defender_connector import DefenderConnector
 
 
 def test_defender_connector_maps_high_severity_alert_to_unauthorized_api_call():

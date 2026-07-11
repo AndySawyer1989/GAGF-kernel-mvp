@@ -1,4 +1,4 @@
-from backend.app.connectors.github_connector import GitHubConnector
+﻿from backend.app.connectors.github_connector import GitHubConnector
 
 
 def test_github_connector_normalizes_single_event():

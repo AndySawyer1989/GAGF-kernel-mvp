@@ -1,4 +1,4 @@
-from backend.app.gagf.evidence_confidence_adapter import EvidenceConfidenceAdapter
+﻿from backend.app.gagf.evidence_confidence_adapter import EvidenceConfidenceAdapter
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_diagnostics_risk_service import (
     SnapshotDiagnosticsRiskService,

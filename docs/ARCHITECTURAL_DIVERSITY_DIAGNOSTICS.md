@@ -24,7 +24,7 @@ Is the platform trending toward adaptive architecture or mononal risk?
 
 ## Core Metrics
 
-### ADI — Architectural Diversity Index
+### ADI - Architectural Diversity Index
 
 ADI measures how diverse the architecture is across four dimensions:
 
@@ -50,7 +50,7 @@ unique_values / component_count
 Higher ADI means more architectural diversity.
 Lower ADI means more concentration and mononal risk.
 
-### CRR — Complexity Resilience Ratio
+### CRR - Complexity Resilience Ratio
 
 CRR measures whether architectural diversity, redundancy, and interface balance create resilience instead of uncontrolled complexity.
 
@@ -430,3 +430,4 @@ It diagnoses structure, concentration, and resilience potential.
 The deterministic GAGF Kernel remains the authoritative decision and verification layer.
 
 AI may explain the diagnostic result later, but AI must not override ADI, CRR, or mononal-risk calculations.
+

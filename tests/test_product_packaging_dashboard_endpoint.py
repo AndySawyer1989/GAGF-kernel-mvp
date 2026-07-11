@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
@@ -67,7 +67,7 @@ def test_product_packaging_dashboard_endpoint_builds_first_candidate_card():
         "reason": "lowest_security_burden",
         "is_available": True,
         "display_label": (
-            "assessment_factory_lite — Fast Productization"
+            "assessment_factory_lite - Fast Productization"
         ),
     }
 
@@ -143,3 +143,4 @@ def test_product_packaging_dashboard_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/products/packaging/dashboard" in actual_routes
+

@@ -1,4 +1,4 @@
-from backend.app.gagf.architectural_diversity_platform_service import (
+﻿from backend.app.gagf.architectural_diversity_platform_service import (
     ArchitecturalDiversityPlatformService,
 )
 from backend.app.gagf.architectural_diversity_telemetry_adapter import (

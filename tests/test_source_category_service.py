@@ -1,4 +1,4 @@
-from backend.app.gagf.source_category_service import SourceCategoryService
+﻿from backend.app.gagf.source_category_service import SourceCategoryService
 
 
 def test_source_category_service_returns_summary():
