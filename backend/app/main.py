@@ -29,6 +29,9 @@ from backend.app.gagf.architecture_drift_detection_service import (
 from backend.app.gagf.architecture_drift_dashboard_service import (
     ArchitectureDriftDashboardService,
 )
+from backend.app.gagf.product_security_tier_service import (
+    ProductSecurityTierService,
+)
 from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
 from backend.app.gagf.decision_ledger import DecisionLedger
@@ -668,6 +671,11 @@ def architecture_drift_dashboard(payload: dict):
     )
 
 
+@app.post("/products/security-tier")
+def classify_product_security_tier(product_profile: dict):
+    return ProductSecurityTierService().classify_product(product_profile)
+
+
 @app.get("/snapshots")
 def list_snapshots():
     return SnapshotLedger().list_snapshots()
@@ -901,6 +909,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
