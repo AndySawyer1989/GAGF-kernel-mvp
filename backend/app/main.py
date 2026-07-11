@@ -648,6 +648,16 @@ def detect_architecture_drift(payload: dict):
     )
 
 
+@app.post("/governance/architecture/platform/drift")
+def detect_platform_architecture_drift(payload: dict):
+    current_result = ArchitecturalDiversityPlatformService().diagnose_platform()
+
+    return ArchitectureDriftDetectionService().detect_drift(
+        baseline_result=payload.get("baseline_result", {}),
+        current_result=current_result,
+    )
+
+
 @app.get("/snapshots")
 def list_snapshots():
     return SnapshotLedger().list_snapshots()
@@ -881,4 +891,5 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
