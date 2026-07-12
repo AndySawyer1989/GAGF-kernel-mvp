@@ -40,3 +40,4 @@ def test_sources_endpoint_includes_required_metadata_fields():
         assert "trust_tier" in source
         assert "kernel_role" in source
         assert "enabled" in source
+

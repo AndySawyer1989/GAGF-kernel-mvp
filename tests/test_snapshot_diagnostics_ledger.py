@@ -63,3 +63,4 @@ def test_snapshot_diagnostics_ledger_returns_empty_list_when_no_file_exists(tmp_
     ledger = SnapshotDiagnosticsLedger(str(ledger_path))
 
     assert ledger.list_diagnostics() == []
+

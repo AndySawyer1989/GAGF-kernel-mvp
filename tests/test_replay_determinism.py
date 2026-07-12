@@ -41,3 +41,4 @@ def test_replay_determinism():
 
     assert decision1 == decision2
     assert decision1.selected_strategy == "Contain"
+

@@ -252,3 +252,4 @@ def test_evidence_conflict_service_ignores_unknown_metadata_shape():
     assert result["event_count"] == 1
     assert result["conflict_count"] == 0
     assert result["conflicts"] == []
+

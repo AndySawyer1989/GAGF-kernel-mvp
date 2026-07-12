@@ -75,3 +75,4 @@ def test_source_category_endpoint_does_not_conflict_with_source_detail_route():
 
     assert "categories" in data
     assert "source" not in data
+

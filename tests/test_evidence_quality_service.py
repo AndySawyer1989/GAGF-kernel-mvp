@@ -138,3 +138,4 @@ def test_evidence_quality_service_scores_empty_batch_as_invalid():
     assert result["average_quality_score"] == 0.0
     assert result["average_quality_band"] == "invalid"
     assert result["events"] == []
+

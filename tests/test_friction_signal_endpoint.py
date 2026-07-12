@@ -219,3 +219,4 @@ def test_friction_signal_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/governance/friction/signals" in actual_routes
+

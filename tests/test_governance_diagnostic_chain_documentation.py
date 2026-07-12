@@ -62,3 +62,4 @@ def test_governance_diagnostic_chain_document_preserves_kernel_boundary():
         "The deterministic Kernel remains the authoritative decision and "
         "verification layer."
     ) in content
+

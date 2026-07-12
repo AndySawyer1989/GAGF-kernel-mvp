@@ -202,3 +202,4 @@ def test_governance_signal_summary_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/governance/signals/summary" in actual_routes
+

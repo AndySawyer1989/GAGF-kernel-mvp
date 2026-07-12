@@ -43,3 +43,4 @@ def test_full_pipeline_selects_contain():
     assert decision.kernel_decision == "transition_to_contain"
     assert decision.decision_meta.is_override_triggered is True
     assert decision_id is not None
+

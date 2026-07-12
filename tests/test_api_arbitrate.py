@@ -30,3 +30,4 @@ def test_arbitrate_endpoint_returns_contain():
     assert data["selected_strategy"] == "Contain"
     assert data["kernel_decision"] == "transition_to_contain"
     assert data["reason"] == ["risk_index_high"]
+

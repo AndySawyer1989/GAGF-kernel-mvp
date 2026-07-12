@@ -33,3 +33,4 @@ def test_invalid_snapshot_blocks_arbitration():
     assert decision.kernel_decision == "blocked_decision"
     assert decision.selected_strategy is None
     assert "snapshot_invalid" in decision.reason
+

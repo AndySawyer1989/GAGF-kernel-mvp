@@ -120,3 +120,4 @@ def test_jira_connector_falls_back_to_missing_id():
     assert event.event_id == "jira-event-missing-id"
     assert event.source_system == "jira"
     assert event.event_type == "historically_valid_control"
+

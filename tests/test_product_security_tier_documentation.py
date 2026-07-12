@@ -88,3 +88,4 @@ def test_product_security_tier_document_preserves_compliance_boundary():
         "The deterministic GAGF Kernel remains the authoritative decision "
         "and verification layer."
     ) in content
+

@@ -73,3 +73,4 @@ def test_source_trust_tier_detail_endpoint_does_not_conflict_with_trust_tier_sum
     assert data["status"] == "ok"
     assert "trust_tiers" in data
     assert "source_count" not in data
+

@@ -135,3 +135,4 @@ def test_entra_connector_uses_missing_id_fallback():
     assert normalized.event_id == "entra-event-missing-id"
     assert normalized.source_system == "entra"
     assert normalized.event_type == "historically_valid_control"
+

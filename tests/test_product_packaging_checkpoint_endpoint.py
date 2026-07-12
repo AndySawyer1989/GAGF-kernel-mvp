@@ -142,3 +142,4 @@ def test_product_packaging_checkpoint_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/products/packaging/checkpoint" in actual_routes
+

@@ -225,3 +225,4 @@ def test_intervention_candidate_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/governance/interventions/candidates" in actual_routes
+

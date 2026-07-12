@@ -175,3 +175,4 @@ def test_evidence_quality_endpoint_accepts_empty_batch():
     assert data["average_quality_score"] == 0.0
     assert data["average_quality_band"] == "invalid"
     assert data["events"] == []
+

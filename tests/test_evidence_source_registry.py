@@ -84,3 +84,4 @@ def test_registry_current_source_map_closeout():
         assert EvidenceSourceRegistry.detect_from_snapshot_id(snapshot_id) == expected_label
 
     assert EvidenceSourceRegistry.detect_from_snapshot(None) == "None"
+

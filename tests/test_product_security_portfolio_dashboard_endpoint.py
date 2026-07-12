@@ -145,3 +145,4 @@ def test_product_security_portfolio_dashboard_endpoint_route_exists():
 
     assert "/products/security-portfolio/dashboard" in actual_routes
 
+

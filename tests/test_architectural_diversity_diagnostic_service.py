@@ -305,3 +305,4 @@ def test_architectural_diversity_service_classifies_architecture_postures():
         0.2,
         0.2,
     ) == "mononal_architecture_risk"
+

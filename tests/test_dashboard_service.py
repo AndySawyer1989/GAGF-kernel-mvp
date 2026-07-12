@@ -107,3 +107,4 @@ def test_dashboard_detects_latest_evidence_source_fallback():
     snapshot = {"snapshot_id": "manual-abc123"}
 
     assert service._detect_latest_evidence_source(snapshot) == "Local / Manual"
+

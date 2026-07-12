@@ -91,3 +91,4 @@ def test_source_category_service_returns_empty_list_for_unknown_category():
     sources = service.get_sources_for_category("unknown-category")
 
     assert sources == []
+

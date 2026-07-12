@@ -295,3 +295,4 @@ def test_friction_signal_detection_service_calculates_intensity_safely():
         base_intensity=0.80,
         signal_strength="unknown",
     ) == 0.48
+

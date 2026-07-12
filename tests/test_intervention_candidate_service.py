@@ -293,3 +293,4 @@ def test_intervention_candidate_service_calculates_priority_safely():
         intervention_urgency="near_term",
         amplifier_pressure="unknown",
     ) == 0.4575
+

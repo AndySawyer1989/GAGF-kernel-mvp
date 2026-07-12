@@ -236,3 +236,4 @@ def test_governance_diagnostic_chain_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/governance/diagnostics/chain" in actual_routes
+

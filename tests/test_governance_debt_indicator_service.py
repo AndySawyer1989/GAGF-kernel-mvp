@@ -321,3 +321,4 @@ def test_governance_debt_indicator_service_calculates_scores_safely():
         ],
         amplifier_pressure=0.90,
     ) == 0.74
+

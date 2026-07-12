@@ -192,3 +192,4 @@ def test_governance_signal_endpoint_handles_empty_batch():
         },
         "signals": [],
     }
+

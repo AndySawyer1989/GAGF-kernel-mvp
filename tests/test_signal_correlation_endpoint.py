@@ -179,3 +179,4 @@ def test_signal_correlation_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/governance/signals/correlations" in actual_routes
+

@@ -219,3 +219,4 @@ def test_governance_debt_indicator_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/governance/debt/indicators" in actual_routes
+

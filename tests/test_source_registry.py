@@ -52,3 +52,4 @@ def test_source_registry_returns_none_for_unknown_source():
     unknown = registry.get_source("unknown-source")
 
     assert unknown is None
+

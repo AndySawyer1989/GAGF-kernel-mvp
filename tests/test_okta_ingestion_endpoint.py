@@ -123,3 +123,4 @@ def test_okta_ingestion_endpoint_rejects_event_missing_required_fields():
     assert "event_0_missing_uuid" in data["errors"]
     assert "event_0_missing_eventType" in data["errors"]
     assert "event_0_missing_published" in data["errors"]
+

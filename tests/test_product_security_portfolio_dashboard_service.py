@@ -138,3 +138,4 @@ def test_product_security_portfolio_dashboard_handles_empty_result():
         "not_required": 0,
     }
     assert summary["recommended_action"] == "add_product_profiles"
+

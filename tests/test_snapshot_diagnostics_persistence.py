@@ -141,3 +141,4 @@ def test_snapshot_diagnostics_endpoint_returns_failed_for_missing_snapshot(monke
         "error": "snapshot_diagnostics_not_found",
         "snapshot_id": "missing-snapshot",
     }
+

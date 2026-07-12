@@ -170,3 +170,4 @@ def test_sentinelone_ingest_script_has_source_aware_activity_labels():
     assert "[SentinelOne] Evidence ingested" in js
     assert "[SentinelOne] Snapshot" in js
     assert "[Kernel] Strategy selected" in js
+

@@ -166,3 +166,4 @@ def test_product_packaging_recommendation_service_handles_empty_dashboard():
         "No product packaging candidate is available yet."
     )
     assert recommendation["next_action"] == "add_product_candidates"
+

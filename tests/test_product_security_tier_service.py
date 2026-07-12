@@ -142,3 +142,4 @@ def test_product_security_tier_service_normalizes_profile():
         "personal_productivity"
     )
     assert result["normalized_profile"]["is_internal_only"] is True
+

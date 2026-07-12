@@ -14,3 +14,4 @@ def test_dashboard_includes_latest_evidence_source():
     data = response.json()
 
     assert "latest_evidence_source" in data
+

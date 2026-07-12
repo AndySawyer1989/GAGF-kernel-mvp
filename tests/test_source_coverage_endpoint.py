@@ -68,3 +68,4 @@ def test_source_coverage_endpoint_does_not_conflict_with_source_detail_route():
 
     assert "total_sources" in data
     assert "source" not in data
+

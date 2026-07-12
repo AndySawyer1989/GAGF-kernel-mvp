@@ -223,3 +223,4 @@ def test_architectural_diversity_dashboard_service_recommends_mononal_action():
     assert result["risk_summary"]["highest_attention_area"] == (
         "dominant_component_type:worker"
     )
+

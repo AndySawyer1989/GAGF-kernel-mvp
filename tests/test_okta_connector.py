@@ -123,3 +123,4 @@ def test_okta_connector_uses_missing_id_fallback():
     assert normalized.event_id == "okta-event-missing-id"
     assert normalized.source_system == "okta"
     assert normalized.event_type == "historically_valid_control"
+

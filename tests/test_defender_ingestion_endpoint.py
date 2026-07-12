@@ -78,3 +78,4 @@ def test_defender_ingestion_rejects_missing_required_event_fields():
     assert "event_0_missing_id" in data["errors"]
     assert "event_0_missing_title" in data["errors"]
     assert "event_0_missing_timestamp" in data["errors"]
+

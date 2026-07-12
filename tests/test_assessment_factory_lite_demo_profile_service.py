@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_demo_profile_service import (
+﻿from backend.app.gagf.assessment_factory_lite_demo_profile_service import (
     AssessmentFactoryLiteDemoProfileService,
 )
 from backend.app.gagf.product_packaging_checkpoint_service import (

@@ -148,3 +148,4 @@ def test_snapshot_endpoint_marks_missing_timestamp_snapshot_invalid_but_keeps_co
     assert data["timestamp_quality_distribution"]["MISSING_TIMESTAMP"] == 1
     assert confidence["score"] > 0.0
     assert "evidence_quality" in confidence["factors"]
+

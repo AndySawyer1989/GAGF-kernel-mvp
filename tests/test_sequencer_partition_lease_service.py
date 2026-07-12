@@ -472,3 +472,4 @@ def test_stale_sequencer_cannot_issue_receipt_after_transfer():
             sequencer_identity=OWNER_A,
             authorized_at=at(0) + timedelta(seconds=30),
         )
+

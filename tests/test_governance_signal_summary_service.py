@@ -234,3 +234,4 @@ def test_governance_signal_summary_service_average_ignores_non_numeric_strengths
     )
 
     assert result == 0.75
+

@@ -282,3 +282,4 @@ def test_governance_diagnostic_chain_service_chain_posture_priority():
             "intervention_candidate_count": 0,
         }
     ) == "low_governance_diagnosis"
+

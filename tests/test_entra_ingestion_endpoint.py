@@ -127,3 +127,4 @@ def test_entra_ingestion_endpoint_rejects_event_missing_required_fields():
     assert "event_0_missing_id" in data["errors"]
     assert "event_0_missing_activityDisplayName" in data["errors"]
     assert "event_0_missing_createdDateTime" in data["errors"]
+

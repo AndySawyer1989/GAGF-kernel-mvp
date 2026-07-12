@@ -183,3 +183,4 @@ def test_assessment_factory_lite_demo_diagnostics_handles_empty_rows():
         "reason": "no_demo_rows_available",
     }
     assert result["export_ready_summary"]["is_export_ready"] is True
+

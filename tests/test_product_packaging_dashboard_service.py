@@ -153,3 +153,4 @@ def test_product_packaging_dashboard_handles_empty_result():
     assert summary["recommended_action"] == "add_product_candidates"
     assert summary["blocker_summary"]["blocker_count"] == 0
 
+

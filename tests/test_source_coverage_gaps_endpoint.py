@@ -43,3 +43,4 @@ def test_source_coverage_gaps_endpoint_does_not_conflict_with_coverage_summary_r
     assert data["status"] == "ok"
     assert "total_sources" in data
     assert "coverage_gaps" in data
+

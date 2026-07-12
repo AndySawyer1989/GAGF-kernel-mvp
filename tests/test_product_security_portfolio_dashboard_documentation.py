@@ -79,3 +79,4 @@ def test_product_security_portfolio_dashboard_document_preserves_compliance_boun
         "The deterministic GAGF Kernel remains the authoritative decision "
         "and verification layer."
     ) in content
+

@@ -84,3 +84,4 @@ def test_architectural_diversity_platform_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/governance/architecture/platform" in actual_routes
+

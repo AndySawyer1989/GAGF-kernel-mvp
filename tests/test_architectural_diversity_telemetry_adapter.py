@@ -242,3 +242,4 @@ def test_architectural_diversity_telemetry_adapter_normalizes_strings():
     assert adapter.normalize_string("") == "unknown"
     assert adapter.normalize_string(None) == "unknown"
 
+

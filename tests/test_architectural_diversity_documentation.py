@@ -69,3 +69,4 @@ def test_architectural_diversity_document_preserves_kernel_boundary():
         "AI must not override ADI, CRR, or mononal-risk calculations."
     ) in content
 
+

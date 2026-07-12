@@ -209,3 +209,4 @@ def test_architecture_drift_dashboard_service_handles_critical_drift():
     assert result["risk_summary"]["highest_attention_area"] == (
         "critical_architecture_regression"
     )
+

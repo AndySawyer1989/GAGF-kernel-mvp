@@ -126,3 +126,4 @@ def test_sentinelone_connector_uses_missing_id_fallback():
     assert normalized.event_id == "sentinelone-event-missing-id"
     assert normalized.source_system == "sentinelone"
     assert normalized.event_type == "verification_passed"
+
