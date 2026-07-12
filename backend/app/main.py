@@ -56,6 +56,9 @@ from backend.app.gagf.assessment_factory_lite_dataset_contract_service import (
 from backend.app.gagf.assessment_factory_lite_demo_diagnostics_service import (
     AssessmentFactoryLiteDemoDiagnosticsService,
 )
+from backend.app.gagf.assessment_factory_lite_demo_export_service import (
+    AssessmentFactoryLiteDemoExportService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -816,6 +819,16 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.post("/products/assessment-factory-lite/demo-export/summary")
+def assessment_factory_lite_demo_export_summary(payload: dict):
+    diagnostics_result = payload.get("diagnostics_result")
+    rows = payload.get("rows")
+    return AssessmentFactoryLiteDemoExportService().build_export_summary(
+        diagnostics_result=diagnostics_result,
+        rows=rows,
+    )
+
+
 @app.post("/products/assessment-factory-lite/demo-diagnostics/run")
 def run_assessment_factory_lite_demo_diagnostics(payload: dict):
     rows = payload.get("rows", [])
@@ -1120,6 +1133,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
