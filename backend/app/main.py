@@ -65,6 +65,9 @@ from backend.app.gagf.assessment_factory_lite_demo_ui_view_service import (
 from backend.app.gagf.assessment_factory_lite_demo_ui_html_service import (
     AssessmentFactoryLiteDemoUIHTMLService,
 )
+from backend.app.gagf.assessment_factory_lite_demo_sample_rows_service import (
+    AssessmentFactoryLiteDemoSampleRowsService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -825,6 +828,20 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.get("/products/assessment-factory-lite/demo-samples/rows")
+def assessment_factory_lite_demo_sample_rows():
+    return AssessmentFactoryLiteDemoSampleRowsService().get_sample_rows(
+        "standard"
+    )
+
+
+@app.get("/products/assessment-factory-lite/demo-samples/rows/{scenario}")
+def assessment_factory_lite_demo_sample_rows_by_scenario(scenario: str):
+    return AssessmentFactoryLiteDemoSampleRowsService().get_sample_rows(
+        scenario
+    )
+
+
 @app.post("/products/assessment-factory-lite/demo-ui/html")
 def assessment_factory_lite_demo_ui_html(payload: dict):
     return AssessmentFactoryLiteDemoUIHTMLService().render_html(
@@ -1160,6 +1177,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
