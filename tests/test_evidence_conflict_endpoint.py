@@ -252,3 +252,4 @@ def test_evidence_conflict_endpoint_detects_multiple_conflicts():
     assert "security_resolution_mismatch" in conflict_types
     assert "workflow_state_mismatch" in conflict_types
 
+

@@ -163,3 +163,4 @@ def test_assessment_factory_lite_dataset_contract_rejects_missing_and_regulated_
         "regulated_data_not_allowed",
         "federal_data_not_allowed",
     }
+

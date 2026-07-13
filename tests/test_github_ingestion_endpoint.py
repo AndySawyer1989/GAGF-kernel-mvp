@@ -105,3 +105,4 @@ def test_github_ingestion_rejects_event_missing_required_fields():
     assert "event_0_missing_event_name" in data["errors"]
     assert "event_0_missing_created_at" in data["errors"]
 
+

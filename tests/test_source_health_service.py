@@ -76,3 +76,4 @@ def test_source_health_service_detects_disabled_source():
     assert result["health"] == "disabled"
     assert result["missing_fields"] == []
 
+

@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_demo_ui_view_service import (
+﻿from backend.app.gagf.assessment_factory_lite_demo_ui_view_service import (
     AssessmentFactoryLiteDemoUIViewService,
 )
 
@@ -175,3 +175,4 @@ def test_assessment_factory_lite_demo_ui_view_includes_warnings():
             ),
         },
     ]
+

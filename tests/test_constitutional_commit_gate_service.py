@@ -901,3 +901,4 @@ def test_second_commit_with_stale_prior_state_is_rejected():
             committed_at=at(10),
         )
 
+

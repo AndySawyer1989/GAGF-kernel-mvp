@@ -145,3 +145,4 @@ def test_assessment_factory_lite_demo_profile_endpoint_route_exists():
     actual_routes = {route.path for route in app.routes}
 
     assert "/products/assessment-factory-lite/demo-profile" in actual_routes
+

@@ -189,3 +189,4 @@ def test_evidence_confidence_endpoint_handles_empty_event_batch():
     assert confidence["factors"]["conflict_health"] == 1.0
     assert confidence["factors"]["source_coverage"] == 1.0
 
+

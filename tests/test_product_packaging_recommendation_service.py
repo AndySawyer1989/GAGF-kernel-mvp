@@ -167,3 +167,4 @@ def test_product_packaging_recommendation_service_handles_empty_dashboard():
     )
     assert recommendation["next_action"] == "add_product_candidates"
 
+

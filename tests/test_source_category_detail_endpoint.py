@@ -84,3 +84,4 @@ def test_source_category_detail_endpoint_does_not_conflict_with_category_summary
     assert "categories" in data
     assert "source_count" not in data
 
+

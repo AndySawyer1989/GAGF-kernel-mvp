@@ -115,3 +115,4 @@ def test_source_coverage_service_detects_empty_registry_gap():
     assert "missing_trust_tiers" in gap_types
     assert "missing_kernel_roles" in gap_types
 
+

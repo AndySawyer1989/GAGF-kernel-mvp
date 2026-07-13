@@ -203,3 +203,4 @@ def test_architectural_diversity_platform_service_marks_mononal_risk_status():
         concentration_risk="critical",
     ) == "platform_architecture_mononal_risk"
 
+

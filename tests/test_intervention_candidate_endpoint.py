@@ -226,3 +226,4 @@ def test_intervention_candidate_endpoint_route_exists():
 
     assert "/governance/interventions/candidates" in actual_routes
 
+

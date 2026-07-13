@@ -182,3 +182,4 @@ def test_snapshot_diagnostics_risk_route_is_not_captured_as_snapshot_id(
     assert data["status"] == "ok"
     assert "snapshot_diagnostics_not_found" not in str(data)
 
+

@@ -109,3 +109,4 @@ def test_servicenow_ingestion_rejects_event_missing_required_fields():
     assert "event_0_missing_table" in data["errors"]
     assert "event_0_missing_timestamp" in data["errors"]
 
+
