@@ -205,3 +205,4 @@ def test_architecture_drift_detection_service_marks_component_count_delta():
     assert result["component_count_delta"] == 3
 
 
+

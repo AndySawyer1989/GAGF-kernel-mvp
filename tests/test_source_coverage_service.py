@@ -116,3 +116,4 @@ def test_source_coverage_service_detects_empty_registry_gap():
     assert "missing_kernel_roles" in gap_types
 
 
+

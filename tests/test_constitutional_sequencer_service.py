@@ -597,3 +597,4 @@ def test_candidate_receipt_binding_rejects_wrong_candidate():
         )
 
 
+

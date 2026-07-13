@@ -221,3 +221,4 @@ def test_friction_signal_endpoint_route_exists():
     assert "/governance/friction/signals" in actual_routes
 
 
+

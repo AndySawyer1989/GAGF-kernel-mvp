@@ -289,3 +289,4 @@ def test_snapshot_diagnostics_risk_service_handles_missing_or_malformed_values()
     assert risk["factors"]["low_source_support"] == 0.5
 
 
+

@@ -86,3 +86,4 @@ def test_architectural_diversity_platform_endpoint_route_exists():
     assert "/governance/architecture/platform" in actual_routes
 
 
+

@@ -449,3 +449,4 @@ def test_assert_candidate_integrity_rejects_tampered_candidate():
         CanonicalEvidenceService.assert_candidate_integrity(tampered)
 
 
+

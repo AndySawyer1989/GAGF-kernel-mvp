@@ -127,3 +127,4 @@ def test_defender_connector_uses_missing_id_fallback():
     assert normalized.event_type == "verification_passed"
 
 
+

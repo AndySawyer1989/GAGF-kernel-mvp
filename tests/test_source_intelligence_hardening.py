@@ -203,3 +203,4 @@ def test_expected_source_intelligence_model_is_present():
     assert sources["sentinelone"]["kernel_role"] == "threat_evidence"
 
 
+

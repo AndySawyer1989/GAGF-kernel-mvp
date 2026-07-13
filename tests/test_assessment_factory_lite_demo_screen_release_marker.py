@@ -6,7 +6,7 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_assessment_factory_lite_demo_ui_release_marker():
+def test_assessment_factory_lite_demo_screen_release_marker():
     response = client.get("/version")
 
     assert response.status_code == 200
@@ -18,7 +18,7 @@ def test_assessment_factory_lite_demo_ui_release_marker():
     }
 
 
-def test_assessment_factory_lite_demo_ui_release_routes_exist():
+def test_assessment_factory_lite_demo_screen_release_routes_exist():
     actual_routes = {route.path for route in app.routes}
 
     assert "/products/assessment-factory-lite/demo-profile" in actual_routes
@@ -36,9 +36,10 @@ def test_assessment_factory_lite_demo_ui_release_routes_exist():
         in actual_routes
     )
     assert "/products/assessment-factory-lite/demo-ui/view" in actual_routes
+    assert "/products/assessment-factory-lite/demo-ui/html" in actual_routes
 
 
-def test_assessment_factory_lite_demo_ui_release_view_endpoint_works():
+def test_assessment_factory_lite_demo_screen_release_html_endpoint_works():
     rows = [
         {
             "event_id": "evt-001",
@@ -55,7 +56,7 @@ def test_assessment_factory_lite_demo_ui_release_view_endpoint_works():
     ]
 
     response = client.post(
-        "/products/assessment-factory-lite/demo-ui/view",
+        "/products/assessment-factory-lite/demo-ui/html",
         json={"rows": rows},
     )
 
@@ -64,16 +65,18 @@ def test_assessment_factory_lite_demo_ui_release_view_endpoint_works():
     payload = response.json()
 
     assert payload["status"] == "ok"
-    assert payload["view_type"] == "assessment_factory_lite_demo_ui_view"
+    assert payload["screen_type"] == (
+        "assessment_factory_lite_demo_ui_html_screen"
+    )
     assert payload["package_name"] == "Assessment Factory Lite Demo Package"
-    assert payload["release"] == "assessment-factory-lite-demo-package"
-    assert payload["version"] == "1.1.0"
+    assert payload["release"] == "assessment-factory-lite-demo-ui"
+    assert payload["version"] == "1.2.0"
     assert payload["recommended_action"] == (
-        "render_assessment_factory_lite_demo_view"
+        "display_assessment_factory_lite_demo_screen"
     )
 
 
-def test_assessment_factory_lite_demo_ui_release_view_has_cards():
+def test_assessment_factory_lite_demo_screen_release_html_contains_core_screen_parts():
     rows = [
         {
             "event_id": "evt-001",
@@ -90,35 +93,34 @@ def test_assessment_factory_lite_demo_ui_release_view_has_cards():
     ]
 
     response = client.post(
-        "/products/assessment-factory-lite/demo-ui/view",
+        "/products/assessment-factory-lite/demo-ui/html",
         json={"rows": rows},
     )
 
-    payload = response.json()
-    cards = {card["card_id"]: card for card in payload["cards"]}
+    html = response.json()["html"]
 
-    assert "demo_readiness_card" in cards
-    assert "sample_data_boundary_card" in cards
-    assert "dataset_contract_card" in cards
-    assert "dataset_validation_card" in cards
-    assert "governance_drag_summary_card" in cards
-    assert "top_friction_points_card" in cards
-    assert "recommended_intervention_card" in cards
-    assert "export_summary_preview_card" in cards
-    assert cards["dataset_validation_card"]["status"] == "passed"
+    assert "<!doctype html>" in html
+    assert 'data-screen="assessment-factory-lite-demo-ui-html-screen"' in html
+    assert "FIP/GAGF Operator Workstation" in html
+    assert "Assessment Factory Lite Demo" in html
+    assert "Demo Safety Warnings" in html
+    assert "Operator Demo Cards" in html
+    assert "Buyer-Facing Export Preview" in html
+    assert "Operator Actions" in html
 
 
-def test_assessment_factory_lite_demo_ui_release_preserves_demo_boundary():
+def test_assessment_factory_lite_demo_screen_release_preserves_demo_boundary():
     response = client.post(
-        "/products/assessment-factory-lite/demo-ui/view",
+        "/products/assessment-factory-lite/demo-ui/html",
         json={},
     )
 
     assert response.status_code == 200
 
     payload = response.json()
+    html = payload["html"]
 
-    assert payload["data_boundary"] == {
+    assert payload["ui_view"]["data_boundary"] == {
         "boundary_type": "demo_only_sample_data",
         "allowed_data": [
             "sample_csv",
@@ -136,8 +138,6 @@ def test_assessment_factory_lite_demo_ui_release_preserves_demo_boundary():
         ],
         "certification_claims_allowed": False,
     }
-    assert payload["warnings"][0]["warning_type"] == "demo_only_boundary"
-    assert payload["warnings"][1]["warning_type"] == "no_certification_claims"
-
-
+    assert "Use synthetic sample data only" in html
+    assert "does not certify FedRAMP High" in html
 

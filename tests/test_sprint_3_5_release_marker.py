@@ -11,9 +11,9 @@ def test_current_release_marker_reports_product_packaging_complete():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.2.0",
-        "release": "assessment-factory-lite-demo-ui",
-        "sprint": "4.1",
+        "version": "1.3.0",
+        "release": "assessment-factory-lite-demo-screen",
+        "sprint": "4.2",
         "status": "complete",
     }
 
@@ -46,9 +46,9 @@ def test_current_release_marker_is_product_packaging_complete():
     assert response.status_code == 200
 
     assert response.json() == {
-        "version": "1.2.0",
-        "release": "assessment-factory-lite-demo-ui",
-        "sprint": "4.1",
+        "version": "1.3.0",
+        "release": "assessment-factory-lite-demo-screen",
+        "sprint": "4.2",
         "status": "complete",
     }
 
@@ -62,6 +62,7 @@ def test_current_release_marker_preserves_core_routes():
     assert "/governance/debt/indicators" in actual_routes
     assert "/governance/architecture/diversity" in actual_routes
     assert "/governance/architecture/platform" in actual_routes
+
 
 
 

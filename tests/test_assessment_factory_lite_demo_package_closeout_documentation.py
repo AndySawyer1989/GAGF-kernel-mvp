@@ -110,3 +110,4 @@ def test_assessment_factory_lite_demo_package_closeout_document_preserves_bounda
         "The deterministic GAGF Kernel remains the authoritative decision "
         "and verification layer."
     ) in content
+

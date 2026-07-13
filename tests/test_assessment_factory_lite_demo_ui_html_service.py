@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_demo_ui_html_service import (
+﻿from backend.app.gagf.assessment_factory_lite_demo_ui_html_service import (
     AssessmentFactoryLiteDemoUIHTMLService,
 )
 
@@ -123,3 +123,4 @@ def test_assessment_factory_lite_demo_ui_html_screen_preserves_ui_view():
     assert result["ui_view"]["data_boundary"]["boundary_type"] == (
         "demo_only_sample_data"
     )
+

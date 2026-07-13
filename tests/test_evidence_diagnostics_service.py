@@ -265,3 +265,4 @@ def test_evidence_diagnostics_service_assigns_diagnostic_bands():
     assert service.get_diagnostic_band(0.0) == "invalid"
 
 
+

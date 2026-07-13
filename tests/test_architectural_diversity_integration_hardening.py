@@ -140,3 +140,4 @@ def test_architectural_diversity_platform_components_are_diagnostic_ready():
     assert diagnostic_component_ids == component_ids
 
 
+

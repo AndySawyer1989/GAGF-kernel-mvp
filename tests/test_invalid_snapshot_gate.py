@@ -35,3 +35,4 @@ def test_invalid_snapshot_blocks_arbitration():
     assert "snapshot_invalid" in decision.reason
 
 
+
