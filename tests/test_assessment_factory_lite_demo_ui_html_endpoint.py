@@ -1,0 +1,211 @@
+from fastapi.testclient import TestClient
+
+from backend.app.gagf.assessment_factory_lite_demo_ui_view_service import (
+    AssessmentFactoryLiteDemoUIViewService,
+)
+from backend.app.main import app
+
+
+client = TestClient(app)
+
+
+def rows():
+    return [
+        {
+            "event_id": "evt-001",
+            "case_id": "case-001",
+            "event_type": "approval_requested",
+            "actor": "requester",
+            "team": "operations",
+            "timestamp": "2026-01-01T09:00:00Z",
+            "severity": "medium",
+            "description": "Synthetic approval request submitted.",
+            "constraint_label": "approval_required",
+            "duration_minutes": 0,
+        },
+        {
+            "event_id": "evt-002",
+            "case_id": "case-001",
+            "event_type": "approval_delayed",
+            "actor": "approver",
+            "team": "operations",
+            "timestamp": "2026-01-01T13:00:00Z",
+            "severity": "high",
+            "description": "Synthetic approval delayed.",
+            "constraint_label": "approval_delay",
+            "duration_minutes": 240,
+        },
+    ]
+
+
+def ui_view():
+    return AssessmentFactoryLiteDemoUIViewService().build_view(rows=rows())
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_renders_contract_from_rows():
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"rows": rows()},
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["status"] == "ok"
+    assert payload["screen_type"] == (
+        "assessment_factory_lite_demo_ui_html_screen"
+    )
+    assert payload["package_name"] == "Assessment Factory Lite Demo Package"
+    assert payload["release"] == "assessment-factory-lite-demo-ui"
+    assert payload["version"] == "1.2.0"
+    assert payload["recommended_action"] == (
+        "display_assessment_factory_lite_demo_screen"
+    )
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_renders_from_ui_view():
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"ui_view": ui_view()},
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["status"] == "ok"
+    assert payload["ui_view"]["view_type"] == "assessment_factory_lite_demo_ui_view"
+    assert payload["ui_view"]["recommended_action"] == (
+        "render_assessment_factory_lite_demo_view"
+    )
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_contains_document_shell():
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"rows": rows()},
+    )
+
+    html = response.json()["html"]
+
+    assert "<!doctype html>" in html
+    assert '<html lang="en">' in html
+    assert "<title>Assessment Factory Lite Demo</title>" in html
+    assert 'data-screen="assessment-factory-lite-demo-ui-html-screen"' in html
+    assert "FIP/GAGF Operator Workstation" in html
+    assert "Sample-data-only buyer demo path" in html
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_contains_cards():
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"rows": rows()},
+    )
+
+    html = response.json()["html"]
+
+    assert 'data-card-id="demo_readiness_card"' in html
+    assert 'data-card-id="sample_data_boundary_card"' in html
+    assert 'data-card-id="dataset_contract_card"' in html
+    assert 'data-card-id="dataset_validation_card"' in html
+    assert 'data-card-id="governance_drag_summary_card"' in html
+    assert 'data-card-id="top_friction_points_card"' in html
+    assert 'data-card-id="recommended_intervention_card"' in html
+    assert 'data-card-id="export_summary_preview_card"' in html
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_contains_warnings():
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"rows": rows()},
+    )
+
+    html = response.json()["html"]
+
+    assert 'data-warning-type="demo_only_boundary"' in html
+    assert 'data-warning-type="no_certification_claims"' in html
+    assert "Use synthetic sample data only" in html
+    assert "does not certify FedRAMP High" in html
+    assert "HIPAA compliance" in html
+    assert "SOC 2" in html
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_contains_export_preview():
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"rows": rows()},
+    )
+
+    html = response.json()["html"]
+
+    assert "Buyer-Facing Export Preview" in html
+    assert "Assessment Factory Lite analyzed 2 synthetic workflow events" in html
+    assert "governance drag events" in html
+    assert "synthetic sample data" in html
+    assert "production readiness" in html
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_contains_operator_actions():
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"rows": rows()},
+    )
+
+    html = response.json()["html"]
+
+    assert "Operator Actions" in html
+    assert "review_demo_readiness" in html
+    assert "review_sample_data_boundary" in html
+    assert "review_governance_drag_summary" in html
+    assert "review_top_friction_points" in html
+    assert "review_recommended_intervention" in html
+    assert "review_demo_export_summary" in html
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_rejects_invalid_rows_in_ui_view():
+    bad_rows = [
+        {
+            "event_id": "evt-003",
+            "case_id": "case-002",
+            "event_type": "real_customer_incident",
+            "actor": "operator",
+            "team": "security",
+            "timestamp": "2026-01-01T15:00:00Z",
+            "severity": "urgent",
+            "description": "Invalid event.",
+            "contains_real_customer_data": True,
+        }
+    ]
+
+    response = client.post(
+        "/products/assessment-factory-lite/demo-ui/html",
+        json={"rows": bad_rows},
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["ui_view"]["source_payloads"]["diagnostics_result"][
+        "status"
+    ] == "rejected"
+    assert "repair_sample_csv_before_demo" in payload["html"]
+
+
+def test_assessment_factory_lite_demo_ui_html_route_exists():
+    actual_routes = {route.path for route in app.routes}
+
+    assert "/products/assessment-factory-lite/demo-ui/html" in actual_routes
+
+
+def test_assessment_factory_lite_demo_ui_html_endpoint_preserves_release_marker():
+    response = client.get("/version")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "version": "1.2.0",
+        "release": "assessment-factory-lite-demo-ui",
+        "sprint": "4.1",
+        "status": "complete",
+    }
