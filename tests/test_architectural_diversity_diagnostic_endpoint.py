@@ -200,11 +200,12 @@ def test_architectural_diversity_endpoint_preserves_current_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.3.0",
-        "release": "assessment-factory-lite-demo-screen",
-        "sprint": "4.2",
+        "version": "1.4.0",
+        "release": "assessment-factory-lite-demo-loader",
+        "sprint": "4.3",
         "status": "complete",
     }
+
 
 
 

@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.gagf.assessment_factory_lite_dataset_contract_service import (
     AssessmentFactoryLiteDatasetContractService,
@@ -195,8 +195,8 @@ def test_assessment_factory_lite_demo_sample_rows_endpoint_preserves_release_mar
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.3.0",
-        "release": "assessment-factory-lite-demo-screen",
-        "sprint": "4.2",
+        "version": "1.4.0",
+        "release": "assessment-factory-lite-demo-loader",
+        "sprint": "4.3",
         "status": "complete",
     }

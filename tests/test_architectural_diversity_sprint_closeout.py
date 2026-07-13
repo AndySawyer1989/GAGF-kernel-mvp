@@ -15,9 +15,9 @@ def test_architectural_diversity_sprint_closeout_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.3.0",
-        "release": "assessment-factory-lite-demo-screen",
-        "sprint": "4.2",
+        "version": "1.4.0",
+        "release": "assessment-factory-lite-demo-loader",
+        "sprint": "4.3",
         "status": "complete",
     }
 
@@ -165,6 +165,7 @@ def test_architectural_diversity_sprint_closeout_documentation_mentions_release_
     assert "POST /governance/architecture/diversity" in content
     assert "GET /governance/architecture/platform" in content
     assert "GET /governance/architecture/dashboard" in content
+
 
 
 
