@@ -134,9 +134,11 @@ def test_assessment_factory_lite_demo_html_screen_response_contract_includes_sce
         "version",
         "sample_rows_result",
         "scenario_menu",
+        "style_tokens",
         "html",
         "ui_view",
         "operator_message",
         "recommended_action",
     }
+
 

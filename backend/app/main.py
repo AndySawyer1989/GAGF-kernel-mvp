@@ -868,6 +868,7 @@ def assessment_factory_lite_demo_ui_html(payload: dict):
         ui_view=payload.get("ui_view"),
         sample_scenario=payload.get("sample_scenario"),
         include_scenario_menu=payload.get("include_scenario_menu", True),
+        include_style_tokens=payload.get("include_style_tokens", True),
     )
 
 
@@ -1195,6 +1196,8 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
+
 
 
 
