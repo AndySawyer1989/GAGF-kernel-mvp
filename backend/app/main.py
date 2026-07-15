@@ -86,6 +86,9 @@ from backend.app.gagf.assessment_factory_lite_operator_runbook_service import (
 from backend.app.gagf.assessment_factory_lite_delivery_readiness_service import (
     AssessmentFactoryLiteDeliveryReadinessService,
 )
+from backend.app.gagf.assessment_factory_lite_buyer_walkthrough_script_service import (
+    AssessmentFactoryLiteBuyerWalkthroughScriptService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -846,6 +849,11 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.get("/products/assessment-factory-lite/buyer-walkthrough/script")
+def assessment_factory_lite_buyer_walkthrough_script():
+    return AssessmentFactoryLiteBuyerWalkthroughScriptService().build_script()
+
+
 @app.get("/products/assessment-factory-lite/delivery/readiness")
 def assessment_factory_lite_delivery_readiness():
     return AssessmentFactoryLiteDeliveryReadinessService().evaluate_readiness()
@@ -1232,6 +1240,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
