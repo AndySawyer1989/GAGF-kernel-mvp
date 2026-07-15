@@ -201,9 +201,9 @@ def test_assessment_factory_lite_dataset_contract_endpoint_preserves_release_mar
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.6.0",
-        "release": "assessment-factory-lite-demo-styling-export",
-        "sprint": "4.5",
+        "version": "1.7.0",
+        "release": "assessment-factory-lite-demo-delivery-packaging",
+        "sprint": "4.6",
         "status": "complete",
     }
 
@@ -243,6 +243,7 @@ def test_assessment_factory_lite_dataset_contract_validation_defaults_missing_ro
     assert payload["row_count"] == 0
     assert payload["is_valid"] is True
     assert payload["recommended_action"] == "run_demo_diagnostics"
+
 
 
 

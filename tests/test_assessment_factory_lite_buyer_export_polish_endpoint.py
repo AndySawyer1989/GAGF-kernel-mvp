@@ -165,8 +165,9 @@ def test_assessment_factory_lite_buyer_export_polish_endpoint_preserves_release_
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.6.0",
-        "release": "assessment-factory-lite-demo-styling-export",
-        "sprint": "4.5",
+        "version": "1.7.0",
+        "release": "assessment-factory-lite-demo-delivery-packaging",
+        "sprint": "4.6",
         "status": "complete",
     }
+

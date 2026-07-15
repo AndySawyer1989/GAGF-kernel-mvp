@@ -182,11 +182,12 @@ def test_product_security_portfolio_dashboard_endpoint_preserves_release_marker(
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.6.0",
-        "release": "assessment-factory-lite-demo-styling-export",
-        "sprint": "4.5",
+        "version": "1.7.0",
+        "release": "assessment-factory-lite-demo-delivery-packaging",
+        "sprint": "4.6",
         "status": "complete",
     }
+
 
 
 
