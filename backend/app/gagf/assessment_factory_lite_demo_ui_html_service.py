@@ -3,6 +3,9 @@ from html import escape
 from backend.app.gagf.assessment_factory_lite_demo_sample_rows_service import (
     AssessmentFactoryLiteDemoSampleRowsService,
 )
+from backend.app.gagf.assessment_factory_lite_demo_scenario_menu_service import (
+    AssessmentFactoryLiteDemoScenarioMenuService,
+)
 from backend.app.gagf.assessment_factory_lite_demo_ui_view_service import (
     AssessmentFactoryLiteDemoUIViewService,
 )
@@ -15,10 +18,16 @@ class AssessmentFactoryLiteDemoUIHTMLService:
         self,
         ui_view_service: AssessmentFactoryLiteDemoUIViewService | None = None,
         sample_rows_service: AssessmentFactoryLiteDemoSampleRowsService | None = None,
+        scenario_menu_service: (
+            AssessmentFactoryLiteDemoScenarioMenuService | None
+        ) = None,
     ):
         self.ui_view_service = ui_view_service or AssessmentFactoryLiteDemoUIViewService()
         self.sample_rows_service = (
             sample_rows_service or AssessmentFactoryLiteDemoSampleRowsService()
+        )
+        self.scenario_menu_service = (
+            scenario_menu_service or AssessmentFactoryLiteDemoScenarioMenuService()
         )
 
     def render_html(
@@ -29,8 +38,14 @@ class AssessmentFactoryLiteDemoUIHTMLService:
         export_summary: dict | None = None,
         ui_view: dict | None = None,
         sample_scenario: str | None = None,
+        include_scenario_menu: bool = True,
     ) -> dict:
         sample_rows_result = None
+        scenario_menu = (
+            self.scenario_menu_service.build_menu()
+            if include_scenario_menu
+            else None
+        )
 
         if ui_view is None and rows is None and sample_scenario:
             sample_rows_result = self.sample_rows_service.get_sample_rows(
@@ -49,6 +64,7 @@ class AssessmentFactoryLiteDemoUIHTMLService:
         html = self._build_html(
             ui_view=ui_view,
             sample_rows_result=sample_rows_result,
+            scenario_menu=scenario_menu,
         )
 
         return {
@@ -58,6 +74,7 @@ class AssessmentFactoryLiteDemoUIHTMLService:
             "release": "assessment-factory-lite-demo-ui",
             "version": "1.2.0",
             "sample_rows_result": sample_rows_result,
+            "scenario_menu": scenario_menu,
             "html": html,
             "ui_view": ui_view,
             "operator_message": (
@@ -71,6 +88,7 @@ class AssessmentFactoryLiteDemoUIHTMLService:
         self,
         ui_view: dict,
         sample_rows_result: dict | None = None,
+        scenario_menu: dict | None = None,
     ) -> str:
         cards_html = "\n".join(
             self._render_card(card) for card in ui_view.get("cards", [])
@@ -84,6 +102,7 @@ class AssessmentFactoryLiteDemoUIHTMLService:
             for action in ui_view.get("operator_actions", [])
         )
 
+        scenario_menu_html = self._render_scenario_menu(scenario_menu)
         sample_loader_html = self._render_sample_loader(sample_rows_result)
 
         export_summary = ui_view.get("source_payloads", {}).get(
@@ -109,6 +128,11 @@ class AssessmentFactoryLiteDemoUIHTMLService:
       <p class="afl-subtitle">Sample-data-only buyer demo path</p>
       <p class="afl-release">Release: {escape(ui_view.get("release", ""))} | Version: {escape(ui_view.get("version", ""))}</p>
     </header>
+
+    <section class="afl-scenario-menu" aria-label="Demo scenario menu">
+      <h2>Demo Scenario Menu</h2>
+      {scenario_menu_html}
+    </section>
 
     <section class="afl-sample-loader" aria-label="Sample data loader">
       <h2>Sample Data Loader</h2>
@@ -140,6 +164,48 @@ class AssessmentFactoryLiteDemoUIHTMLService:
   </main>
 </body>
 </html>"""
+
+    def _render_scenario_menu(self, scenario_menu: dict | None) -> str:
+        if scenario_menu is None:
+            return "<p>Scenario menu was not included for this render.</p>"
+
+        items_html = "\n".join(
+            self._render_scenario_menu_item(item)
+            for item in scenario_menu.get("menu_items", [])
+        )
+
+        default_scenario = escape(str(scenario_menu.get("default_scenario", "")))
+        action = escape(str(scenario_menu.get("recommended_action", "")))
+
+        return f"""<div class="afl-scenario-menu-summary">
+  <p>Default scenario: {default_scenario}</p>
+  <p>Action: {action}</p>
+</div>
+<div class="afl-scenario-menu-grid">
+  {items_html}
+</div>"""
+
+    def _render_scenario_menu_item(self, item: dict) -> str:
+        scenario = escape(str(item.get("scenario", "")))
+        label = escape(str(item.get("label", "")))
+        description = escape(str(item.get("description", "")))
+        recommended_use = escape(str(item.get("recommended_use", "")))
+        row_count = escape(str(item.get("row_count", 0)))
+        expected_intervention = escape(str(item.get("expected_intervention", "")))
+        ui_action = escape(str(item.get("ui_action", "")))
+        sample_scenario = escape(
+            str(item.get("html_payload", {}).get("sample_scenario", ""))
+        )
+
+        return f"""<article class="afl-scenario-card" data-scenario="{scenario}">
+  <h3>{label}</h3>
+  <p>{description}</p>
+  <p>Recommended use: {recommended_use}</p>
+  <p>Rows: {row_count}</p>
+  <p>Expected intervention: {expected_intervention}</p>
+  <p>UI action: {ui_action}</p>
+  <p>HTML payload: sample_scenario={sample_scenario}</p>
+</article>"""
 
     def _render_sample_loader(
         self,
