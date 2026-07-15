@@ -127,3 +127,4 @@ def test_assessment_factory_lite_demo_sample_rows_handles_unknown_scenario():
     assert "invalid" in result["available_scenarios"]
     assert "empty" in result["available_scenarios"]
     assert result["recommended_action"] == "choose_available_sample_scenario"
+

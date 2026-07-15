@@ -519,9 +519,9 @@ def health():
 @app.get("/version")
 def version():
     return {
-        "version": "1.4.0",
-        "release": "assessment-factory-lite-demo-loader",
-        "sprint": "4.3",
+        "version": "1.5.0",
+        "release": "assessment-factory-lite-demo-usability",
+        "sprint": "4.4",
         "status": "complete",
     }
 
@@ -1187,6 +1187,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 

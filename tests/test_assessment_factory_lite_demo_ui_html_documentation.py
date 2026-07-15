@@ -96,3 +96,4 @@ def test_assessment_factory_lite_demo_ui_html_document_preserves_boundaries():
         "and verification layer."
     ) in content
 
+

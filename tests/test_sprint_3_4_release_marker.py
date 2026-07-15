@@ -12,9 +12,9 @@ def test_current_release_marker_is_product_packaging_complete():
     assert response.status_code == 200
 
     assert response.json() == {
-        "version": "1.4.0",
-        "release": "assessment-factory-lite-demo-loader",
-        "sprint": "4.3",
+        "version": "1.5.0",
+        "release": "assessment-factory-lite-demo-usability",
+        "sprint": "4.4",
         "status": "complete",
     }
 
@@ -28,6 +28,7 @@ def test_current_release_marker_preserves_core_routes():
     assert "/governance/debt/indicators" in actual_routes
     assert "/governance/architecture/diversity" in actual_routes
     assert "/governance/architecture/platform" in actual_routes
+
 
 
 

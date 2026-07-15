@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
@@ -108,8 +108,9 @@ def test_assessment_factory_lite_demo_scenario_menu_endpoint_route_exists_and_pr
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.4.0",
-        "release": "assessment-factory-lite-demo-loader",
-        "sprint": "4.3",
+        "version": "1.5.0",
+        "release": "assessment-factory-lite-demo-usability",
+        "sprint": "4.4",
         "status": "complete",
     }
+

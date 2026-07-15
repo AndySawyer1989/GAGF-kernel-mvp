@@ -88,3 +88,4 @@ def test_architectural_diversity_platform_endpoint_route_exists():
 
 
 
+
