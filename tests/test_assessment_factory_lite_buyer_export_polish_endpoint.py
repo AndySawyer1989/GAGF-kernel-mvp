@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.gagf.assessment_factory_lite_demo_export_service import (
     AssessmentFactoryLiteDemoExportService,
@@ -165,8 +165,8 @@ def test_assessment_factory_lite_buyer_export_polish_endpoint_preserves_release_
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.5.0",
-        "release": "assessment-factory-lite-demo-usability",
-        "sprint": "4.4",
+        "version": "1.6.0",
+        "release": "assessment-factory-lite-demo-styling-export",
+        "sprint": "4.5",
         "status": "complete",
     }

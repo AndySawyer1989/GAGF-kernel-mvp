@@ -256,11 +256,12 @@ def test_assessment_factory_lite_demo_diagnostics_endpoint_preserves_release_mar
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.5.0",
-        "release": "assessment-factory-lite-demo-usability",
-        "sprint": "4.4",
+        "version": "1.6.0",
+        "release": "assessment-factory-lite-demo-styling-export",
+        "sprint": "4.5",
         "status": "complete",
     }
+
 
 
 

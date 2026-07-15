@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.gagf.assessment_factory_lite_demo_ui_html_service import (
     AssessmentFactoryLiteDemoUIHTMLService,
@@ -138,8 +138,8 @@ def test_assessment_factory_lite_demo_html_style_integration_preserves_release_m
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.5.0",
-        "release": "assessment-factory-lite-demo-usability",
-        "sprint": "4.4",
+        "version": "1.6.0",
+        "release": "assessment-factory-lite-demo-styling-export",
+        "sprint": "4.5",
         "status": "complete",
     }
