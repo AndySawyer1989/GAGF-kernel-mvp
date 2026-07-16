@@ -12,11 +12,12 @@ def test_version_endpoint_reports_product_security_portfolio_release_complete():
     assert response.status_code == 200
 
     assert response.json() == {
-        "version": "1.8.0",
-        "release": "assessment-factory-lite-buyer-conversion",
-        "sprint": "4.7",
+        "version": "1.9.0",
+        "release": "assessment-factory-lite-commercial-offer",
+        "sprint": "4.8",
         "status": "complete",
     }
+
 
 
 

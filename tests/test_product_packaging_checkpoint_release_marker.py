@@ -11,9 +11,9 @@ def test_product_packaging_checkpoint_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.8.0",
-        "release": "assessment-factory-lite-buyer-conversion",
-        "sprint": "4.7",
+        "version": "1.9.0",
+        "release": "assessment-factory-lite-commercial-offer",
+        "sprint": "4.8",
         "status": "complete",
     }
 
@@ -46,6 +46,7 @@ def test_product_security_portfolio_endpoint_remains_available_after_checkpoint_
     actual_routes = {route.path for route in app.routes}
 
     assert "/products/security-portfolio" in actual_routes
+
 
 
 

@@ -11,9 +11,9 @@ def test_assessment_factory_lite_demo_screen_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.8.0",
-        "release": "assessment-factory-lite-buyer-conversion",
-        "sprint": "4.7",
+        "version": "1.9.0",
+        "release": "assessment-factory-lite-commercial-offer",
+        "sprint": "4.8",
         "status": "complete",
     }
 
@@ -140,6 +140,7 @@ def test_assessment_factory_lite_demo_screen_release_preserves_demo_boundary():
     }
     assert "Use synthetic sample data only" in html
     assert "does not certify FedRAMP High" in html
+
 
 
 

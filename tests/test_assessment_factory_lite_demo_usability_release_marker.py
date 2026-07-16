@@ -11,9 +11,9 @@ def test_assessment_factory_lite_demo_usability_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.8.0",
-        "release": "assessment-factory-lite-buyer-conversion",
-        "sprint": "4.7",
+        "version": "1.9.0",
+        "release": "assessment-factory-lite-commercial-offer",
+        "sprint": "4.8",
         "status": "complete",
     }
 
@@ -111,6 +111,7 @@ def test_assessment_factory_lite_demo_usability_release_empty_scenario_works():
     assert payload["scenario_menu"]["default_scenario"] == "standard"
     assert "Empty Demo Starting State" in payload["html"]
     assert "add_synthetic_sample_rows" in payload["html"]
+
 
 
 
