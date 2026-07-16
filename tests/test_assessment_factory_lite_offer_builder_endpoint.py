@@ -193,8 +193,9 @@ def test_assessment_factory_lite_offer_builder_endpoint_route_exists_and_preserv
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.9.0",
-        "release": "assessment-factory-lite-commercial-offer",
-        "sprint": "4.8",
+        "version": "2.0.0",
+        "release": "assessment-factory-lite-proposal-package",
+        "sprint": "4.9",
         "status": "complete",
     }
+

@@ -151,11 +151,12 @@ def test_architecture_drift_detection_endpoint_preserves_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.9.0",
-        "release": "assessment-factory-lite-commercial-offer",
-        "sprint": "4.8",
+        "version": "2.0.0",
+        "release": "assessment-factory-lite-proposal-package",
+        "sprint": "4.9",
         "status": "complete",
     }
+
 
 
 

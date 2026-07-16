@@ -11,9 +11,9 @@ def test_assessment_factory_lite_demo_package_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.9.0",
-        "release": "assessment-factory-lite-commercial-offer",
-        "sprint": "4.8",
+        "version": "2.0.0",
+        "release": "assessment-factory-lite-proposal-package",
+        "sprint": "4.9",
         "status": "complete",
     }
 
@@ -116,6 +116,7 @@ def test_assessment_factory_lite_demo_package_release_has_export_summary():
     )
     assert payload["package_name"] == "Assessment Factory Lite Demo Package"
     assert payload["recommended_action"] == "review_demo_export_summary"
+
 
 
 

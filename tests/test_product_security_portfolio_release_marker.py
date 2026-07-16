@@ -11,9 +11,9 @@ def test_product_packaging_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.9.0",
-        "release": "assessment-factory-lite-commercial-offer",
-        "sprint": "4.8",
+        "version": "2.0.0",
+        "release": "assessment-factory-lite-proposal-package",
+        "sprint": "4.9",
         "status": "complete",
     }
 
@@ -40,6 +40,7 @@ def test_product_security_portfolio_dashboard_endpoint_remains_available_after_r
     actual_routes = {route.path for route in app.routes}
 
     assert "/products/security-portfolio/dashboard" in actual_routes
+
 
 
 
