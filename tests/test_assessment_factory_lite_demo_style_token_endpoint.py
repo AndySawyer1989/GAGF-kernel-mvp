@@ -147,9 +147,10 @@ def test_assessment_factory_lite_demo_style_tokens_endpoint_route_exists_and_pre
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.7.0",
-        "release": "assessment-factory-lite-demo-delivery-packaging",
-        "sprint": "4.6",
+        "version": "1.8.0",
+        "release": "assessment-factory-lite-buyer-conversion",
+        "sprint": "4.7",
         "status": "complete",
     }
+
 

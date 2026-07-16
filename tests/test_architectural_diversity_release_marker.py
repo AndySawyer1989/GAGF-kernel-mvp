@@ -11,9 +11,9 @@ def test_product_packaging_release_marker_version_contract():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "1.7.0",
-        "release": "assessment-factory-lite-demo-delivery-packaging",
-        "sprint": "4.6",
+        "version": "1.8.0",
+        "release": "assessment-factory-lite-buyer-conversion",
+        "sprint": "4.7",
         "status": "complete",
     }
 
@@ -40,6 +40,7 @@ def test_product_packaging_release_marker_preserves_version_route():
     actual_routes = {route.path for route in app.routes}
 
     assert "/version" in actual_routes
+
 
 
 
