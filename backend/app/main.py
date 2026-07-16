@@ -101,6 +101,9 @@ from backend.app.gagf.assessment_factory_lite_offer_html_service import (
 from backend.app.gagf.assessment_factory_lite_proposal_builder_service import (
     AssessmentFactoryLiteProposalBuilderService,
 )
+from backend.app.gagf.assessment_factory_lite_proposal_html_service import (
+    AssessmentFactoryLiteProposalHTMLService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -861,6 +864,16 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.post("/products/assessment-factory-lite/proposal/html")
+def assessment_factory_lite_proposal_html(payload: dict | None = None):
+    payload = payload or {}
+    return AssessmentFactoryLiteProposalHTMLService().render_html(
+        proposal=payload.get("proposal"),
+        offer=payload.get("offer"),
+        buyer_context=payload.get("buyer_context"),
+    )
+
+
 @app.post("/products/assessment-factory-lite/proposal")
 def assessment_factory_lite_proposal(payload: dict | None = None):
     payload = payload or {}
@@ -1284,6 +1297,8 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
+
 
 
 
