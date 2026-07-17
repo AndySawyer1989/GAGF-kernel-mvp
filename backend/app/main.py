@@ -128,6 +128,9 @@ from backend.app.gagf.assessment_factory_lite_buyer_delivery_message_service imp
 from backend.app.gagf.assessment_factory_lite_buyer_delivery_event_record_service import (
     AssessmentFactoryLiteBuyerDeliveryEventRecordService,
 )
+from backend.app.gagf.assessment_factory_lite_buyer_follow_up_tracker_service import (
+    AssessmentFactoryLiteBuyerFollowUpTrackerService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -888,6 +891,26 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.post("/products/assessment-factory-lite/buyer-follow-up-tracker")
+def assessment_factory_lite_buyer_follow_up_tracker(payload: dict | None = None):
+    payload = payload or {}
+    return AssessmentFactoryLiteBuyerFollowUpTrackerService().build_tracker(
+        event_record=payload.get("event_record"),
+        message=payload.get("message"),
+        delivery_package=payload.get("delivery_package"),
+        export_package=payload.get("export_package"),
+        export=payload.get("export"),
+        document=payload.get("document"),
+        proposal=payload.get("proposal"),
+        offer=payload.get("offer"),
+        buyer_context=payload.get("buyer_context"),
+        operator_approval=payload.get("operator_approval"),
+        message_context=payload.get("message_context"),
+        event_context=payload.get("event_context"),
+        follow_up_context=payload.get("follow_up_context"),
+    )
+
+
 @app.post("/products/assessment-factory-lite/buyer-delivery-event-record")
 def assessment_factory_lite_buyer_delivery_event_record(payload: dict | None = None):
     payload = payload or {}
@@ -1428,6 +1451,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
