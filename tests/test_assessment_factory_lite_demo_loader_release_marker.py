@@ -11,9 +11,9 @@ def test_assessment_factory_lite_demo_loader_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.0.0",
-        "release": "assessment-factory-lite-proposal-package",
-        "sprint": "4.9",
+        "version": "2.1.0",
+        "release": "assessment-factory-lite-proposal-export-package",
+        "sprint": "5.0",
         "status": "complete",
     }
 
@@ -93,6 +93,7 @@ def test_assessment_factory_lite_demo_loader_release_html_loads_invalid_boundary
     ] == "rejected"
     assert "Unsafe Data Boundary Example" in payload["html"]
     assert "repair_sample_csv_before_demo" in payload["html"]
+
 
 
 

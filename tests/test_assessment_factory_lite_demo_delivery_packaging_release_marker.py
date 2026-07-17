@@ -11,9 +11,9 @@ def test_assessment_factory_lite_demo_delivery_packaging_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.0.0",
-        "release": "assessment-factory-lite-proposal-package",
-        "sprint": "4.9",
+        "version": "2.1.0",
+        "release": "assessment-factory-lite-proposal-export-package",
+        "sprint": "5.0",
         "status": "complete",
     }
 
@@ -71,5 +71,6 @@ def test_assessment_factory_lite_demo_delivery_packaging_readiness_remains_on_st
     assert payload["delivery_stage"] == "demo_delivery_packaging"
     assert payload["readiness_status"] == "ready"
     assert payload["delivery_decision"]["decision"] == "go"
+
 
 
