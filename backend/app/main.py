@@ -137,6 +137,9 @@ from backend.app.gagf.assessment_factory_lite_buyer_follow_up_message_service im
 from backend.app.gagf.assessment_factory_lite_buyer_follow_up_event_record_service import (
     AssessmentFactoryLiteBuyerFollowUpEventRecordService,
 )
+from backend.app.gagf.assessment_factory_lite_assessment_scope_call_package_service import (
+    AssessmentFactoryLiteAssessmentScopeCallPackageService,
+)
 from backend.app.gagf.zta_control_mapping_service import (
     ZTAControlMappingService,
 )
@@ -897,6 +900,32 @@ def product_packaging_checkpoint(payload: dict):
     )
 
 
+@app.post("/products/assessment-factory-lite/assessment-scope-call-package")
+def assessment_factory_lite_assessment_scope_call_package(payload: dict | None = None):
+    payload = payload or {}
+    return AssessmentFactoryLiteAssessmentScopeCallPackageService().build_package(
+        follow_up_event_record=payload.get("follow_up_event_record"),
+        follow_up_message=payload.get("follow_up_message"),
+        tracker=payload.get("tracker"),
+        event_record=payload.get("event_record"),
+        message=payload.get("message"),
+        delivery_package=payload.get("delivery_package"),
+        export_package=payload.get("export_package"),
+        export=payload.get("export"),
+        document=payload.get("document"),
+        proposal=payload.get("proposal"),
+        offer=payload.get("offer"),
+        buyer_context=payload.get("buyer_context"),
+        operator_approval=payload.get("operator_approval"),
+        message_context=payload.get("message_context"),
+        event_context=payload.get("event_context"),
+        follow_up_context=payload.get("follow_up_context"),
+        follow_up_message_context=payload.get("follow_up_message_context"),
+        follow_up_event_context=payload.get("follow_up_event_context"),
+        scope_call_context=payload.get("scope_call_context"),
+    )
+
+
 @app.post("/products/assessment-factory-lite/buyer-follow-up-event-record")
 def assessment_factory_lite_buyer_follow_up_event_record(payload: dict | None = None):
     payload = payload or {}
@@ -1503,6 +1532,7 @@ def ingest_defender(payload: dict):
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
     )
+
 
 
 
