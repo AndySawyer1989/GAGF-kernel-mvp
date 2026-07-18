@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_proposal_html_service import (
+﻿from backend.app.gagf.assessment_factory_lite_proposal_html_service import (
     AssessmentFactoryLiteProposalHTMLService,
 )
 

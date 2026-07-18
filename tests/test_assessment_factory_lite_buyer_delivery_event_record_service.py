@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_buyer_delivery_event_record_service import (
+﻿from backend.app.gagf.assessment_factory_lite_buyer_delivery_event_record_service import (
     AssessmentFactoryLiteBuyerDeliveryEventRecordService,
 )
 from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
@@ -238,3 +238,4 @@ def test_assessment_factory_lite_buyer_delivery_event_record_blocks_not_send_rea
         ),
         "future_action": "rerun_buyer_delivery_event_record",
     }
+

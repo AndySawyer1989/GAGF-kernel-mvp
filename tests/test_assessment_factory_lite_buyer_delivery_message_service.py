@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_buyer_delivery_message_service import (
+﻿from backend.app.gagf.assessment_factory_lite_buyer_delivery_message_service import (
     AssessmentFactoryLiteBuyerDeliveryMessageService,
 )
 from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
@@ -214,3 +214,4 @@ def test_assessment_factory_lite_buyer_delivery_message_blocks_failed_delivery_p
         ),
         "future_action": "rerun_buyer_delivery_message",
     }
+

@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_buyer_export_polish_service import (
+﻿from backend.app.gagf.assessment_factory_lite_buyer_export_polish_service import (
     AssessmentFactoryLiteBuyerExportPolishService,
 )
 from backend.app.gagf.assessment_factory_lite_demo_sample_rows_service import (

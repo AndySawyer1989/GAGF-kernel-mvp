@@ -129,3 +129,4 @@ def test_assessment_factory_lite_demo_style_tokens_preserve_demo_boundary():
         "live_security_telemetry",
     ]
     assert boundary["certification_claims_allowed"] is False
+

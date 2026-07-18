@@ -11,8 +11,8 @@ def test_assessment_factory_lite_proposal_package_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.1.0",
-        "release": "assessment-factory-lite-proposal-export-package",
+        "version": "2.2.0",
+        "release": "assessment-factory-lite-buyer-delivery-follow-up",
         "sprint": "5.0",
         "status": "complete",
     }
@@ -87,3 +87,4 @@ def test_assessment_factory_lite_proposal_package_contains_proposal_assets():
     assert "Evidence Boundary" in html
     assert "Approval Requirements" in html
     assert "Proposal Risk Controls" in html
+

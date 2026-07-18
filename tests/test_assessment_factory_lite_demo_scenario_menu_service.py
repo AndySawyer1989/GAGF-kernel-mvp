@@ -124,3 +124,4 @@ def test_assessment_factory_lite_demo_scenario_menu_items_are_html_ready():
         assert "sample_scenario" in item["html_payload"]
 
 
+

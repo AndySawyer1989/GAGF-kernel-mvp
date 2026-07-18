@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_buyer_follow_up_event_record_service import (
+﻿from backend.app.gagf.assessment_factory_lite_buyer_follow_up_event_record_service import (
     AssessmentFactoryLiteBuyerFollowUpEventRecordService,
 )
 from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
@@ -281,3 +281,4 @@ def test_assessment_factory_lite_buyer_follow_up_event_record_blocks_invalid_mes
         ),
         "future_action": "rerun_buyer_follow_up_event_record",
     }
+

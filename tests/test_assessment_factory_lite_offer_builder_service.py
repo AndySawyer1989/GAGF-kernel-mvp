@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_offer_builder_service import (
+﻿from backend.app.gagf.assessment_factory_lite_offer_builder_service import (
     AssessmentFactoryLiteOfferBuilderService,
 )
 

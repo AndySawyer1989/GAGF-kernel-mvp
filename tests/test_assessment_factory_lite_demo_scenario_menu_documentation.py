@@ -103,3 +103,4 @@ def test_assessment_factory_lite_demo_scenario_menu_document_preserves_boundarie
         "The deterministic GAGF Kernel remains the authoritative decision "
         "and verification layer."
     ) in content
+

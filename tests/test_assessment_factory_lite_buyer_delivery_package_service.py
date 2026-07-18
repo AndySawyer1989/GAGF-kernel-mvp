@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
+﻿from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
     AssessmentFactoryLiteFormalProposalMarkdownExportService,
 )
 from backend.app.gagf.assessment_factory_lite_buyer_delivery_package_service import (
@@ -218,3 +218,4 @@ def test_assessment_factory_lite_buyer_delivery_package_blocks_failed_export_pac
         ),
         "future_action": "rerun_buyer_delivery_package",
     }
+

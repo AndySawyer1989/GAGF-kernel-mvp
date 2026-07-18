@@ -112,3 +112,4 @@ def test_assessment_factory_lite_buyer_export_polish_document_preserves_boundari
         "The deterministic GAGF Kernel remains the authoritative decision "
         "and verification layer."
     ) in content
+

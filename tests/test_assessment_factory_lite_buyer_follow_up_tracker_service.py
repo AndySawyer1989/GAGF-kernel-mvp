@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_buyer_follow_up_tracker_service import (
+﻿from backend.app.gagf.assessment_factory_lite_buyer_follow_up_tracker_service import (
     AssessmentFactoryLiteBuyerFollowUpTrackerService,
 )
 from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
@@ -230,3 +230,4 @@ def test_assessment_factory_lite_buyer_follow_up_tracker_blocks_unrecorded_deliv
         ),
         "future_action": "rerun_buyer_follow_up_tracker",
     }
+

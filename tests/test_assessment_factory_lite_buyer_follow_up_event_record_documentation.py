@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 
 DOC_PATH = Path("docs/ASSESSMENT_FACTORY_LITE_BUYER_FOLLOW_UP_EVENT_RECORD.md")

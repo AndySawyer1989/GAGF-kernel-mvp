@@ -247,3 +247,4 @@ def test_architectural_diversity_telemetry_adapter_normalizes_strings():
 
 
 
+

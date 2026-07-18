@@ -11,8 +11,8 @@ def test_assessment_factory_lite_buyer_conversion_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.1.0",
-        "release": "assessment-factory-lite-proposal-export-package",
+        "version": "2.2.0",
+        "release": "assessment-factory-lite-buyer-delivery-follow-up",
         "sprint": "5.0",
         "status": "complete",
     }
@@ -72,5 +72,6 @@ def test_assessment_factory_lite_buyer_conversion_html_contains_conversion_asset
     assert "streamline_approval_path" in html
     assert "schedule_paid_assessment_conversation" in html
     assert "Demo-Only Boundary" in html
+
 
 

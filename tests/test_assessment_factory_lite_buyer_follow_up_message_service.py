@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_buyer_follow_up_message_service import (
+﻿from backend.app.gagf.assessment_factory_lite_buyer_follow_up_message_service import (
     AssessmentFactoryLiteBuyerFollowUpMessageService,
 )
 from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
@@ -249,3 +249,4 @@ def test_assessment_factory_lite_buyer_follow_up_message_blocks_invalid_tracker(
         ),
         "future_action": "rerun_buyer_follow_up_message",
     }
+

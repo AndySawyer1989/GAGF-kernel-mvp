@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+﻿from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
@@ -11,8 +11,8 @@ def test_assessment_factory_lite_proposal_export_package_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.1.0",
-        "release": "assessment-factory-lite-proposal-export-package",
+        "version": "2.2.0",
+        "release": "assessment-factory-lite-buyer-delivery-follow-up",
         "sprint": "5.0",
         "status": "complete",
     }

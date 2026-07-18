@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_assessment_scope_call_package_service import (
+﻿from backend.app.gagf.assessment_factory_lite_assessment_scope_call_package_service import (
     AssessmentFactoryLiteAssessmentScopeCallPackageService,
 )
 from backend.app.gagf.assessment_factory_lite_formal_proposal_markdown_export_service import (
@@ -308,3 +308,6 @@ def test_assessment_factory_lite_assessment_scope_call_package_blocks_invalid_fo
         ),
         "future_action": "rerun_assessment_scope_call_package",
     }
+
+
+

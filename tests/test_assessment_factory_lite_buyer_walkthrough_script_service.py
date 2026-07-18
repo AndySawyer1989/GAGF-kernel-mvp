@@ -1,4 +1,4 @@
-from backend.app.gagf.assessment_factory_lite_buyer_walkthrough_script_service import (
+﻿from backend.app.gagf.assessment_factory_lite_buyer_walkthrough_script_service import (
     AssessmentFactoryLiteBuyerWalkthroughScriptService,
 )
 
