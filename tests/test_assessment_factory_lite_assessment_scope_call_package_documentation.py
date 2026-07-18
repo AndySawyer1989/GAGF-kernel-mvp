@@ -242,3 +242,4 @@ def test_assessment_factory_lite_assessment_scope_call_package_doc_names_commerc
     assert "The deterministic GAGF Kernel remains the authoritative decision and verification layer." in content
     assert "AI may later explain, summarize, or adapt scope-call materials" in content
     assert "AI must not override deterministic delivery checks" in content
+

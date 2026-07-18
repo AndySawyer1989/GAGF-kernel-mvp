@@ -204,11 +204,12 @@ def test_assessment_factory_lite_demo_ui_html_endpoint_preserves_release_marker(
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.2.0",
-        "release": "assessment-factory-lite-buyer-delivery-follow-up",
+        "version": "2.3.0",
+        "release": "assessment-factory-lite-scope-call-conversion",
         "sprint": "5.0",
         "status": "complete",
     }
+
 
 
 

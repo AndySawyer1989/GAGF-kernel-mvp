@@ -195,8 +195,8 @@ def test_assessment_factory_lite_scope_call_agenda_message_doc_names_evidence_co
     assert "production readiness" in content
 
     assert "Route Preservation" in content
-    assert "version: 2.2.0" in content
-    assert "release: assessment-factory-lite-buyer-delivery-follow-up" in content
+    assert "version: 2.3.0" in content
+    assert "release: assessment-factory-lite-scope-call-conversion" in content
     assert "sprint: 5.0" in content
     assert "status: complete" in content
     assert "The new message object may use version 2.3.0 without changing the system release marker until a later release-marker story." in content
@@ -210,3 +210,4 @@ def test_assessment_factory_lite_scope_call_agenda_message_doc_names_product_mea
     assert "Assessment Factory Lite can now prepare a scope-call agenda message after buyer interest has been recorded." in content
     assert "This turns buyer follow-up into a practical next commercial step while preserving human approval." in content
     assert "US-273 — Assessment Factory Lite Scope Call Agenda Message Release Marker" in content
+

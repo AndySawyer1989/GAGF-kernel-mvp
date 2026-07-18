@@ -589,8 +589,8 @@ def health():
 @app.get("/version")
 def version():
     return {
-        "version": "2.2.0",
-        "release": "assessment-factory-lite-buyer-delivery-follow-up",
+        "version": "2.3.0",
+        "release": "assessment-factory-lite-scope-call-conversion",
         "sprint": "5.0",
         "status": "complete",
     }
@@ -1626,6 +1626,7 @@ def build_assessment_factory_lite_scope_call_agenda_message(payload: dict | None
         scope_call_context=payload.get("scope_call_context"),
         scope_call_message_context=payload.get("scope_call_message_context"),
     )
+
 
 
 

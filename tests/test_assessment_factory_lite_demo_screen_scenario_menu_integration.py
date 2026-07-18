@@ -116,8 +116,8 @@ def test_assessment_factory_lite_demo_html_endpoint_route_preserves_release_mark
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.2.0",
-        "release": "assessment-factory-lite-buyer-delivery-follow-up",
+        "version": "2.3.0",
+        "release": "assessment-factory-lite-scope-call-conversion",
         "sprint": "5.0",
         "status": "complete",
     }
@@ -140,6 +140,7 @@ def test_assessment_factory_lite_demo_html_screen_response_contract_includes_sce
         "operator_message",
         "recommended_action",
     }
+
 
 
 

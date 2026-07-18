@@ -108,11 +108,12 @@ def test_assessment_factory_lite_demo_scenario_menu_endpoint_route_exists_and_pr
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.2.0",
-        "release": "assessment-factory-lite-buyer-delivery-follow-up",
+        "version": "2.3.0",
+        "release": "assessment-factory-lite-scope-call-conversion",
         "sprint": "5.0",
         "status": "complete",
     }
+
 
 
 

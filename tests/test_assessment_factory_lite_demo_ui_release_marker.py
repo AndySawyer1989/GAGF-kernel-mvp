@@ -11,8 +11,8 @@ def test_assessment_factory_lite_demo_ui_release_marker():
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.2.0",
-        "release": "assessment-factory-lite-buyer-delivery-follow-up",
+        "version": "2.3.0",
+        "release": "assessment-factory-lite-scope-call-conversion",
         "sprint": "5.0",
         "status": "complete",
     }
@@ -138,6 +138,7 @@ def test_assessment_factory_lite_demo_ui_release_preserves_demo_boundary():
     }
     assert payload["warnings"][0]["warning_type"] == "demo_only_boundary"
     assert payload["warnings"][1]["warning_type"] == "no_certification_claims"
+
 
 
 

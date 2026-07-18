@@ -199,9 +199,10 @@ def test_assessment_factory_lite_formal_proposal_pdf_readiness_endpoint_accepts_
 
     assert version_response.status_code == 200
     assert version_response.json() == {
-        "version": "2.2.0",
-        "release": "assessment-factory-lite-buyer-delivery-follow-up",
+        "version": "2.3.0",
+        "release": "assessment-factory-lite-scope-call-conversion",
         "sprint": "5.0",
         "status": "complete",
     }
+
 

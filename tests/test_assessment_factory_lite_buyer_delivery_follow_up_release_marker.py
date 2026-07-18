@@ -11,8 +11,8 @@ def test_assessment_factory_lite_buyer_delivery_follow_up_release_marker_version
 
     assert response.status_code == 200
     assert response.json() == {
-        "version": "2.2.0",
-        "release": "assessment-factory-lite-buyer-delivery-follow-up",
+        "version": "2.3.0",
+        "release": "assessment-factory-lite-scope-call-conversion",
         "sprint": "5.0",
         "status": "complete",
     }
@@ -135,3 +135,4 @@ def test_assessment_factory_lite_buyer_delivery_follow_up_release_marker_preserv
     assert payload["release"] == "assessment-factory-lite-proposal-export-package"
     assert payload["version"] == "2.1.0"
     assert payload["message_status"] == "draft_ready"
+
