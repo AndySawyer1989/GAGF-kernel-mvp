@@ -11,6 +11,7 @@ from backend.app.gagf.assessment_factory_lite_scope_call_event_record_service im
 from backend.app.gagf.assessment_factory_lite_paid_assessment_authorization_package_service import AssessmentFactoryLitePaidAssessmentAuthorizationPackageService
 from backend.app.gagf.assessment_factory_lite_paid_assessment_agreement_review_service import AssessmentFactoryLitePaidAssessmentAgreementReviewService
 from backend.app.gagf.assessment_factory_lite_contract_execution_review_service import AssessmentFactoryLiteContractExecutionReviewService
+from backend.app.gagf.assessment_factory_lite_contract_execution_event_service import AssessmentFactoryLiteContractExecutionEventService
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -1858,4 +1859,48 @@ def build_assessment_factory_lite_contract_execution_review(payload: dict | None
         authorization_context=payload.get("authorization_context"),
         agreement_context=payload.get("agreement_context"),
         contract_context=payload.get("contract_context"),
+    )
+
+@app.post("/products/assessment-factory-lite/contract-execution-event")
+def record_assessment_factory_lite_contract_execution_event(payload: dict | None = None):
+    payload = payload or {}
+
+    service = AssessmentFactoryLiteContractExecutionEventService()
+
+    return service.record_event(
+        contract_execution_review=payload.get("contract_execution_review"),
+        paid_assessment_agreement_review=payload.get("paid_assessment_agreement_review"),
+        paid_assessment_authorization_package=payload.get("paid_assessment_authorization_package"),
+        scope_call_event_record=payload.get("scope_call_event_record"),
+        scope_call_event_package=payload.get("scope_call_event_package"),
+        scope_call_agenda_message_event_record=payload.get("scope_call_agenda_message_event_record"),
+        scope_call_agenda_message=payload.get("scope_call_agenda_message"),
+        scope_call_package=payload.get("scope_call_package"),
+        follow_up_event_record=payload.get("follow_up_event_record"),
+        follow_up_message=payload.get("follow_up_message"),
+        tracker=payload.get("tracker"),
+        event_record=payload.get("event_record"),
+        message=payload.get("message"),
+        delivery_package=payload.get("delivery_package"),
+        export_package=payload.get("export_package"),
+        export=payload.get("export"),
+        document=payload.get("document"),
+        proposal=payload.get("proposal"),
+        offer=payload.get("offer"),
+        buyer_context=payload.get("buyer_context"),
+        operator_approval=payload.get("operator_approval"),
+        message_context=payload.get("message_context"),
+        event_context=payload.get("event_context"),
+        follow_up_context=payload.get("follow_up_context"),
+        follow_up_message_context=payload.get("follow_up_message_context"),
+        follow_up_event_context=payload.get("follow_up_event_context"),
+        scope_call_context=payload.get("scope_call_context"),
+        scope_call_message_context=payload.get("scope_call_message_context"),
+        scope_call_message_event_context=payload.get("scope_call_message_event_context"),
+        scope_call_event_context=payload.get("scope_call_event_context"),
+        scope_call_record_context=payload.get("scope_call_record_context"),
+        authorization_context=payload.get("authorization_context"),
+        agreement_context=payload.get("agreement_context"),
+        contract_context=payload.get("contract_context"),
+        contract_execution_context=payload.get("contract_execution_context"),
     )
