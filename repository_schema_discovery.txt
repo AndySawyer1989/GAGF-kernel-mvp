@@ -1,0 +1,1472 @@
+﻿
+============================================================
+FILE: .\backend\app\gagf\schemas.py
+============================================================
+from enum import Enum
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
+
+
+class TimestampQuality(str, Enum):
+    SOURCE_OCCURRED_AT = "SOURCE_OCCURRED_AT"
+    BACKFILLED_FROM_CREATED_AT = "BACKFILLED_FROM_CREATED_AT"
+    MISSING_TIMESTAMP = "MISSING_TIMESTAMP"
+
+
+class RawSecurityEvent(BaseModel):
+    event_id: str
+    event_type: str
+    event_occurred_at: Optional[str] = None
+    event_created_at: Optional[str] = None
+    timestamp_quality: TimestampQuality
+    kernel_eligible: bool = True
+    source_system: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class NormalizationApplied(BaseModel):
+    event_id: str
+    event_type: str
+    indicator: str
+    delta: float
+
+
+class EvidenceConfidence(BaseModel):
+    score: float
+    factors: Dict[str, float]
+
+
+class AdaptiveState(BaseModel):
+    risk_index: float = 0.10
+    uncertainty: float = 0.10
+    coherence_psi: float = 0.85
+    revision_pressure: float = 0.10
+    governance_momentum: float = 0.50
+
+
+class MetricAdapterResult(BaseModel):
+    adaptive_state: AdaptiveState
+    evidence_confidence: EvidenceConfidence
+    evidence: List[str]
+    normalization_applied: List[NormalizationApplied]
+
+
+class DecisionMeta(BaseModel):
+    is_override_triggered: bool
+    hysteresis_buffer_active: bool = False
+    policy_version: str
+    policy_id: str
+
+
+class ArbitrationResult(BaseModel):
+    snapshot_id: Optional[str] = None
+    active_strategy: Optional[str] = None
+    strategy_proposal: Optional[str] = None
+    kernel_decision: str
+    selected_strategy: Optional[str] = None
+    reason: List[str]
+    decision_meta: DecisionMeta
+
+
+class AdaptiveStateSnapshot(BaseModel):
+    snapshot_id: str
+    tenant_id: str
+    work_item_id: str
+    status: str
+    adaptive_state: AdaptiveState
+    evidence_confidence: EvidenceConfidence
+    evidence: List[str]
+    timestamp_quality_distribution: Dict[str, int] = Field(default_factory=dict)
+
+============================================================
+FILE: .\backend\app\gagf\metric_adapter.py
+============================================================
+from collections import Counter
+from typing import Iterable, List
+
+from backend.app.gagf.schemas import (
+    AdaptiveState,
+    EvidenceConfidence,
+    MetricAdapterResult,
+    NormalizationApplied,
+    RawSecurityEvent,
+    TimestampQuality,
+)
+
+
+NORMALIZATION_DELTAS = {
+    "honeyfile_interaction": ("uncertainty", 0.40),
+    "failed_auth_burst": ("risk_index", 0.20),
+    "unauthorized_api_call": ("risk_index", 0.30),
+    "lateral_movement_pattern": ("risk_index", 0.50),
+    "containment_success": ("risk_index", -0.40),
+    "verification_passed": ("uncertainty", -0.30),
+    "service_restored": ("coherence_psi", 0.30),
+    "strategy_failure": ("revision_pressure", 0.25),
+    "historically_valid_control": ("governance_momentum", 0.20),
+}
+
+
+def clamp(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    return max(minimum, min(maximum, value))
+
+
+class MetricAdapter:
+    def build_snapshot(self, events: Iterable[RawSecurityEvent]) -> MetricAdapterResult:
+        eligible_events = [event for event in events if event.kernel_eligible]
+
+        state = AdaptiveState()
+        evidence: List[str] = []
+        applied: List[NormalizationApplied] = []
+
+        for event in eligible_events:
+            mapping = NORMALIZATION_DELTAS.get(event.event_type)
+            if not mapping:
+                continue
+
+            indicator, delta = mapping
+            current_value = getattr(state, indicator)
+            setattr(state, indicator, clamp(current_value + delta))
+
+            evidence.append(event.event_id)
+            applied.append(
+                NormalizationApplied(
+                    event_id=event.event_id,
+                    event_type=event.event_type,
+                    indicator=indicator,
+                    delta=delta,
+                )
+            )
+
+        confidence = self._calculate_evidence_confidence(eligible_events)
+
+        return MetricAdapterResult(
+            adaptive_state=state,
+            evidence_confidence=confidence,
+            evidence=evidence,
+            normalization_applied=applied,
+        )
+
+    def _calculate_evidence_confidence(
+        self, events: List[RawSecurityEvent]
+    ) -> EvidenceConfidence:
+        if not events:
+            return EvidenceConfidence(
+                score=0.0,
+                factors={
+                    "timestamp_quality": 0.0,
+                    "sensor_reliability": 0.0,
+                    "cross_source_agreement": 0.0,
+                    "telemetry_completeness": 0.0,
+                },
+            )
+
+        counts = Counter(event.timestamp_quality for event in events)
+        total = len(events)
+
+        timestamp_quality_score = (
+            counts[TimestampQuality.SOURCE_OCCURRED_AT] * 1.0
+            + counts[TimestampQuality.BACKFILLED_FROM_CREATED_AT] * 0.6
+            + counts[TimestampQuality.MISSING_TIMESTAMP] * 0.0
+        ) / total
+
+        source_systems = {event.source_system for event in events if event.source_system}
+        cross_source_agreement = 1.0 if len(source_systems) > 1 else 0.7
+
+        telemetry_completeness = sum(
+            1 for event in events if event.event_occurred_at is not None
+        ) / total
+
+        sensor_reliability = 0.90
+
+        score = (
+            timestamp_quality_score * 0.40
+            + sensor_reliability * 0.25
+            + cross_source_agreement * 0.20
+            + telemetry_completeness * 0.15
+        )
+
+        return EvidenceConfidence(
+            score=round(clamp(score), 3),
+            factors={
+                "timestamp_quality": round(timestamp_quality_score, 3),
+                "sensor_reliability": sensor_reliability,
+                "cross_source_agreement": cross_source_agreement,
+                "telemetry_completeness": round(telemetry_completeness, 3),
+            },
+        )
+
+============================================================
+FILE: .\backend\app\gagf\evidence_confidence_adapter.py
+============================================================
+from backend.app.gagf.evidence_diagnostics_service import EvidenceDiagnosticsService
+from backend.app.gagf.schemas import EvidenceConfidence
+
+
+class EvidenceConfidenceAdapter:
+    def build_confidence(self, events: list) -> dict:
+        diagnostics = EvidenceDiagnosticsService().diagnose_events(events)
+
+        confidence_score = self.calculate_confidence_score(diagnostics)
+        confidence_band = self.get_confidence_band(confidence_score)
+
+        evidence_confidence = EvidenceConfidence(
+            score=confidence_score,
+            factors={
+                "evidence_quality": diagnostics["quality"]["average_quality_score"],
+                "cross_source_agreement": diagnostics["agreement"]["agreement_score"],
+                "conflict_health": self.score_conflict_health(
+                    diagnostics["conflicts"]
+                ),
+                "source_coverage": self.score_source_coverage(
+                    diagnostics["source_coverage"]
+                ),
+                "diagnostic_score": diagnostics["diagnostic_score"],
+            },
+        )
+
+        return {
+            "status": "ok",
+            "event_count": diagnostics["event_count"],
+            "confidence_score": confidence_score,
+            "confidence_band": confidence_band,
+            "evidence_confidence": evidence_confidence,
+            "diagnostics": diagnostics,
+        }
+
+    def calculate_confidence_score(self, diagnostics: dict) -> float:
+        quality_score = diagnostics["quality"]["average_quality_score"]
+        agreement_score = diagnostics["agreement"]["agreement_score"]
+        conflict_health = self.score_conflict_health(diagnostics["conflicts"])
+        source_coverage = self.score_source_coverage(
+            diagnostics["source_coverage"]
+        )
+
+        score = (
+            quality_score * 0.35
+            + agreement_score * 0.30
+            + conflict_health * 0.20
+            + source_coverage * 0.15
+        )
+
+        return round(score, 4)
+
+    def score_conflict_health(self, conflicts: dict) -> float:
+        conflict_count = conflicts["conflict_count"]
+        severity_counts = conflicts["severity_counts"]
+
+        if conflict_count == 0:
+            return 1.0
+
+        if severity_counts.get("critical", 0) > 0:
+            return 0.0
+
+        if severity_counts.get("warning", 0) >= 2:
+            return 0.35
+
+        if severity_counts.get("warning", 0) == 1:
+            return 0.65
+
+        return 0.75
+
+    def score_source_coverage(self, source_coverage: dict) -> float:
+        total_sources = source_coverage["total_sources"]
+        enabled_sources = source_coverage["enabled_sources"]
+        coverage_gaps = source_coverage["coverage_gaps"]
+
+        if total_sources == 0:
+            return 0.0
+
+        enabled_ratio = enabled_sources / total_sources
+
+        if coverage_gaps:
+            return round(enabled_ratio * 0.75, 4)
+
+        return round(enabled_ratio, 4)
+
+    def get_confidence_band(self, confidence_score: float) -> str:
+        if confidence_score >= 0.85:
+            return "high"
+
+        if confidence_score >= 0.65:
+            return "medium"
+
+        if confidence_score > 0.0:
+            return "low"
+
+        return "invalid"
+
+============================================================
+FILE: .\backend\app\gagf\snapshot_ledger.py
+============================================================
+import json
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+class SnapshotLedger:
+    def __init__(self, db_path="gagf.db"):
+        self.db_path = Path(db_path)
+        self._init_db()
+
+    def _connect(self):
+        return sqlite3.connect(self.db_path)
+
+    def _init_db(self):
+        with self._connect() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS gagf_state_snapshots (
+                    snapshot_id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    work_item_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    adaptive_state_json TEXT NOT NULL,
+                    evidence_confidence_json TEXT NOT NULL,
+                    timestamp_quality_distribution_json TEXT NOT NULL,
+                    evidence_json TEXT NOT NULL,
+                    normalization_applied_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+
+    def save_snapshot(self, snapshot, normalization_applied=None):
+        normalization_applied = normalization_applied or []
+
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO gagf_state_snapshots (
+                    snapshot_id,
+                    tenant_id,
+                    work_item_id,
+                    status,
+                    adaptive_state_json,
+                    evidence_confidence_json,
+                    timestamp_quality_distribution_json,
+                    evidence_json,
+                    normalization_applied_json,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    snapshot.snapshot_id,
+                    snapshot.tenant_id,
+                    snapshot.work_item_id,
+                    snapshot.status,
+                    json.dumps(snapshot.adaptive_state.model_dump()),
+                    json.dumps(snapshot.evidence_confidence.model_dump()),
+                    json.dumps(snapshot.timestamp_quality_distribution),
+                    json.dumps(snapshot.evidence),
+                    json.dumps([item.model_dump() for item in normalization_applied]),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+
+        return snapshot.snapshot_id
+
+    def get_snapshot(self, snapshot_id):
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT *
+                FROM gagf_state_snapshots
+                WHERE snapshot_id = ?
+                """,
+                (snapshot_id,),
+            ).fetchone()
+
+        return dict(row) if row else None
+
+    def list_snapshots(self):
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM gagf_state_snapshots
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+
+============================================================
+FILE: .\backend\app\services\evidence_source_registry.py
+============================================================
+class EvidenceSourceRegistry:
+    """
+    Central registry for mapping snapshot ID prefixes to evidence source labels.
+
+    This keeps source detection consistent across dashboard summaries,
+    recent activity, future reports, and future connector expansion.
+    """
+
+    SOURCE_PREFIXES = {
+        "github-": "GitHub",
+        "gitlab-": "GitLab",
+        "servicenow-": "ServiceNow",
+        "jira-": "Jira",
+        "okta-": "Okta",
+        "entra-": "Entra ID",
+        "sentinelone-": "SentinelOne",
+        "defender-": "Microsoft Defender",
+        "wiz-": "Wiz",
+        "crowdstrike-": "CrowdStrike",
+        "csv-": "CSV",
+        "api-": "API",
+}
+
+    DEFAULT_SOURCE = "Local / Manual"
+    EMPTY_SOURCE = "None"
+
+    @classmethod
+    def detect_from_snapshot(cls, snapshot):
+        if snapshot is None:
+            return cls.EMPTY_SOURCE
+
+        snapshot_id = snapshot.get("snapshot_id", "")
+
+        return cls.detect_from_snapshot_id(snapshot_id)
+
+    @classmethod
+    def detect_from_snapshot_id(cls, snapshot_id: str) -> str:
+        for prefix, label in cls.SOURCE_PREFIXES.items():
+            if snapshot_id.startswith(prefix):
+                return label
+
+        return cls.DEFAULT_SOURCE
+
+============================================================
+FILE: .\backend\app\services\ingestion_service.py
+============================================================
+from uuid import uuid4
+
+from backend.app.connectors.csv_connector import CSVConnector
+from backend.app.normalization.validator import EventValidator
+from backend.app.normalization.normalizer import EventNormalizer
+
+from backend.app.gagf.metric_adapter import MetricAdapter
+from backend.app.gagf.snapshot_ledger import SnapshotLedger
+from backend.app.gagf.decision_ledger import DecisionLedger
+from backend.app.gagf.gpl_loader import GPLLoader
+from backend.app.gagf.arbitration_service import ArbitrationService
+from backend.app.gagf.schemas import AdaptiveStateSnapshot
+
+
+class IngestionService:
+    def __init__(self):
+        self.csv_connector = CSVConnector()
+        self.validator = EventValidator()
+        self.normalizer = EventNormalizer()
+        self.metric_adapter = MetricAdapter()
+        self.snapshot_ledger = SnapshotLedger()
+        self.decision_ledger = DecisionLedger()
+        self.gpl = GPLLoader("backend/app/gagf/policies/gpl_v0_1.yaml")
+        self.arbiter = ArbitrationService(self.gpl)
+
+    def ingest_csv(self, file_path: str):
+        rows = self.csv_connector.read_events(file_path)
+
+        validation = self.validator.validate_rows(rows)
+        if not validation.is_valid:
+            return {
+                "status": "validation_failed",
+                "errors": validation.errors,
+            }
+
+        events = self.normalizer.normalize_rows(rows)
+        adapter_result = self.metric_adapter.build_snapshot(events)
+
+        timestamp_quality_distribution = {
+            "SOURCE_OCCURRED_AT": sum(
+                1 for event in events if event.timestamp_quality == "SOURCE_OCCURRED_AT"
+            ),
+            "BACKFILLED_FROM_CREATED_AT": sum(
+                1 for event in events if event.timestamp_quality == "BACKFILLED_FROM_CREATED_AT"
+            ),
+            "MISSING_TIMESTAMP": sum(
+                1 for event in events if event.timestamp_quality == "MISSING_TIMESTAMP"
+            ),
+        }
+
+        snapshot_status = (
+            "INVALID"
+            if timestamp_quality_distribution["MISSING_TIMESTAMP"] > 0
+            else "VALID"
+        )
+
+        snapshot = AdaptiveStateSnapshot(
+            snapshot_id=str(uuid4()),
+            tenant_id="demo",
+            work_item_id="csv-import",
+            status=snapshot_status,
+            adaptive_state=adapter_result.adaptive_state,
+            evidence_confidence=adapter_result.evidence_confidence,
+            evidence=adapter_result.evidence,
+            timestamp_quality_distribution=timestamp_quality_distribution,
+        )
+
+        self.snapshot_ledger.save_snapshot(
+            snapshot,
+            normalization_applied=adapter_result.normalization_applied,
+        )
+
+        decision = self.arbiter.arbitrate(
+            snapshot,
+            active_strategy="Normal",
+            proposal="continue",
+        )
+
+        decision_id = self.decision_ledger.save_decision(
+            decision,
+            evidence=snapshot.evidence,
+        )
+
+        return {
+            "status": "ingested",
+            "rows_received": len(rows),
+            "events_normalized": len(events),
+            "snapshot_id": snapshot.snapshot_id,
+            "snapshot_status": snapshot.status,
+            "decision_id": decision_id,
+            "selected_strategy": decision.selected_strategy,
+            "kernel_decision": decision.kernel_decision,
+            "reason": decision.reason,
+        }
+
+============================================================
+FILE: .\backend\app\services\constitutional_commit_gate_service.py
+============================================================
+from __future__ import annotations
+
+import hashlib
+import json
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Mapping, Sequence
+from uuid import UUID, uuid4
+
+from backend.app.contracts.constitutional_sequencer import (
+    CanonicalEvidenceCandidate,
+    CommitStatus,
+    ConstitutionalCommitRequest,
+    ConstitutionalCommitResult,
+    SequenceReceipt,
+)
+from backend.app.services.canonical_evidence_service import (
+    CanonicalEvidenceService,
+)
+from backend.app.services.constitutional_sequencer_service import (
+    ConstitutionalSequencerService,
+    ReceiptChainError,
+)
+from backend.app.services.sequencer_partition_lease_service import (
+    SequencerPartitionLeaseService,
+)
+
+
+GENESIS_STATE_HASH = "0" * 64
+
+
+class ConstitutionalCommitGateError(ValueError):
+    """
+    Base exception for Constitutional Commit Gate failures.
+    """
+
+
+class CommitBatchEmptyError(ConstitutionalCommitGateError):
+    """
+    Raised when a commit contains no candidates or receipts.
+    """
+
+
+class CommitBatchCardinalityError(ConstitutionalCommitGateError):
+    """
+    Raised when candidate and receipt counts do not match.
+    """
+
+
+class CommitBatchBindingError(ConstitutionalCommitGateError):
+    """
+    Raised when candidates, receipts, or the request are not bound together.
+    """
+
+
+class CommitPartitionMismatchError(ConstitutionalCommitGateError):
+    """
+    Raised when a commit crosses tenant, lifecycle, or partition boundaries.
+    """
+
+
+class CommitEpochMismatchError(ConstitutionalCommitGateError):
+    """
+    Raised when the receipt epoch differs from the authorized commit epoch.
+    """
+
+
+class CommitPolicyMismatchError(ConstitutionalCommitGateError):
+    """
+    Raised when policy or ordering-policy versions conflict.
+    """
+
+
+class CommitCandidateIntegrityError(ConstitutionalCommitGateError):
+    """
+    Raised when candidate integrity verification fails.
+    """
+
+
+class CommitReceiptIntegrityError(ConstitutionalCommitGateError):
+    """
+    Raised when receipt or receipt-chain verification fails.
+    """
+
+
+class PreviousStateHashMismatchError(ConstitutionalCommitGateError):
+    """
+    Raised when the caller presents a stale or incorrect prior state.
+    """
+
+
+class DuplicateCommitBatchError(ConstitutionalCommitGateError):
+    """
+    Raised when an already-committed batch is submitted again.
+    """
+
+
+class DuplicateDecisionHashError(ConstitutionalCommitGateError):
+    """
+    Raised when an already-committed deterministic decision is submitted again.
+    """
+
+
+class UnsupportedCommitContractError(ConstitutionalCommitGateError):
+    """
+    Raised when the requested commit contract is unsupported.
+    """
+
+
+@dataclass(frozen=True)
+class GovernanceStateTransition:
+    """
+    Immutable constitutional state transition.
+    """
+
+    partition_key: str
+    prior_state_hash: str
+    resulting_state_hash: str
+    policy_version: str
+    kernel_version: str
+    ordering_policy_version: str
+    candidate_hashes: tuple[str, ...]
+    receipt_hashes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ConstitutionalCommitRecord:
+    """
+    Immutable authoritative record produced by a successful Commit Gate action.
+    """
+
+    commit_request_id: UUID
+    batch_id: UUID
+    decision_id: UUID
+
+    tenant_id: str
+    lifecycle_instance_id: str
+    partition_key: str
+
+    candidate_ids: tuple[UUID, ...]
+    receipt_ids: tuple[UUID, ...]
+
+    sequencer_epoch: int
+    ordering_policy_version: str
+    policy_version: str
+    kernel_version: str
+    commit_contract_version: str
+
+    prior_state_hash: str
+    resulting_state_hash: str
+    decision_hash: str
+
+    ledger_offset: int
+    committed_at: datetime
+
+
+class InMemoryConstitutionalCommitRepository:
+    """
+    In-memory atomic commit repository for the MVP.
+
+    All validation occurs before repository mutation. The repository then
+    performs duplicate checks and applies the complete commit in one method.
+    """
+
+    def __init__(self) -> None:
+        self._records_by_batch: dict[
+            UUID,
+            ConstitutionalCommitRecord,
+        ] = {}
+
+        self._records_by_decision_hash: dict[
+            str,
+            ConstitutionalCommitRecord,
+        ] = {}
+
+        self._current_state_by_partition: dict[str, str] = {}
+        self._records_by_partition: dict[
+            str,
+            list[ConstitutionalCommitRecord],
+        ] = {}
+
+        self._next_ledger_offset = 0
+
+    def get_by_batch_id(
+        self,
+        batch_id: UUID,
+    ) -> ConstitutionalCommitRecord | None:
+        return self._records_by_batch.get(batch_id)
+
+    def get_by_decision_hash(
+        self,
+        decision_hash: str,
+    ) -> ConstitutionalCommitRecord | None:
+        return self._records_by_decision_hash.get(decision_hash)
+
+    def get_current_state_hash(
+        self,
+        partition_key: str,
+    ) -> str:
+        return self._current_state_by_partition.get(
+            partition_key,
+            GENESIS_STATE_HASH,
+        )
+
+    def list_partition_records(
+        self,
+        partition_key: str,
+    ) -> tuple[ConstitutionalCommitRecord, ...]:
+        return tuple(
+            self._records_by_partition.get(partition_key, [])
+        )
+
+    def next_ledger_offset(self) -> int:
+        return self._next_ledger_offset
+
+    def commit(
+        self,
+        record: ConstitutionalCommitRecord,
+    ) -> ConstitutionalCommitRecord:
+        """
+        Apply one complete authoritative commit atomically.
+
+        No repository mutation occurs before all duplicate and state-continuity
+        checks pass.
+        """
+        if record.batch_id in self._records_by_batch:
+            raise DuplicateCommitBatchError(
+                "batch has already been committed"
+            )
+
+        if record.decision_hash in self._records_by_decision_hash:
+            raise DuplicateDecisionHashError(
+                "decision hash has already been committed"
+            )
+
+        current_state = self.get_current_state_hash(
+            record.partition_key
+        )
+
+        if current_state != record.prior_state_hash:
+            raise PreviousStateHashMismatchError(
+                "repository state changed before commit"
+            )
+
+        if record.ledger_offset != self._next_ledger_offset:
+            raise ConstitutionalCommitGateError(
+                "ledger offset does not match repository next offset"
+            )
+
+        self._records_by_batch[record.batch_id] = record
+        self._records_by_decision_hash[
+            record.decision_hash
+        ] = record
+
+        self._current_state_by_partition[
+            record.partition_key
+        ] = record.resulting_state_hash
+
+        partition_records = self._records_by_partition.setdefault(
+            record.partition_key,
+            [],
+        )
+        partition_records.append(record)
+
+        self._next_ledger_offset += 1
+
+        return record
+
+
+class ConstitutionalCommitGateService:
+    """
+    Converts valid, ordered, authorized evidence into authoritative state.
+
+    Constitutional boundary:
+
+    The Commit Gate may:
+
+    - verify candidates and sequence receipts;
+    - verify receipt-chain continuity;
+    - validate active lease authority;
+    - enforce prior-state continuity;
+    - calculate deterministic state and decision hashes;
+    - atomically persist an authoritative commit.
+
+    The Commit Gate may not:
+
+    - canonicalize raw source evidence;
+    - assign sequence numbers;
+    - issue sequence receipts;
+    - acquire or transfer partition leases;
+    - modify previous commit records.
+    """
+
+    COMMIT_CONTRACT_VERSION = "constitutional-commit-v1"
+    SUPPORTED_COMMIT_CONTRACTS = frozenset(
+        {
+            COMMIT_CONTRACT_VERSION,
+        }
+    )
+
+    def __init__(
+        self,
+        *,
+        lease_service: SequencerPartitionLeaseService,
+        repository: InMemoryConstitutionalCommitRepository | None = None,
+    ) -> None:
+        self.lease_service = lease_service
+        self.repository = (
+            repository
+            or InMemoryConstitutionalCommitRepository()
+        )
+
+    def commit_batch(
+        self,
+        *,
+        request: ConstitutionalCommitRequest,
+        candidates: Sequence[CanonicalEvidenceCandidate],
+        receipts: Sequence[SequenceReceipt],
+        committed_at: datetime,
+        commit_contract_version: str = COMMIT_CONTRACT_VERSION,
+        decision_id: UUID | None = None,
+    ) -> ConstitutionalCommitResult:
+        """
+        Validate and atomically commit one ordered evidence batch.
+        """
+        normalized_committed_at = self._normalize_datetime(
+            committed_at,
+            "committed_at",
+        )
+
+        self._validate_commit_contract(
+            commit_contract_version
+        )
+
+        if (
+            self.repository.get_by_batch_id(
+                request.batch_id
+            )
+            is not None
+        ):
+            raise DuplicateCommitBatchError(
+                "batch has already been committed"
+            )
+
+        candidate_tuple = tuple(candidates)
+        receipt_tuple = tuple(receipts)
+
+        self._validate_non_empty(
+            candidates=candidate_tuple,
+            receipts=receipt_tuple,
+        )
+
+        self._validate_cardinality(
+            request=request,
+            candidates=candidate_tuple,
+            receipts=receipt_tuple,
+        )
+
+        self._validate_request_scope(
+            request=request,
+            candidates=candidate_tuple,
+            receipts=receipt_tuple,
+        )
+
+        self._validate_candidate_integrity(candidate_tuple)
+
+        self._validate_candidate_receipt_bindings(
+            request=request,
+            candidates=candidate_tuple,
+            receipts=receipt_tuple,
+        )
+
+        self._validate_receipt_authority(
+            request=request,
+            receipts=receipt_tuple,
+        )
+
+        self._validate_receipt_integrity(receipt_tuple)
+
+        self.lease_service.assert_authorized(
+            partition_key=request.partition_key,
+            owner_identity=request.submitted_by,
+            epoch=request.sequencer_epoch,
+            at=normalized_committed_at,
+        )
+
+        current_state_hash = (
+            self.repository.get_current_state_hash(
+                request.partition_key
+            )
+        )
+
+        if request.prior_state_hash != current_state_hash:
+            raise PreviousStateHashMismatchError(
+                "prior_state_hash does not match current partition state"
+            )
+
+        ordered_candidates = self._order_candidates_by_receipts(
+            candidates=candidate_tuple,
+            receipts=receipt_tuple,
+        )
+
+        ordered_receipts = tuple(
+            sorted(
+                receipt_tuple,
+                key=lambda receipt: receipt.assigned_sequence,
+            )
+        )
+
+        resulting_state_hash = self.calculate_resulting_state_hash(
+            partition_key=request.partition_key,
+            prior_state_hash=request.prior_state_hash,
+            candidate_hashes=tuple(
+                candidate.candidate_hash
+                for candidate in ordered_candidates
+            ),
+            receipt_hashes=tuple(
+                receipt.receipt_hash
+                for receipt in ordered_receipts
+            ),
+            ordering_policy_version=(
+                request.ordering_policy_version
+            ),
+            policy_version=request.policy_version,
+            kernel_version=request.kernel_version,
+            commit_contract_version=commit_contract_version,
+        )
+
+        decision_hash = self.calculate_decision_hash(
+            commit_request_id=request.commit_request_id,
+            batch_id=request.batch_id,
+            partition_key=request.partition_key,
+            sequencer_epoch=request.sequencer_epoch,
+            prior_state_hash=request.prior_state_hash,
+            resulting_state_hash=resulting_state_hash,
+            candidate_hashes=tuple(
+                candidate.candidate_hash
+                for candidate in ordered_candidates
+            ),
+            receipt_hashes=tuple(
+                receipt.receipt_hash
+                for receipt in ordered_receipts
+            ),
+            ordering_policy_version=(
+                request.ordering_policy_version
+            ),
+            policy_version=request.policy_version,
+            kernel_version=request.kernel_version,
+            commit_contract_version=commit_contract_version,
+        )
+
+        resolved_decision_id = decision_id or uuid4()
+        ledger_offset = self.repository.next_ledger_offset()
+
+        record = ConstitutionalCommitRecord(
+            commit_request_id=request.commit_request_id,
+            batch_id=request.batch_id,
+            decision_id=resolved_decision_id,
+            tenant_id=request.tenant_id,
+            lifecycle_instance_id=(
+                request.lifecycle_instance_id
+            ),
+            partition_key=request.partition_key,
+            candidate_ids=tuple(
+                candidate.candidate_id
+                for candidate in ordered_candidates
+            ),
+            receipt_ids=tuple(
+                receipt.receipt_id
+                for receipt in ordered_receipts
+            ),
+            sequencer_epoch=request.sequencer_epoch,
+            ordering_policy_version=(
+                request.ordering_policy_version
+            ),
+            policy_version=request.policy_version,
+            kernel_version=request.kernel_version,
+            commit_contract_version=commit_contract_version,
+            prior_state_hash=request.prior_state_hash,
+            resulting_state_hash=resulting_state_hash,
+            decision_hash=decision_hash,
+            ledger_offset=ledger_offset,
+            committed_at=normalized_committed_at,
+        )
+
+        committed_record = self.repository.commit(record)
+
+        return ConstitutionalCommitResult(
+            commit_request_id=(
+                committed_record.commit_request_id
+            ),
+            batch_id=committed_record.batch_id,
+            status=CommitStatus.ACCEPTED,
+            decision_id=committed_record.decision_id,
+            ledger_offset=committed_record.ledger_offset,
+            decision_hash=committed_record.decision_hash,
+            resulting_state_hash=(
+                committed_record.resulting_state_hash
+            ),
+            rejection_codes=(),
+            committed_at=committed_record.committed_at,
+        )
+
+    @classmethod
+    def calculate_resulting_state_hash(
+        cls,
+        *,
+        partition_key: str,
+        prior_state_hash: str,
+        candidate_hashes: tuple[str, ...],
+        receipt_hashes: tuple[str, ...],
+        ordering_policy_version: str,
+        policy_version: str,
+        kernel_version: str,
+        commit_contract_version: str = COMMIT_CONTRACT_VERSION,
+    ) -> str:
+        """
+        Calculate the deterministic state produced by an accepted batch.
+        """
+        cls._validate_sha256(
+            prior_state_hash,
+            "prior_state_hash",
+        )
+
+        if not candidate_hashes:
+            raise CommitBatchEmptyError(
+                "candidate_hashes must not be empty"
+            )
+
+        if len(candidate_hashes) != len(receipt_hashes):
+            raise CommitBatchCardinalityError(
+                "candidate and receipt hash counts must match"
+            )
+
+        for candidate_hash in candidate_hashes:
+            cls._validate_sha256(
+                candidate_hash,
+                "candidate_hash",
+            )
+
+        for receipt_hash in receipt_hashes:
+            cls._validate_sha256(
+                receipt_hash,
+                "receipt_hash",
+            )
+
+        envelope = {
+            "commit_contract_version": (
+                commit_contract_version
+            ),
+            "partition_key": partition_key,
+            "prior_state_hash": prior_state_hash,
+            "candidate_hashes": list(candidate_hashes),
+            "receipt_hashes": list(receipt_hashes),
+            "ordering_policy_version": (
+                ordering_policy_version
+            ),
+            "policy_version": policy_version,
+            "kernel_version": kernel_version,
+        }
+
+        return cls._hash_envelope(envelope)
+
+    @classmethod
+    def calculate_decision_hash(
+        cls,
+        *,
+        commit_request_id: UUID,
+        batch_id: UUID,
+        partition_key: str,
+        sequencer_epoch: int,
+        prior_state_hash: str,
+        resulting_state_hash: str,
+        candidate_hashes: tuple[str, ...],
+        receipt_hashes: tuple[str, ...],
+        ordering_policy_version: str,
+        policy_version: str,
+        kernel_version: str,
+        commit_contract_version: str = COMMIT_CONTRACT_VERSION,
+    ) -> str:
+        """
+        Calculate the deterministic constitutional decision hash.
+        """
+        cls._validate_sha256(
+            prior_state_hash,
+            "prior_state_hash",
+        )
+        cls._validate_sha256(
+            resulting_state_hash,
+            "resulting_state_hash",
+        )
+
+        envelope = {
+            "commit_contract_version": (
+                commit_contract_version
+            ),
+            "commit_request_id": str(commit_request_id),
+            "batch_id": str(batch_id),
+            "partition_key": partition_key,
+            "sequencer_epoch": sequencer_epoch,
+            "prior_state_hash": prior_state_hash,
+            "resulting_state_hash": resulting_state_hash,
+            "candidate_hashes": list(candidate_hashes),
+            "receipt_hashes": list(receipt_hashes),
+            "ordering_policy_version": (
+                ordering_policy_version
+            ),
+            "policy_version": policy_version,
+            "kernel_version": kernel_version,
+        }
+
+        return cls._hash_envelope(envelope)
+    @staticmethod
+    def _validate_candidate_integrity(
+        candidates: tuple[CanonicalEvidenceCandidate, ...],
+    ) -> None:
+        for candidate in candidates:
+            if not CanonicalEvidenceService.verify_candidate(
+                candidate
+            ):
+                raise CommitCandidateIntegrityError(
+                    "candidate hash verification failed"
+                )
+
+    @staticmethod
+    def _validate_non_empty(
+        *,
+        candidates: tuple[CanonicalEvidenceCandidate, ...],
+        receipts: tuple[SequenceReceipt, ...],
+    ) -> None:
+        if not candidates:
+            raise CommitBatchEmptyError(
+                "commit batch must contain candidates"
+            )
+
+        if not receipts:
+            raise CommitBatchEmptyError(
+                "commit batch must contain receipts"
+            )
+
+    @staticmethod
+    def _validate_cardinality(
+        *,
+        request: ConstitutionalCommitRequest,
+        candidates: tuple[CanonicalEvidenceCandidate, ...],
+        receipts: tuple[SequenceReceipt, ...],
+    ) -> None:
+        if len(candidates) != len(receipts):
+            raise CommitBatchCardinalityError(
+                "candidate and receipt counts must match"
+            )
+
+        if len(request.candidate_ids) != len(candidates):
+            raise CommitBatchCardinalityError(
+                "request candidate count does not match supplied candidates"
+            )
+
+        if len(request.receipt_ids) != len(receipts):
+            raise CommitBatchCardinalityError(
+                "request receipt count does not match supplied receipts"
+            )
+
+    @staticmethod
+    def _validate_request_scope(
+        *,
+        request: ConstitutionalCommitRequest,
+        candidates: tuple[CanonicalEvidenceCandidate, ...],
+        receipts: tuple[SequenceReceipt, ...],
+    ) -> None:
+        for candidate in candidates:
+            if candidate.tenant_id != request.tenant_id:
+                raise CommitPartitionMismatchError(
+                    "candidate tenant does not match commit request"
+                )
+
+            if (
+                candidate.lifecycle_instance_id
+                != request.lifecycle_instance_id
+            ):
+                raise CommitPartitionMismatchError(
+                    "candidate lifecycle does not match commit request"
+                )
+
+        for receipt in receipts:
+            if receipt.batch_id != request.batch_id:
+                raise CommitBatchBindingError(
+                    "receipt batch_id does not match commit request"
+                )
+
+            if receipt.tenant_id != request.tenant_id:
+                raise CommitPartitionMismatchError(
+                    "receipt tenant does not match commit request"
+                )
+
+            if (
+                receipt.lifecycle_instance_id
+                != request.lifecycle_instance_id
+            ):
+                raise CommitPartitionMismatchError(
+                    "receipt lifecycle does not match commit request"
+                )
+
+            if receipt.partition_key != request.partition_key:
+                raise CommitPartitionMismatchError(
+                    "receipt partition does not match commit request"
+                )
+
+    @staticmethod
+    def _validate_receipt_integrity(
+        receipts: tuple[SequenceReceipt, ...],
+    ) -> None:
+        ordered_receipts = tuple(
+            sorted(
+                receipts,
+                key=lambda receipt: receipt.assigned_sequence,
+            )
+        )
+
+        try:
+            ConstitutionalSequencerService.verify_receipt_chain(
+                ordered_receipts,
+                expected_starting_sequence=(
+                    ordered_receipts[0].assigned_sequence
+                ),
+                expected_previous_receipt_hash=(
+                    ordered_receipts[0].previous_receipt_hash
+                ),
+            )
+
+            for receipt in ordered_receipts:
+                if not ConstitutionalSequencerService.verify_receipt(
+                    receipt
+                ):
+                    raise CommitReceiptIntegrityError(
+                        "sequence receipt hash verification failed"
+                    )
+
+        except CommitReceiptIntegrityError:
+            raise
+
+        except ValueError as exc:
+            raise CommitReceiptIntegrityError(
+                str(exc)
+            ) from exc
+
+    @staticmethod
+    def _validate_candidate_receipt_bindings(
+        *,
+        request: ConstitutionalCommitRequest,
+        candidates: tuple[CanonicalEvidenceCandidate, ...],
+        receipts: tuple[SequenceReceipt, ...],
+    ) -> None:
+        candidates_by_id = {
+            candidate.candidate_id: candidate
+            for candidate in candidates
+        }
+
+        receipts_by_id = {
+            receipt.receipt_id: receipt
+            for receipt in receipts
+        }
+
+        if set(request.candidate_ids) != set(candidates_by_id):
+            raise CommitBatchBindingError(
+                "request candidate_ids do not match supplied candidates"
+            )
+
+        if set(request.receipt_ids) != set(receipts_by_id):
+            raise CommitBatchBindingError(
+                "request receipt_ids do not match supplied receipts"
+            )
+
+        receipt_candidate_ids = {
+            receipt.candidate_id
+            for receipt in receipts
+        }
+
+        if receipt_candidate_ids != set(candidates_by_id):
+            raise CommitBatchBindingError(
+                "receipt candidate bindings do not match supplied candidates"
+            )
+
+        for receipt in receipts:
+            candidate = candidates_by_id.get(
+                receipt.candidate_id
+            )
+
+            if candidate is None:
+                raise CommitBatchBindingError(
+                    "receipt references an unknown candidate"
+                )
+
+            if receipt.candidate_id != candidate.candidate_id:
+                raise CommitBatchBindingError(
+                    "receipt candidate_id does not match candidate"
+                )
+
+            if receipt.candidate_hash != candidate.candidate_hash:
+                raise CommitBatchBindingError(
+                    "receipt candidate_hash does not match candidate"
+                )
+
+            if receipt.tenant_id != candidate.tenant_id:
+                raise CommitBatchBindingError(
+                    "receipt tenant_id does not match candidate"
+                )
+
+            if (
+                receipt.lifecycle_instance_id
+                != candidate.lifecycle_instance_id
+            ):
+                raise CommitBatchBindingError(
+                    "receipt lifecycle_instance_id does not match candidate"
+                )
+
+    @staticmethod
+    def _validate_receipt_authority(
+        *,
+        request: ConstitutionalCommitRequest,
+        receipts: tuple[SequenceReceipt, ...],
+    ) -> None:
+        for receipt in receipts:
+            if receipt.sequencer_epoch != request.sequencer_epoch:
+                raise CommitEpochMismatchError(
+                    "receipt epoch does not match commit request"
+                )
+
+            if (
+                receipt.sequencer_identity
+                != request.submitted_by
+            ):
+                raise CommitBatchBindingError(
+                    "receipt sequencer identity does not match submitter"
+                )
+
+            if (
+                receipt.ordering_policy_version
+                != request.ordering_policy_version
+            ):
+                raise CommitPolicyMismatchError(
+                    "receipt ordering policy does not match commit request"
+                )
+
+    @staticmethod
+    def _order_candidates_by_receipts(
+        *,
+        candidates: tuple[CanonicalEvidenceCandidate, ...],
+        receipts: tuple[SequenceReceipt, ...],
+    ) -> tuple[CanonicalEvidenceCandidate, ...]:
+        candidates_by_id = {
+            candidate.candidate_id: candidate
+            for candidate in candidates
+        }
+
+        ordered_receipts = sorted(
+            receipts,
+            key=lambda receipt: receipt.assigned_sequence,
+        )
+
+        return tuple(
+            candidates_by_id[receipt.candidate_id]
+            for receipt in ordered_receipts
+        )
+
+    @classmethod
+    def _validate_commit_contract(
+        cls,
+        commit_contract_version: str,
+    ) -> None:
+        if (
+            commit_contract_version
+            not in cls.SUPPORTED_COMMIT_CONTRACTS
+        ):
+            raise UnsupportedCommitContractError(
+                "unsupported commit contract version"
+            )
+
+    @staticmethod
+    def _hash_envelope(
+        envelope: Mapping[str, object],
+    ) -> str:
+        serialized = json.dumps(
+            envelope,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+
+        return hashlib.sha256(
+            serialized.encode("utf-8")
+        ).hexdigest()
+
+    @staticmethod
+    def _validate_sha256(
+        value: str,
+        field_name: str,
+    ) -> None:
+        if (
+            not isinstance(value, str)
+            or len(value) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in value
+            )
+        ):
+            raise ConstitutionalCommitGateError(
+                f"{field_name} must be a lowercase SHA-256 hash"
+            )
+
+    @staticmethod
+    def _normalize_datetime(
+        value: datetime,
+        field_name: str,
+    ) -> datetime:
+        if not isinstance(value, datetime):
+            raise ConstitutionalCommitGateError(
+                f"{field_name} must be a datetime"
+            )
+
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ConstitutionalCommitGateError(
+                f"{field_name} must be timezone-aware"
+            )
+
+        return value.astimezone(timezone.utc)
+
+

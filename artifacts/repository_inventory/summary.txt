@@ -1,0 +1,35 @@
+﻿
+================================================================================
+REPOSITORY INVENTORY SUMMARY
+================================================================================
+Repository root: C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp
+Generated at: 2026-07-21T18:50:11.8626771+00:00
+
+Python files: 402
+Test files: 293
+Evidence-confidence matches: 252
+AdaptiveState matches: 82
+Constitutional matches: 452
+Python project files: 1
+
+================================================================================
+GIT STATUS
+================================================================================
+Branch:
+main
+
+Working tree:
+?? artifacts/
+?? repository_event_discovery.txt
+?? repository_schema_discovery.txt
+?? schema_alignment_part1.txt
+?? schema_alignment_part2.txt
+?? schema_alignment_part3.txt
+?? scripts/
+
+Recent commits:
+46c791d Add Assessment Factory Lite payment request event service
+a583cc3 Mark Assessment Factory Lite payment request review release
+dbf68c7 Document Assessment Factory Lite payment request review
+0ba37e3 Add Assessment Factory Lite payment request review endpoint
+aec4922 Add Assessment Factory Lite payment request review service

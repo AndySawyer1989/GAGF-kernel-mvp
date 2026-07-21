@@ -1,0 +1,297 @@
+﻿
+============================================================
+FILE: .\backend\app\gagf\schemas.py
+============================================================
+from enum import Enum
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
+
+
+class TimestampQuality(str, Enum):
+    SOURCE_OCCURRED_AT = "SOURCE_OCCURRED_AT"
+    BACKFILLED_FROM_CREATED_AT = "BACKFILLED_FROM_CREATED_AT"
+    MISSING_TIMESTAMP = "MISSING_TIMESTAMP"
+
+
+class RawSecurityEvent(BaseModel):
+    event_id: str
+    event_type: str
+    event_occurred_at: Optional[str] = None
+    event_created_at: Optional[str] = None
+    timestamp_quality: TimestampQuality
+    kernel_eligible: bool = True
+    source_system: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class NormalizationApplied(BaseModel):
+    event_id: str
+    event_type: str
+    indicator: str
+    delta: float
+
+
+class EvidenceConfidence(BaseModel):
+    score: float
+    factors: Dict[str, float]
+
+
+class AdaptiveState(BaseModel):
+    risk_index: float = 0.10
+    uncertainty: float = 0.10
+    coherence_psi: float = 0.85
+    revision_pressure: float = 0.10
+    governance_momentum: float = 0.50
+
+
+class MetricAdapterResult(BaseModel):
+    adaptive_state: AdaptiveState
+    evidence_confidence: EvidenceConfidence
+    evidence: List[str]
+    normalization_applied: List[NormalizationApplied]
+
+
+class DecisionMeta(BaseModel):
+    is_override_triggered: bool
+    hysteresis_buffer_active: bool = False
+    policy_version: str
+    policy_id: str
+
+
+class ArbitrationResult(BaseModel):
+    snapshot_id: Optional[str] = None
+    active_strategy: Optional[str] = None
+    strategy_proposal: Optional[str] = None
+    kernel_decision: str
+    selected_strategy: Optional[str] = None
+    reason: List[str]
+    decision_meta: DecisionMeta
+
+
+class AdaptiveStateSnapshot(BaseModel):
+    snapshot_id: str
+    tenant_id: str
+    work_item_id: str
+    status: str
+    adaptive_state: AdaptiveState
+    evidence_confidence: EvidenceConfidence
+    evidence: List[str]
+    timestamp_quality_distribution: Dict[str, int] = Field(default_factory=dict)
+
+============================================================
+FILE: .\backend\app\gagf\metric_adapter.py
+============================================================
+from collections import Counter
+from typing import Iterable, List
+
+from backend.app.gagf.schemas import (
+    AdaptiveState,
+    EvidenceConfidence,
+    MetricAdapterResult,
+    NormalizationApplied,
+    RawSecurityEvent,
+    TimestampQuality,
+)
+
+
+NORMALIZATION_DELTAS = {
+    "honeyfile_interaction": ("uncertainty", 0.40),
+    "failed_auth_burst": ("risk_index", 0.20),
+    "unauthorized_api_call": ("risk_index", 0.30),
+    "lateral_movement_pattern": ("risk_index", 0.50),
+    "containment_success": ("risk_index", -0.40),
+    "verification_passed": ("uncertainty", -0.30),
+    "service_restored": ("coherence_psi", 0.30),
+    "strategy_failure": ("revision_pressure", 0.25),
+    "historically_valid_control": ("governance_momentum", 0.20),
+}
+
+
+def clamp(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    return max(minimum, min(maximum, value))
+
+
+class MetricAdapter:
+    def build_snapshot(self, events: Iterable[RawSecurityEvent]) -> MetricAdapterResult:
+        eligible_events = [event for event in events if event.kernel_eligible]
+
+        state = AdaptiveState()
+        evidence: List[str] = []
+        applied: List[NormalizationApplied] = []
+
+        for event in eligible_events:
+            mapping = NORMALIZATION_DELTAS.get(event.event_type)
+            if not mapping:
+                continue
+
+            indicator, delta = mapping
+            current_value = getattr(state, indicator)
+            setattr(state, indicator, clamp(current_value + delta))
+
+            evidence.append(event.event_id)
+            applied.append(
+                NormalizationApplied(
+                    event_id=event.event_id,
+                    event_type=event.event_type,
+                    indicator=indicator,
+                    delta=delta,
+                )
+            )
+
+        confidence = self._calculate_evidence_confidence(eligible_events)
+
+        return MetricAdapterResult(
+            adaptive_state=state,
+            evidence_confidence=confidence,
+            evidence=evidence,
+            normalization_applied=applied,
+        )
+
+    def _calculate_evidence_confidence(
+        self, events: List[RawSecurityEvent]
+    ) -> EvidenceConfidence:
+        if not events:
+            return EvidenceConfidence(
+                score=0.0,
+                factors={
+                    "timestamp_quality": 0.0,
+                    "sensor_reliability": 0.0,
+                    "cross_source_agreement": 0.0,
+                    "telemetry_completeness": 0.0,
+                },
+            )
+
+        counts = Counter(event.timestamp_quality for event in events)
+        total = len(events)
+
+        timestamp_quality_score = (
+            counts[TimestampQuality.SOURCE_OCCURRED_AT] * 1.0
+            + counts[TimestampQuality.BACKFILLED_FROM_CREATED_AT] * 0.6
+            + counts[TimestampQuality.MISSING_TIMESTAMP] * 0.0
+        ) / total
+
+        source_systems = {event.source_system for event in events if event.source_system}
+        cross_source_agreement = 1.0 if len(source_systems) > 1 else 0.7
+
+        telemetry_completeness = sum(
+            1 for event in events if event.event_occurred_at is not None
+        ) / total
+
+        sensor_reliability = 0.90
+
+        score = (
+            timestamp_quality_score * 0.40
+            + sensor_reliability * 0.25
+            + cross_source_agreement * 0.20
+            + telemetry_completeness * 0.15
+        )
+
+        return EvidenceConfidence(
+            score=round(clamp(score), 3),
+            factors={
+                "timestamp_quality": round(timestamp_quality_score, 3),
+                "sensor_reliability": sensor_reliability,
+                "cross_source_agreement": cross_source_agreement,
+                "telemetry_completeness": round(telemetry_completeness, 3),
+            },
+        )
+
+============================================================
+FILE: .\backend\app\gagf\evidence_confidence_adapter.py
+============================================================
+from backend.app.gagf.evidence_diagnostics_service import EvidenceDiagnosticsService
+from backend.app.gagf.schemas import EvidenceConfidence
+
+
+class EvidenceConfidenceAdapter:
+    def build_confidence(self, events: list) -> dict:
+        diagnostics = EvidenceDiagnosticsService().diagnose_events(events)
+
+        confidence_score = self.calculate_confidence_score(diagnostics)
+        confidence_band = self.get_confidence_band(confidence_score)
+
+        evidence_confidence = EvidenceConfidence(
+            score=confidence_score,
+            factors={
+                "evidence_quality": diagnostics["quality"]["average_quality_score"],
+                "cross_source_agreement": diagnostics["agreement"]["agreement_score"],
+                "conflict_health": self.score_conflict_health(
+                    diagnostics["conflicts"]
+                ),
+                "source_coverage": self.score_source_coverage(
+                    diagnostics["source_coverage"]
+                ),
+                "diagnostic_score": diagnostics["diagnostic_score"],
+            },
+        )
+
+        return {
+            "status": "ok",
+            "event_count": diagnostics["event_count"],
+            "confidence_score": confidence_score,
+            "confidence_band": confidence_band,
+            "evidence_confidence": evidence_confidence,
+            "diagnostics": diagnostics,
+        }
+
+    def calculate_confidence_score(self, diagnostics: dict) -> float:
+        quality_score = diagnostics["quality"]["average_quality_score"]
+        agreement_score = diagnostics["agreement"]["agreement_score"]
+        conflict_health = self.score_conflict_health(diagnostics["conflicts"])
+        source_coverage = self.score_source_coverage(
+            diagnostics["source_coverage"]
+        )
+
+        score = (
+            quality_score * 0.35
+            + agreement_score * 0.30
+            + conflict_health * 0.20
+            + source_coverage * 0.15
+        )
+
+        return round(score, 4)
+
+    def score_conflict_health(self, conflicts: dict) -> float:
+        conflict_count = conflicts["conflict_count"]
+        severity_counts = conflicts["severity_counts"]
+
+        if conflict_count == 0:
+            return 1.0
+
+        if severity_counts.get("critical", 0) > 0:
+            return 0.0
+
+        if severity_counts.get("warning", 0) >= 2:
+            return 0.35
+
+        if severity_counts.get("warning", 0) == 1:
+            return 0.65
+
+        return 0.75
+
+    def score_source_coverage(self, source_coverage: dict) -> float:
+        total_sources = source_coverage["total_sources"]
+        enabled_sources = source_coverage["enabled_sources"]
+        coverage_gaps = source_coverage["coverage_gaps"]
+
+        if total_sources == 0:
+            return 0.0
+
+        enabled_ratio = enabled_sources / total_sources
+
+        if coverage_gaps:
+            return round(enabled_ratio * 0.75, 4)
+
+        return round(enabled_ratio, 4)
+
+    def get_confidence_band(self, confidence_score: float) -> str:
+        if confidence_score >= 0.85:
+            return "high"
+
+        if confidence_score >= 0.65:
+            return "medium"
+
+        if confidence_score > 0.0:
+            return "low"
+
+        return "invalid"

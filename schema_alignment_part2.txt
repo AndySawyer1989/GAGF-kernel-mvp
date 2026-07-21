@@ -1,0 +1,743 @@
+﻿
+============================================================
+FILE: .\backend\app\gagf\evidence_diagnostics_service.py
+============================================================
+from backend.app.gagf.cross_source_agreement_service import CrossSourceAgreementService
+from backend.app.gagf.evidence_conflict_service import EvidenceConflictService
+from backend.app.gagf.evidence_quality_service import EvidenceQualityService
+from backend.app.gagf.source_coverage_service import SourceCoverageService
+
+
+class EvidenceDiagnosticsService:
+    def diagnose_events(self, events: list) -> dict:
+        quality = EvidenceQualityService().score_events(events)
+        agreement = CrossSourceAgreementService().evaluate_agreement(events)
+        conflicts = EvidenceConflictService().detect_conflicts(events)
+        coverage = SourceCoverageService().get_coverage_summary()
+
+        diagnostic_score = self.calculate_diagnostic_score(
+            quality=quality,
+            agreement=agreement,
+            conflicts=conflicts,
+            coverage=coverage,
+        )
+
+        diagnostic_band = self.get_diagnostic_band(diagnostic_score)
+
+        recommendations = self.build_recommendations(
+            quality=quality,
+            agreement=agreement,
+            conflicts=conflicts,
+            coverage=coverage,
+        )
+
+        return {
+            "status": "ok",
+            "event_count": len(events),
+            "diagnostic_score": diagnostic_score,
+            "diagnostic_band": diagnostic_band,
+            "quality": {
+                "event_count": quality["event_count"],
+                "average_quality_score": quality["average_quality_score"],
+                "average_quality_band": quality["average_quality_band"],
+            },
+            "agreement": {
+                "event_count": agreement["event_count"],
+                "source_count": agreement["source_count"],
+                "agreement_score": agreement["agreement_score"],
+                "agreement_band": agreement["agreement_band"],
+                "supporting_sources": agreement["supporting_sources"],
+                "kernel_roles_present": agreement["kernel_roles_present"],
+                "missing_roles": agreement["missing_roles"],
+            },
+            "conflicts": {
+                "event_count": conflicts["event_count"],
+                "conflict_count": conflicts["conflict_count"],
+                "severity_counts": conflicts["severity_counts"],
+                "conflicts": conflicts["conflicts"],
+            },
+            "source_coverage": {
+                "total_sources": coverage["total_sources"],
+                "enabled_sources": coverage["enabled_sources"],
+                "disabled_sources": coverage["disabled_sources"],
+                "coverage_gap_count": len(coverage["coverage_gaps"]),
+                "coverage_gaps": coverage["coverage_gaps"],
+            },
+            "recommendations": recommendations,
+        }
+
+    def calculate_diagnostic_score(
+        self,
+        quality: dict,
+        agreement: dict,
+        conflicts: dict,
+        coverage: dict,
+    ) -> float:
+        quality_score = quality["average_quality_score"]
+        agreement_score = agreement["agreement_score"]
+        conflict_score = self.score_conflict_health(conflicts)
+        coverage_score = self.score_source_coverage(coverage)
+
+        score = (
+            quality_score * 0.35
+            + agreement_score * 0.30
+            + conflict_score * 0.20
+            + coverage_score * 0.15
+        )
+
+        return round(score, 4)
+
+    def score_conflict_health(self, conflicts: dict) -> float:
+        conflict_count = conflicts["conflict_count"]
+        severity_counts = conflicts["severity_counts"]
+
+        if conflict_count == 0:
+            return 1.0
+
+        if severity_counts.get("critical", 0) > 0:
+            return 0.0
+
+        if severity_counts.get("warning", 0) >= 2:
+            return 0.35
+
+        if severity_counts.get("warning", 0) == 1:
+            return 0.65
+
+        return 0.75
+
+    def score_source_coverage(self, coverage: dict) -> float:
+        total_sources = coverage["total_sources"]
+        enabled_sources = coverage["enabled_sources"]
+        coverage_gaps = coverage["coverage_gaps"]
+
+        if total_sources == 0:
+            return 0.0
+
+        enabled_ratio = enabled_sources / total_sources
+
+        if coverage_gaps:
+            return round(enabled_ratio * 0.75, 4)
+
+        return round(enabled_ratio, 4)
+
+    def get_diagnostic_band(self, diagnostic_score: float) -> str:
+        if diagnostic_score >= 0.85:
+            return "healthy"
+
+        if diagnostic_score >= 0.65:
+            return "watch"
+
+        if diagnostic_score > 0.0:
+            return "degraded"
+
+        return "invalid"
+
+    def build_recommendations(
+        self,
+        quality: dict,
+        agreement: dict,
+        conflicts: dict,
+        coverage: dict,
+    ) -> list[dict]:
+        recommendations = []
+
+        if quality["average_quality_score"] < 0.85:
+            recommendations.append(
+                {
+                    "recommendation_type": "improve_evidence_quality",
+                    "severity": "warning",
+                    "message": "Improve timestamp quality, source registration, or metadata completeness before relying on this evidence.",
+                }
+            )
+
+        if agreement["agreement_score"] < 0.60:
+            recommendations.append(
+                {
+                    "recommendation_type": "increase_cross_source_agreement",
+                    "severity": "warning",
+                    "message": "Add supporting evidence from additional registered sources or kernel roles.",
+                }
+            )
+
+        if agreement["missing_roles"]:
+            recommendations.append(
+                {
+                    "recommendation_type": "missing_kernel_roles",
+                    "severity": "info",
+                    "message": "Some expected kernel evidence roles are missing from this event set.",
+                    "missing_roles": agreement["missing_roles"],
+                }
+            )
+
+        if conflicts["conflict_count"] > 0:
+            recommendations.append(
+                {
+                    "recommendation_type": "resolve_evidence_conflicts",
+                    "severity": "warning",
+                    "message": "Resolve conflicting source claims before increasing confidence.",
+                    "conflict_count": conflicts["conflict_count"],
+                }
+            )
+
+        if coverage["coverage_gaps"]:
+            recommendations.append(
+                {
+                    "recommendation_type": "resolve_source_coverage_gaps",
+                    "severity": "warning",
+                    "message": "Resolve source registry or source health gaps.",
+                    "coverage_gap_count": len(coverage["coverage_gaps"]),
+                }
+            )
+
+        return recommendations
+
+============================================================
+FILE: .\backend\app\gagf\evidence_quality_service.py
+============================================================
+from backend.app.gagf.source_registry import SourceRegistry
+
+
+class EvidenceQualityService:
+    weights = {
+        "timestamp_quality": 0.25,
+        "source_registered": 0.20,
+        "source_enabled": 0.15,
+        "metadata_completeness": 0.15,
+        "kernel_role_present": 0.15,
+        "trust_tier_weight": 0.10,
+    }
+
+    def score_event(self, event) -> dict:
+        source_system = getattr(event, "source_system", None)
+        source = SourceRegistry().get_source(source_system)
+
+        factors = {
+            "timestamp_quality": self.score_timestamp_quality(
+                getattr(event, "timestamp_quality", None)
+            ),
+            "source_registered": 1.0 if source is not None else 0.0,
+            "source_enabled": self.score_source_enabled(source),
+            "metadata_completeness": self.score_metadata_completeness(
+                getattr(event, "metadata", None)
+            ),
+            "kernel_role_present": self.score_kernel_role_present(source),
+            "trust_tier_weight": self.score_trust_tier(source),
+        }
+
+        quality_score = self.calculate_weighted_score(factors)
+        quality_band = self.get_quality_band(quality_score)
+
+        return {
+            "status": "ok",
+            "event_id": getattr(event, "event_id", None),
+            "source_system": source_system,
+            "quality_score": quality_score,
+            "quality_band": quality_band,
+            "factors": factors,
+        }
+
+    def score_events(self, events: list) -> dict:
+        scored_events = [self.score_event(event) for event in events]
+
+        if not scored_events:
+            average_quality_score = 0.0
+        else:
+            average_quality_score = round(
+                sum(event["quality_score"] for event in scored_events)
+                / len(scored_events),
+                4,
+            )
+
+        return {
+            "status": "ok",
+            "event_count": len(scored_events),
+            "average_quality_score": average_quality_score,
+            "average_quality_band": self.get_quality_band(average_quality_score),
+            "events": scored_events,
+        }
+
+    def score_timestamp_quality(self, timestamp_quality) -> float:
+        value = self.normalize_value(timestamp_quality)
+
+        if value == "SOURCE_OCCURRED_AT":
+            return 1.0
+
+        if value == "BACKFILLED_FROM_CREATED_AT":
+            return 0.7
+
+        if value == "MISSING_TIMESTAMP":
+            return 0.0
+
+        return 0.5
+
+    def score_source_enabled(self, source: dict | None) -> float:
+        if source is None:
+            return 0.0
+
+        return 1.0 if source.get("enabled") is True else 0.0
+
+    def score_metadata_completeness(self, metadata) -> float:
+        if not metadata:
+            return 0.0
+
+        if isinstance(metadata, dict) and metadata.get("raw_payload"):
+            return 1.0
+
+        if isinstance(metadata, dict):
+            return 0.75
+
+        return 0.25
+
+    def score_kernel_role_present(self, source: dict | None) -> float:
+        if source is None:
+            return 0.0
+
+        return 1.0 if source.get("kernel_role") else 0.0
+
+    def score_trust_tier(self, source: dict | None) -> float:
+        if source is None:
+            return 0.0
+
+        trust_tier = source.get("trust_tier")
+
+        if trust_tier == "security":
+            return 1.0
+
+        if trust_tier == "operational":
+            return 0.85
+
+        return 0.5
+
+    def calculate_weighted_score(self, factors: dict) -> float:
+        score = 0.0
+
+        for factor_name, factor_score in factors.items():
+            score += factor_score * self.weights[factor_name]
+
+        return round(score, 4)
+
+    def get_quality_band(self, quality_score: float) -> str:
+        if quality_score >= 0.85:
+            return "high"
+
+        if quality_score >= 0.60:
+            return "medium"
+
+        if quality_score > 0.0:
+            return "low"
+
+        return "invalid"
+
+    def normalize_value(self, value) -> str:
+        if value is None:
+            return ""
+
+        if hasattr(value, "value"):
+            return str(value.value)
+
+        return str(value)
+
+============================================================
+FILE: .\backend\app\gagf\evidence_agreement_service.py
+============================================================
+FILE NOT FOUND
+
+============================================================
+FILE: .\backend\app\gagf\evidence_conflict_service.py
+============================================================
+class EvidenceConflictService:
+    def detect_conflicts(self, events: list) -> dict:
+        conflicts = []
+
+        conflicts.extend(self.detect_security_resolution_conflicts(events))
+        conflicts.extend(self.detect_workflow_state_conflicts(events))
+        conflicts.extend(self.detect_identity_outcome_conflicts(events))
+
+        return {
+            "status": "ok",
+            "event_count": len(events),
+            "conflict_count": len(conflicts),
+            "severity_counts": self.build_severity_counts(conflicts),
+            "conflicts": conflicts,
+        }
+
+    def detect_security_resolution_conflicts(self, events: list) -> list[dict]:
+        unresolved_sources = set()
+        resolved_sources = set()
+
+        for event in events:
+            source_system = self.get_source_system(event)
+            event_type = self.get_event_type(event)
+            metadata = self.get_metadata(event)
+
+            if not source_system:
+                continue
+
+            if self.is_security_unresolved(event_type, metadata):
+                unresolved_sources.add(source_system)
+
+            if self.is_security_resolved(event_type, metadata):
+                resolved_sources.add(source_system)
+
+        if unresolved_sources and resolved_sources:
+            return [
+                {
+                    "conflict_type": "security_resolution_mismatch",
+                    "severity": "warning",
+                    "sources": sorted(unresolved_sources | resolved_sources),
+                    "message": (
+                        "One or more security sources report unresolved risk while "
+                        "another source reports mitigation or resolution."
+                    ),
+                }
+            ]
+
+        return []
+
+    def detect_workflow_state_conflicts(self, events: list) -> list[dict]:
+        blocked_sources = set()
+        completed_sources = set()
+
+        for event in events:
+            source_system = self.get_source_system(event)
+            event_type = self.get_event_type(event)
+            metadata = self.get_metadata(event)
+
+            if not source_system:
+                continue
+
+            if self.is_workflow_blocked(event_type, metadata):
+                blocked_sources.add(source_system)
+
+            if self.is_workflow_completed(event_type, metadata):
+                completed_sources.add(source_system)
+
+        if blocked_sources and completed_sources:
+            return [
+                {
+                    "conflict_type": "workflow_state_mismatch",
+                    "severity": "warning",
+                    "sources": sorted(blocked_sources | completed_sources),
+                    "message": (
+                        "One or more workflow sources report blocked work while "
+                        "another source reports completion or merge."
+                    ),
+                }
+            ]
+
+        return []
+
+    def detect_identity_outcome_conflicts(self, events: list) -> list[dict]:
+        failed_sources = set()
+        successful_sources = set()
+
+        for event in events:
+            source_system = self.get_source_system(event)
+            event_type = self.get_event_type(event)
+            metadata = self.get_metadata(event)
+
+            if not source_system:
+                continue
+
+            if self.is_identity_failed(event_type, metadata):
+                failed_sources.add(source_system)
+
+            if self.is_identity_successful(event_type, metadata):
+                successful_sources.add(source_system)
+
+        if failed_sources and successful_sources:
+            return [
+                {
+                    "conflict_type": "identity_outcome_mismatch",
+                    "severity": "warning",
+                    "sources": sorted(failed_sources | successful_sources),
+                    "message": (
+                        "One or more identity sources report failed access while "
+                        "another source reports successful access."
+                    ),
+                }
+            ]
+
+        return []
+
+    def build_severity_counts(self, conflicts: list[dict]) -> dict:
+        counts = {
+            "critical": 0,
+            "warning": 0,
+            "info": 0,
+        }
+
+        for conflict in conflicts:
+            severity = conflict.get("severity", "info")
+
+            if severity not in counts:
+                counts[severity] = 0
+
+            counts[severity] += 1
+
+        return counts
+
+    def is_security_unresolved(self, event_type: str, metadata: dict) -> bool:
+        text = self.combined_text(event_type, metadata)
+
+        unresolved_terms = {
+            "unauthorized_api_call",
+            "threat_detected",
+            "malware",
+            "ransomware",
+            "critical",
+            "high",
+            "unresolved",
+            "active",
+            "open",
+            "true_positive",
+            "malicious",
+        }
+
+        return any(term in text for term in unresolved_terms)
+
+    def is_security_resolved(self, event_type: str, metadata: dict) -> bool:
+        text = self.combined_text(event_type, metadata)
+
+        resolved_terms = {
+            "verification_passed",
+            "mitigated",
+            "remediated",
+            "resolved",
+            "closed",
+            "benign",
+            "clean",
+        }
+
+        return any(term in text for term in resolved_terms)
+
+    def is_workflow_blocked(self, event_type: str, metadata: dict) -> bool:
+        text = self.combined_text(event_type, metadata)
+
+        blocked_terms = {
+            "work_blocked",
+            "blocked",
+            "approval_delayed",
+            "dependency_wait",
+            "stalled",
+            "waiting",
+        }
+
+        return any(term in text for term in blocked_terms)
+
+    def is_workflow_completed(self, event_type: str, metadata: dict) -> bool:
+        text = self.combined_text(event_type, metadata)
+
+        completed_terms = {
+            "merged",
+            "closed",
+            "done",
+            "completed",
+            "resolved",
+            "deployed",
+            "verification_passed",
+        }
+
+        return any(term in text for term in completed_terms)
+
+    def is_identity_failed(self, event_type: str, metadata: dict) -> bool:
+        text = self.combined_text(event_type, metadata)
+
+        failed_terms = {
+            "login_failed",
+            "sign_in_failed",
+            "authentication_failed",
+            "mfa_denied",
+            "access_denied",
+            "failure",
+            "failed",
+        }
+
+        return any(term in text for term in failed_terms)
+
+    def is_identity_successful(self, event_type: str, metadata: dict) -> bool:
+        text = self.combined_text(event_type, metadata)
+
+        success_terms = {
+            "login_success",
+            "sign_in_success",
+            "authentication_success",
+            "mfa_success",
+            "access_granted",
+            "success",
+            "successful",
+            "verification_passed",
+        }
+
+        return any(term in text for term in success_terms)
+
+    def combined_text(self, event_type: str, metadata: dict) -> str:
+        metadata_values = []
+
+        if isinstance(metadata, dict):
+            metadata_values = [
+                str(value)
+                for value in metadata.values()
+                if value is not None
+            ]
+
+        return " ".join([str(event_type), *metadata_values]).lower()
+
+    def get_source_system(self, event) -> str:
+        return str(getattr(event, "source_system", "") or "")
+
+    def get_event_type(self, event) -> str:
+        return str(getattr(event, "event_type", "") or "")
+
+    def get_metadata(self, event) -> dict:
+        metadata = getattr(event, "metadata", {}) or {}
+
+        if isinstance(metadata, dict):
+            return metadata
+
+        return {}
+
+============================================================
+FILE: .\backend\app\services\evidence_source_registry.py
+============================================================
+class EvidenceSourceRegistry:
+    """
+    Central registry for mapping snapshot ID prefixes to evidence source labels.
+
+    This keeps source detection consistent across dashboard summaries,
+    recent activity, future reports, and future connector expansion.
+    """
+
+    SOURCE_PREFIXES = {
+        "github-": "GitHub",
+        "gitlab-": "GitLab",
+        "servicenow-": "ServiceNow",
+        "jira-": "Jira",
+        "okta-": "Okta",
+        "entra-": "Entra ID",
+        "sentinelone-": "SentinelOne",
+        "defender-": "Microsoft Defender",
+        "wiz-": "Wiz",
+        "crowdstrike-": "CrowdStrike",
+        "csv-": "CSV",
+        "api-": "API",
+}
+
+    DEFAULT_SOURCE = "Local / Manual"
+    EMPTY_SOURCE = "None"
+
+    @classmethod
+    def detect_from_snapshot(cls, snapshot):
+        if snapshot is None:
+            return cls.EMPTY_SOURCE
+
+        snapshot_id = snapshot.get("snapshot_id", "")
+
+        return cls.detect_from_snapshot_id(snapshot_id)
+
+    @classmethod
+    def detect_from_snapshot_id(cls, snapshot_id: str) -> str:
+        for prefix, label in cls.SOURCE_PREFIXES.items():
+            if snapshot_id.startswith(prefix):
+                return label
+
+        return cls.DEFAULT_SOURCE
+
+============================================================
+FILE: .\backend\app\gagf\snapshot_ledger.py
+============================================================
+import json
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+class SnapshotLedger:
+    def __init__(self, db_path="gagf.db"):
+        self.db_path = Path(db_path)
+        self._init_db()
+
+    def _connect(self):
+        return sqlite3.connect(self.db_path)
+
+    def _init_db(self):
+        with self._connect() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS gagf_state_snapshots (
+                    snapshot_id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    work_item_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    adaptive_state_json TEXT NOT NULL,
+                    evidence_confidence_json TEXT NOT NULL,
+                    timestamp_quality_distribution_json TEXT NOT NULL,
+                    evidence_json TEXT NOT NULL,
+                    normalization_applied_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+
+    def save_snapshot(self, snapshot, normalization_applied=None):
+        normalization_applied = normalization_applied or []
+
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO gagf_state_snapshots (
+                    snapshot_id,
+                    tenant_id,
+                    work_item_id,
+                    status,
+                    adaptive_state_json,
+                    evidence_confidence_json,
+                    timestamp_quality_distribution_json,
+                    evidence_json,
+                    normalization_applied_json,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    snapshot.snapshot_id,
+                    snapshot.tenant_id,
+                    snapshot.work_item_id,
+                    snapshot.status,
+                    json.dumps(snapshot.adaptive_state.model_dump()),
+                    json.dumps(snapshot.evidence_confidence.model_dump()),
+                    json.dumps(snapshot.timestamp_quality_distribution),
+                    json.dumps(snapshot.evidence),
+                    json.dumps([item.model_dump() for item in normalization_applied]),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+
+        return snapshot.snapshot_id
+
+    def get_snapshot(self, snapshot_id):
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT *
+                FROM gagf_state_snapshots
+                WHERE snapshot_id = ?
+                """,
+                (snapshot_id,),
+            ).fetchone()
+
+        return dict(row) if row else None
+
+    def list_snapshots(self):
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM gagf_state_snapshots
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+
+        return [dict(row) for row in rows]

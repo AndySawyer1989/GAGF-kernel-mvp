@@ -1,0 +1,1381 @@
+﻿
+============================================================
+FILE: .\backend\app\gagf\cross_source_agreement_service.py
+============================================================
+from backend.app.gagf.source_registry import SourceRegistry
+
+
+class CrossSourceAgreementService:
+    expected_kernel_roles = {
+        "identity_evidence",
+        "threat_evidence",
+        "delivery_evidence",
+        "workflow_evidence",
+        "incident_evidence",
+    }
+
+    def evaluate_agreement(self, events: list) -> dict:
+        sources = self.get_unique_sources(events)
+        kernel_roles = self.get_kernel_roles(events)
+        event_types = self.get_event_types(events)
+        missing_roles = self.get_missing_roles(kernel_roles)
+
+        source_diversity_score = self.score_source_diversity(sources)
+        kernel_role_coverage_score = self.score_kernel_role_coverage(kernel_roles)
+        event_type_alignment_score = self.score_event_type_alignment(event_types)
+        registered_source_score = self.score_registered_sources(sources)
+
+        factors = {
+            "source_diversity": source_diversity_score,
+            "kernel_role_coverage": kernel_role_coverage_score,
+            "event_type_alignment": event_type_alignment_score,
+            "registered_sources": registered_source_score,
+        }
+
+        agreement_score = self.calculate_agreement_score(factors)
+        agreement_band = self.get_agreement_band(agreement_score)
+
+        return {
+            "status": "ok",
+            "event_count": len(events),
+            "source_count": len(sources),
+            "agreement_score": agreement_score,
+            "agreement_band": agreement_band,
+            "supporting_sources": sorted(sources),
+            "kernel_roles_present": sorted(kernel_roles),
+            "missing_roles": sorted(missing_roles),
+            "event_types": sorted(event_types),
+            "factors": factors,
+        }
+
+    def get_unique_sources(self, events: list) -> set[str]:
+        sources = set()
+
+        for event in events:
+            source_system = getattr(event, "source_system", None)
+
+            if source_system:
+                sources.add(source_system)
+
+        return sources
+
+    def get_kernel_roles(self, events: list) -> set[str]:
+        roles = set()
+        registry = SourceRegistry()
+
+        for event in events:
+            source_system = getattr(event, "source_system", None)
+            source = registry.get_source(source_system)
+
+            if source and source.get("kernel_role"):
+                roles.add(source["kernel_role"])
+
+        return roles
+
+    def get_event_types(self, events: list) -> set[str]:
+        event_types = set()
+
+        for event in events:
+            event_type = getattr(event, "event_type", None)
+
+            if event_type:
+                event_types.add(str(event_type))
+
+        return event_types
+
+    def get_missing_roles(self, kernel_roles: set[str]) -> set[str]:
+        return self.expected_kernel_roles - kernel_roles
+
+    def score_source_diversity(self, sources: set[str]) -> float:
+        source_count = len(sources)
+
+        if source_count >= 3:
+            return 1.0
+
+        if source_count == 2:
+            return 0.75
+
+        if source_count == 1:
+            return 0.4
+
+        return 0.0
+
+    def score_kernel_role_coverage(self, kernel_roles: set[str]) -> float:
+        if not self.expected_kernel_roles:
+            return 0.0
+
+        return round(
+            len(kernel_roles) / len(self.expected_kernel_roles),
+            4,
+        )
+
+    def score_event_type_alignment(self, event_types: set[str]) -> float:
+        event_type_count = len(event_types)
+
+        if event_type_count == 0:
+            return 0.0
+
+        if event_type_count == 1:
+            return 1.0
+
+        if event_type_count == 2:
+            return 0.75
+
+        return 0.5
+
+    def score_registered_sources(self, sources: set[str]) -> float:
+        if not sources:
+            return 0.0
+
+        registry = SourceRegistry()
+        registered_count = 0
+
+        for source_system in sources:
+            if registry.get_source(source_system) is not None:
+                registered_count += 1
+
+        return round(
+            registered_count / len(sources),
+            4,
+        )
+
+    def calculate_agreement_score(self, factors: dict) -> float:
+        weights = {
+            "source_diversity": 0.30,
+            "kernel_role_coverage": 0.30,
+            "event_type_alignment": 0.20,
+            "registered_sources": 0.20,
+        }
+
+        score = 0.0
+
+        for factor_name, factor_score in factors.items():
+            score += factor_score * weights[factor_name]
+
+        return round(score, 4)
+
+    def get_agreement_band(self, agreement_score: float) -> str:
+        if agreement_score >= 0.85:
+            return "strong"
+
+        if agreement_score >= 0.60:
+            return "moderate"
+
+        if agreement_score > 0.0:
+            return "weak"
+
+        return "none"
+
+============================================================
+FILE: .\backend\app\gagf\source_registry.py
+============================================================
+from dataclasses import dataclass, asdict
+
+
+@dataclass(frozen=True)
+class SourceDefinition:
+    source_system: str
+    display_name: str
+    category: str
+    ingestion_endpoint: str
+    trust_tier: str
+    kernel_role: str
+    enabled: bool = True
+
+
+class SourceRegistry:
+    def __init__(self):
+        self.sources = {
+            "github": SourceDefinition(
+                source_system="github",
+                display_name="GitHub",
+                category="devops",
+                ingestion_endpoint="/ingest/github",
+                trust_tier="operational",
+                kernel_role="delivery_evidence",
+            ),
+            "jira": SourceDefinition(
+                source_system="jira",
+                display_name="Jira",
+                category="work_management",
+                ingestion_endpoint="/ingest/jira",
+                trust_tier="operational",
+                kernel_role="workflow_evidence",
+            ),
+            "servicenow": SourceDefinition(
+                source_system="servicenow",
+                display_name="ServiceNow",
+                category="it_service_management",
+                ingestion_endpoint="/ingest/servicenow",
+                trust_tier="operational",
+                kernel_role="incident_evidence",
+            ),
+            "okta": SourceDefinition(
+                source_system="okta",
+                display_name="Okta",
+                category="identity",
+                ingestion_endpoint="/ingest/okta",
+                trust_tier="security",
+                kernel_role="identity_evidence",
+            ),
+            "entra": SourceDefinition(
+                source_system="entra",
+                display_name="Microsoft Entra ID",
+                category="identity",
+                ingestion_endpoint="/ingest/entra",
+                trust_tier="security",
+                kernel_role="identity_evidence",
+            ),
+            "defender": SourceDefinition(
+                source_system="defender",
+                display_name="Microsoft Defender",
+                category="endpoint_security",
+                ingestion_endpoint="/ingest/defender",
+                trust_tier="security",
+                kernel_role="threat_evidence",
+            ),
+            "sentinelone": SourceDefinition(
+                source_system="sentinelone",
+                display_name="SentinelOne",
+                category="endpoint_security",
+                ingestion_endpoint="/ingest/sentinelone",
+                trust_tier="security",
+                kernel_role="threat_evidence",
+            ),
+        }
+
+    def list_sources(self) -> list[dict]:
+        return [asdict(source) for source in self.sources.values()]
+
+    def get_source(self, source_system: str) -> dict | None:
+        source = self.sources.get(source_system)
+
+        if source is None:
+            return None
+
+        return asdict(source)
+
+    def list_enabled_sources(self) -> list[dict]:
+        return [
+            asdict(source)
+            for source in self.sources.values()
+            if source.enabled is True
+        ]
+
+============================================================
+FILE: .\backend\app\services\canonical_evidence_service.py
+============================================================
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from enum import Enum
+from typing import Any, Mapping
+from uuid import UUID, uuid4
+
+from backend.app.contracts.constitutional_sequencer import (
+    CandidateStatus,
+    CanonicalEvidenceCandidate,
+)
+
+
+class CanonicalEvidenceError(ValueError):
+    """
+    Base exception for canonical evidence preparation failures.
+    """
+
+
+class CanonicalPayloadError(CanonicalEvidenceError):
+    """
+    Raised when a payload cannot be represented deterministically.
+    """
+
+
+class CandidateHashVerificationError(CanonicalEvidenceError):
+    """
+    Raised when a candidate hash does not match its constitutional contents.
+    """
+
+
+class CanonicalEvidenceService:
+    """
+    Prepares immutable evidence candidates for the Sequencer Security Zone.
+
+    Constitutional boundary:
+
+    This service may:
+
+    - normalize payload values;
+    - produce deterministic canonical JSON;
+    - calculate candidate hashes;
+    - create CanonicalEvidenceCandidate contracts;
+    - verify candidate hash integrity.
+
+    This service may not:
+
+    - assign authoritative sequence numbers;
+    - establish batch order;
+    - issue sequence receipts;
+    - select governance policy;
+    - commit governance decisions;
+    - mutate authoritative state.
+    """
+
+    HASH_ALGORITHM = "sha256"
+    HASH_CONTRACT_VERSION = "candidate-hash-v1"
+
+    @classmethod
+    def canonicalize_payload(cls, payload: Mapping[str, Any]) -> dict[str, Any]:
+        """
+        Convert a source payload into a deterministic JSON-compatible mapping.
+
+        Dictionary keys are sorted during serialization. Lists retain their
+        original order because list order may carry source meaning.
+        """
+        if not isinstance(payload, Mapping):
+            raise CanonicalPayloadError("payload must be a mapping")
+
+        if not payload:
+            raise CanonicalPayloadError("payload must not be empty")
+
+        normalized = cls._normalize_value(payload, path="payload")
+
+        if not isinstance(normalized, dict):
+            raise CanonicalPayloadError(
+                "canonical payload must resolve to a dictionary"
+            )
+
+        return normalized
+
+    @classmethod
+    def canonical_json(cls, value: Any) -> str:
+        """
+        Serialize a normalized value using the canonical JSON rules for
+        candidate-hash-v1.
+        """
+        normalized = cls._normalize_value(value, path="value")
+
+        try:
+            return json.dumps(
+                normalized,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+                allow_nan=False,
+            )
+        except (TypeError, ValueError) as exc:
+            raise CanonicalPayloadError(
+                f"value cannot be serialized canonically: {exc}"
+            ) from exc
+
+    @classmethod
+    def calculate_candidate_hash(
+        cls,
+        *,
+        tenant_id: str,
+        lifecycle_instance_id: str,
+        source_event_id: str,
+        source_identity: str,
+        source_sequence: int | None,
+        observed_at: datetime,
+        canonical_payload: Mapping[str, Any],
+        schema_version: str,
+        canonicalizer_version: str,
+        canonicalizer_identity: str,
+    ) -> str:
+        """
+        Calculate the deterministic constitutional hash for an evidence
+        candidate.
+
+        received_at, created_at, candidate_id, signature, and candidate status
+        are intentionally excluded. They describe processing state rather than
+        the source evidence identity.
+        """
+        normalized_observed_at = cls._normalize_datetime(
+            observed_at,
+            field_name="observed_at",
+        )
+
+        normalized_payload = cls.canonicalize_payload(canonical_payload)
+
+        hash_envelope = {
+            "hash_contract_version": cls.HASH_CONTRACT_VERSION,
+            "tenant_id": cls._require_text(tenant_id, "tenant_id"),
+            "lifecycle_instance_id": cls._require_text(
+                lifecycle_instance_id,
+                "lifecycle_instance_id",
+            ),
+            "source_event_id": cls._require_text(
+                source_event_id,
+                "source_event_id",
+            ),
+            "source_identity": cls._require_text(
+                source_identity,
+                "source_identity",
+            ),
+            "source_sequence": cls._validate_source_sequence(source_sequence),
+            "observed_at": cls._datetime_to_canonical_string(
+                normalized_observed_at
+            ),
+            "canonical_payload": normalized_payload,
+            "schema_version": cls._require_text(
+                schema_version,
+                "schema_version",
+            ),
+            "canonicalizer_version": cls._require_text(
+                canonicalizer_version,
+                "canonicalizer_version",
+            ),
+            "canonicalizer_identity": cls._require_text(
+                canonicalizer_identity,
+                "canonicalizer_identity",
+            ),
+        }
+
+        encoded = cls.canonical_json(hash_envelope).encode("utf-8")
+
+        return hashlib.sha256(encoded).hexdigest()
+
+    @classmethod
+    def create_candidate(
+        cls,
+        *,
+        tenant_id: str,
+        lifecycle_instance_id: str,
+        source_event_id: str,
+        source_identity: str,
+        observed_at: datetime,
+        received_at: datetime,
+        canonical_payload: Mapping[str, Any],
+        schema_version: str,
+        canonicalizer_version: str,
+        canonicalizer_identity: str,
+        source_sequence: int | None = None,
+        signature: str | None = None,
+        candidate_id: UUID | None = None,
+        created_at: datetime | None = None,
+    ) -> CanonicalEvidenceCandidate:
+        """
+        Create an immutable PREPARED candidate.
+
+        The resulting candidate has no sequence number, no receipt, and no
+        authority to affect governance state.
+        """
+        normalized_observed_at = cls._normalize_datetime(
+            observed_at,
+            field_name="observed_at",
+        )
+        normalized_received_at = cls._normalize_datetime(
+            received_at,
+            field_name="received_at",
+        )
+
+        if created_at is None:
+            normalized_created_at = datetime.now(timezone.utc)
+        else:
+            normalized_created_at = cls._normalize_datetime(
+                created_at,
+                field_name="created_at",
+            )
+
+        if normalized_received_at < normalized_observed_at:
+            raise CanonicalEvidenceError(
+                "received_at must not occur before observed_at"
+            )
+
+        if normalized_created_at < normalized_received_at:
+            raise CanonicalEvidenceError(
+                "created_at must not occur before received_at"
+            )
+
+        normalized_payload = cls.canonicalize_payload(canonical_payload)
+
+        candidate_hash = cls.calculate_candidate_hash(
+            tenant_id=tenant_id,
+            lifecycle_instance_id=lifecycle_instance_id,
+            source_event_id=source_event_id,
+            source_identity=source_identity,
+            source_sequence=source_sequence,
+            observed_at=normalized_observed_at,
+            canonical_payload=normalized_payload,
+            schema_version=schema_version,
+            canonicalizer_version=canonicalizer_version,
+            canonicalizer_identity=canonicalizer_identity,
+        )
+
+        return CanonicalEvidenceCandidate(
+            candidate_id=candidate_id or uuid4(),
+            tenant_id=tenant_id,
+            lifecycle_instance_id=lifecycle_instance_id,
+            source_event_id=source_event_id,
+            source_identity=source_identity,
+            source_sequence=source_sequence,
+            observed_at=normalized_observed_at,
+            received_at=normalized_received_at,
+            canonical_payload=normalized_payload,
+            candidate_hash=candidate_hash,
+            schema_version=schema_version,
+            canonicalizer_version=canonicalizer_version,
+            canonicalizer_identity=canonicalizer_identity,
+            signature=signature,
+            status=CandidateStatus.PREPARED,
+            created_at=normalized_created_at,
+        )
+
+    @classmethod
+    def verify_candidate(
+        cls,
+        candidate: CanonicalEvidenceCandidate,
+    ) -> bool:
+        """
+        Return True only when the candidate hash matches the candidate's
+        constitutional hash fields.
+        """
+        expected_hash = cls.calculate_candidate_hash(
+            tenant_id=candidate.tenant_id,
+            lifecycle_instance_id=candidate.lifecycle_instance_id,
+            source_event_id=candidate.source_event_id,
+            source_identity=candidate.source_identity,
+            source_sequence=candidate.source_sequence,
+            observed_at=candidate.observed_at,
+            canonical_payload=candidate.canonical_payload,
+            schema_version=candidate.schema_version,
+            canonicalizer_version=candidate.canonicalizer_version,
+            canonicalizer_identity=candidate.canonicalizer_identity,
+        )
+
+        return expected_hash == candidate.candidate_hash
+
+    @classmethod
+    def assert_candidate_integrity(
+        cls,
+        candidate: CanonicalEvidenceCandidate,
+    ) -> None:
+        """
+        Raise a constitutional verification exception when a candidate cannot
+        be reproduced exactly.
+        """
+        if not cls.verify_candidate(candidate):
+            raise CandidateHashVerificationError(
+                "candidate hash verification failed"
+            )
+
+    @classmethod
+    def _normalize_value(
+        cls,
+        value: Any,
+        *,
+        path: str,
+    ) -> Any:
+        """
+        Recursively normalize values into deterministic JSON-compatible forms.
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, str):
+            return value
+
+        if isinstance(value, int):
+            return value
+
+        if isinstance(value, float):
+            if not math.isfinite(value):
+                raise CanonicalPayloadError(
+                    f"{path} contains a non-finite floating-point value"
+                )
+
+            return value
+
+        if isinstance(value, Decimal):
+            if not value.is_finite():
+                raise CanonicalPayloadError(
+                    f"{path} contains a non-finite Decimal value"
+                )
+
+            return format(value, "f")
+
+        if isinstance(value, datetime):
+            normalized = cls._normalize_datetime(
+                value,
+                field_name=path,
+            )
+            return cls._datetime_to_canonical_string(normalized)
+
+        if isinstance(value, date):
+            return value.isoformat()
+
+        if isinstance(value, UUID):
+            return str(value)
+
+        if isinstance(value, Enum):
+            return cls._normalize_value(value.value, path=path)
+
+        if isinstance(value, Mapping):
+            normalized_mapping: dict[str, Any] = {}
+
+            for key, item in value.items():
+                if not isinstance(key, str):
+                    raise CanonicalPayloadError(
+                        f"{path} contains a non-string dictionary key"
+                    )
+
+                normalized_mapping[key] = cls._normalize_value(
+                    item,
+                    path=f"{path}.{key}",
+                )
+
+            return normalized_mapping
+
+        if isinstance(value, (list, tuple)):
+            return [
+                cls._normalize_value(
+                    item,
+                    path=f"{path}[{index}]",
+                )
+                for index, item in enumerate(value)
+            ]
+
+        if isinstance(value, (set, frozenset)):
+            raise CanonicalPayloadError(
+                f"{path} contains an unordered collection"
+            )
+
+        if isinstance(value, (bytes, bytearray, memoryview)):
+            raise CanonicalPayloadError(
+                f"{path} contains raw binary data"
+            )
+
+        raise CanonicalPayloadError(
+            f"{path} contains unsupported value type "
+            f"{type(value).__name__}"
+        )
+
+    @staticmethod
+    def _require_text(value: str, field_name: str) -> str:
+        if not isinstance(value, str):
+            raise CanonicalEvidenceError(f"{field_name} must be a string")
+
+        normalized = value.strip()
+
+        if not normalized:
+            raise CanonicalEvidenceError(f"{field_name} must not be empty")
+
+        return normalized
+
+    @staticmethod
+    def _validate_source_sequence(
+        value: int | None,
+    ) -> int | None:
+        if value is None:
+            return None
+
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise CanonicalEvidenceError(
+                "source_sequence must be an integer or None"
+            )
+
+        if value < 0:
+            raise CanonicalEvidenceError(
+                "source_sequence must be greater than or equal to zero"
+            )
+
+        return value
+
+    @staticmethod
+    def _normalize_datetime(
+        value: datetime,
+        *,
+        field_name: str,
+    ) -> datetime:
+        if not isinstance(value, datetime):
+            raise CanonicalEvidenceError(
+                f"{field_name} must be a datetime"
+            )
+
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise CanonicalEvidenceError(
+                f"{field_name} must be timezone-aware"
+            )
+
+        return value.astimezone(timezone.utc)
+
+    @staticmethod
+    def _datetime_to_canonical_string(value: datetime) -> str:
+        """
+        Produce one stable UTC representation.
+
+        Python emits +00:00 by default. The constitutional representation uses
+        Z to make UTC explicit and portable.
+        """
+        normalized = value.astimezone(timezone.utc)
+
+        return normalized.isoformat(timespec="microseconds").replace(
+            "+00:00",
+            "Z",
+        )
+
+============================================================
+FILE: .\backend\app\contracts\constitutional_sequencer.py
+============================================================
+from __future__ import annotations
+
+import re
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$")
+VERSION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+def _require_utc(value: datetime, field_name: str) -> datetime:
+    """
+    Require timezone-aware UTC timestamps.
+
+    Constitutional records must never depend on local machine timezone
+    interpretation.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{field_name} must be timezone-aware")
+
+    normalized = value.astimezone(timezone.utc)
+
+    if normalized.utcoffset() != timezone.utc.utcoffset(normalized):
+        raise ValueError(f"{field_name} must resolve to UTC")
+
+    return normalized
+
+
+def _validate_sha256(value: str, field_name: str) -> str:
+    """
+    Validate a lowercase, hexadecimal SHA-256 digest.
+    """
+    if not SHA256_PATTERN.fullmatch(value):
+        raise ValueError(
+            f"{field_name} must be a 64-character lowercase hexadecimal SHA-256 hash"
+        )
+
+    return value
+
+
+def _validate_identifier(value: str, field_name: str) -> str:
+    """
+    Validate identifiers used at constitutional trust boundaries.
+    """
+    if not IDENTIFIER_PATTERN.fullmatch(value):
+        raise ValueError(
+            f"{field_name} contains unsupported characters or has an invalid length"
+        )
+
+    return value
+
+
+def _validate_version(value: str, field_name: str) -> str:
+    """
+    Validate version identifiers such as OPV-1.0 or canonicalizer-1.0.
+    """
+    if not VERSION_PATTERN.fullmatch(value):
+        raise ValueError(f"{field_name} is not a valid version identifier")
+
+    return value
+
+
+class FrozenContract(BaseModel):
+    """
+    Base class for immutable constitutional interface contracts.
+    """
+
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        validate_assignment=True,
+        str_strip_whitespace=True,
+    )
+
+
+class CandidateStatus(str, Enum):
+    PREPARED = "PREPARED"
+    SUBMITTED = "SUBMITTED"
+    SEQUENCED = "SEQUENCED"
+    REJECTED = "REJECTED"
+    QUARANTINED = "QUARANTINED"
+
+
+class SequencerBatchStatus(str, Enum):
+    PROPOSED = "PROPOSED"
+    ORDERED = "ORDERED"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+
+
+class CommitStatus(str, Enum):
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+
+
+class ReplayStatus(str, Enum):
+    EQUAL = "EQUAL"
+    DIVERGENT = "DIVERGENT"
+    INCOMPLETE = "INCOMPLETE"
+
+
+class CanonicalEvidenceCandidate(FrozenContract):
+    """
+    Evidence prepared by the Canonicalization Zone.
+
+    This contract does not grant authoritative order and does not represent a
+    committed governance fact. It is a candidate submitted for sequencing.
+    """
+
+    candidate_id: UUID
+    tenant_id: str
+    lifecycle_instance_id: str
+    source_event_id: str
+    source_identity: str
+
+    source_sequence: int | None = Field(default=None, ge=0)
+    observed_at: datetime
+    received_at: datetime
+
+    canonical_payload: dict[str, Any]
+
+    candidate_hash: str
+    schema_version: str
+    canonicalizer_version: str
+    canonicalizer_identity: str
+
+    signature: str | None = None
+    status: CandidateStatus = CandidateStatus.PREPARED
+    created_at: datetime
+
+    @field_validator(
+        "tenant_id",
+        "lifecycle_instance_id",
+        "source_event_id",
+        "source_identity",
+        "canonicalizer_identity",
+    )
+    @classmethod
+    def validate_identifiers(cls, value: str, info) -> str:
+        return _validate_identifier(value, info.field_name)
+
+    @field_validator("schema_version", "canonicalizer_version")
+    @classmethod
+    def validate_versions(cls, value: str, info) -> str:
+        return _validate_version(value, info.field_name)
+
+    @field_validator("candidate_hash")
+    @classmethod
+    def validate_candidate_hash(cls, value: str) -> str:
+        return _validate_sha256(value, "candidate_hash")
+
+    @field_validator("observed_at", "received_at", "created_at")
+    @classmethod
+    def validate_timestamps(cls, value: datetime, info) -> datetime:
+        return _require_utc(value, info.field_name)
+
+    @field_validator("canonical_payload")
+    @classmethod
+    def canonical_payload_must_not_be_empty(
+        cls,
+        value: dict[str, Any],
+    ) -> dict[str, Any]:
+        if not value:
+            raise ValueError("canonical_payload must not be empty")
+
+        return value
+
+    @model_validator(mode="after")
+    def validate_candidate_timeline(self) -> CanonicalEvidenceCandidate:
+        if self.received_at < self.observed_at:
+            raise ValueError("received_at must not occur before observed_at")
+
+        if self.created_at < self.received_at:
+            raise ValueError("created_at must not occur before received_at")
+
+        return self
+
+
+class SequenceReceipt(FrozenContract):
+    """
+    Immutable proof that an authorized sequencer assigned authoritative order
+    under a specific partition epoch and ordering-policy version.
+    """
+
+    receipt_id: UUID
+    candidate_id: UUID
+    candidate_hash: str
+
+    tenant_id: str
+    lifecycle_instance_id: str
+    partition_key: str
+
+    assigned_sequence: int = Field(ge=0)
+    batch_id: UUID
+
+    sequencer_epoch: int = Field(ge=1)
+    sequencer_identity: str
+    ordering_policy_version: str
+
+    previous_receipt_hash: str
+    receipt_hash: str
+
+    issued_at: datetime
+
+    @field_validator(
+        "tenant_id",
+        "lifecycle_instance_id",
+        "partition_key",
+        "sequencer_identity",
+    )
+    @classmethod
+    def validate_identifiers(cls, value: str, info) -> str:
+        return _validate_identifier(value, info.field_name)
+
+    @field_validator("ordering_policy_version")
+    @classmethod
+    def validate_ordering_policy_version(cls, value: str) -> str:
+        return _validate_version(value, "ordering_policy_version")
+
+    @field_validator(
+        "candidate_hash",
+        "previous_receipt_hash",
+        "receipt_hash",
+    )
+    @classmethod
+    def validate_hashes(cls, value: str, info) -> str:
+        return _validate_sha256(value, info.field_name)
+
+    @field_validator("issued_at")
+    @classmethod
+    def validate_issued_at(cls, value: datetime) -> datetime:
+        return _require_utc(value, "issued_at")
+
+
+class SequencerBatchRequest(FrozenContract):
+    """
+    Request submitted to the Sequencer Security Zone.
+
+    Candidate ordering inside this request is not authoritative. The sequencer
+    must independently apply the recognized ordering policy.
+    """
+
+    batch_id: UUID
+    partition_key: str
+    tenant_id: str
+    lifecycle_instance_id: str
+
+    candidate_ids: tuple[UUID, ...] = Field(min_length=1)
+    expected_epoch: int = Field(ge=1)
+    ordering_policy_version: str
+
+    requested_by: str
+    requested_at: datetime
+
+    @field_validator(
+        "partition_key",
+        "tenant_id",
+        "lifecycle_instance_id",
+        "requested_by",
+    )
+    @classmethod
+    def validate_identifiers(cls, value: str, info) -> str:
+        return _validate_identifier(value, info.field_name)
+
+    @field_validator("ordering_policy_version")
+    @classmethod
+    def validate_ordering_policy_version(cls, value: str) -> str:
+        return _validate_version(value, "ordering_policy_version")
+
+    @field_validator("requested_at")
+    @classmethod
+    def validate_requested_at(cls, value: datetime) -> datetime:
+        return _require_utc(value, "requested_at")
+
+    @field_validator("candidate_ids")
+    @classmethod
+    def candidate_ids_must_be_unique(
+        cls,
+        value: tuple[UUID, ...],
+    ) -> tuple[UUID, ...]:
+        if len(value) != len(set(value)):
+            raise ValueError("candidate_ids must not contain duplicates")
+
+        return value
+
+
+class SequencerBatchResult(FrozenContract):
+    """
+    Result emitted by the Sequencer Security Zone.
+    """
+
+    batch_id: UUID
+    partition_key: str
+    tenant_id: str
+    lifecycle_instance_id: str
+
+    sequencer_epoch: int = Field(ge=1)
+    ordering_policy_version: str
+    sequencer_identity: str
+
+    receipt_ids: tuple[UUID, ...] = Field(default_factory=tuple)
+    status: SequencerBatchStatus
+
+    rejection_codes: tuple[str, ...] = Field(default_factory=tuple)
+
+    started_at: datetime
+    completed_at: datetime
+
+    @field_validator(
+        "partition_key",
+        "tenant_id",
+        "lifecycle_instance_id",
+        "sequencer_identity",
+    )
+    @classmethod
+    def validate_identifiers(cls, value: str, info) -> str:
+        return _validate_identifier(value, info.field_name)
+
+    @field_validator("ordering_policy_version")
+    @classmethod
+    def validate_ordering_policy_version(cls, value: str) -> str:
+        return _validate_version(value, "ordering_policy_version")
+
+    @field_validator("started_at", "completed_at")
+    @classmethod
+    def validate_timestamps(cls, value: datetime, info) -> datetime:
+        return _require_utc(value, info.field_name)
+
+    @model_validator(mode="after")
+    def validate_result(self) -> SequencerBatchResult:
+        if self.completed_at < self.started_at:
+            raise ValueError("completed_at must not occur before started_at")
+
+        if len(self.receipt_ids) != len(set(self.receipt_ids)):
+            raise ValueError("receipt_ids must not contain duplicates")
+
+        if self.status in {
+            SequencerBatchStatus.ORDERED,
+            SequencerBatchStatus.ACCEPTED,
+        }:
+            if not self.receipt_ids:
+                raise ValueError(
+                    "ordered or accepted batches must contain sequence receipts"
+                )
+
+            if self.rejection_codes:
+                raise ValueError(
+                    "ordered or accepted batches must not contain rejection codes"
+                )
+
+        if self.status == SequencerBatchStatus.REJECTED:
+            if not self.rejection_codes:
+                raise ValueError(
+                    "rejected batches must contain at least one rejection code"
+                )
+
+            if self.receipt_ids:
+                raise ValueError(
+                    "rejected batches must not contain sequence receipts"
+                )
+
+        return self
+
+
+class ConstitutionalCommitRequest(FrozenContract):
+    """
+    Request submitted to the Constitutional Commit Gate.
+
+    The Commit Gate must verify all referenced artifacts before authoritative
+    governance state is created.
+    """
+
+    commit_request_id: UUID
+    batch_id: UUID
+
+    tenant_id: str
+    lifecycle_instance_id: str
+    partition_key: str
+
+    candidate_ids: tuple[UUID, ...] = Field(min_length=1)
+    receipt_ids: tuple[UUID, ...] = Field(min_length=1)
+
+    sequencer_epoch: int = Field(ge=1)
+    ordering_policy_version: str
+    policy_version: str
+    kernel_version: str
+
+    prior_state_hash: str
+
+    submitted_by: str
+    submitted_at: datetime
+
+    @field_validator(
+        "tenant_id",
+        "lifecycle_instance_id",
+        "partition_key",
+        "submitted_by",
+    )
+    @classmethod
+    def validate_identifiers(cls, value: str, info) -> str:
+        return _validate_identifier(value, info.field_name)
+
+    @field_validator(
+        "ordering_policy_version",
+        "policy_version",
+        "kernel_version",
+    )
+    @classmethod
+    def validate_versions(cls, value: str, info) -> str:
+        return _validate_version(value, info.field_name)
+
+    @field_validator("prior_state_hash")
+    @classmethod
+    def validate_prior_state_hash(cls, value: str) -> str:
+        return _validate_sha256(value, "prior_state_hash")
+
+    @field_validator("submitted_at")
+    @classmethod
+    def validate_submitted_at(cls, value: datetime) -> datetime:
+        return _require_utc(value, "submitted_at")
+
+    @model_validator(mode="after")
+    def validate_commit_request(self) -> ConstitutionalCommitRequest:
+        if len(self.candidate_ids) != len(set(self.candidate_ids)):
+            raise ValueError("candidate_ids must not contain duplicates")
+
+        if len(self.receipt_ids) != len(set(self.receipt_ids)):
+            raise ValueError("receipt_ids must not contain duplicates")
+
+        if len(self.candidate_ids) != len(self.receipt_ids):
+            raise ValueError(
+                "candidate_ids and receipt_ids must have the same number of entries"
+            )
+
+        return self
+
+
+class ConstitutionalCommitResult(FrozenContract):
+    """
+    Result emitted by the Constitutional Commit Gate.
+    """
+
+    commit_request_id: UUID
+    batch_id: UUID
+
+    status: CommitStatus
+
+    decision_id: UUID | None = None
+    ledger_offset: int | None = Field(default=None, ge=0)
+
+    decision_hash: str | None = None
+    resulting_state_hash: str | None = None
+
+    rejection_codes: tuple[str, ...] = Field(default_factory=tuple)
+
+    committed_at: datetime | None = None
+
+    @field_validator("decision_hash", "resulting_state_hash")
+    @classmethod
+    def validate_optional_hashes(cls, value: str | None, info) -> str | None:
+        if value is None:
+            return None
+
+        return _validate_sha256(value, info.field_name)
+
+    @field_validator("committed_at")
+    @classmethod
+    def validate_committed_at(
+        cls,
+        value: datetime | None,
+    ) -> datetime | None:
+        if value is None:
+            return None
+
+        return _require_utc(value, "committed_at")
+
+    @model_validator(mode="after")
+    def validate_commit_result(self) -> ConstitutionalCommitResult:
+        if self.status == CommitStatus.ACCEPTED:
+            required_values = {
+                "decision_id": self.decision_id,
+                "ledger_offset": self.ledger_offset,
+                "decision_hash": self.decision_hash,
+                "resulting_state_hash": self.resulting_state_hash,
+                "committed_at": self.committed_at,
+            }
+
+            missing = [
+                field_name
+                for field_name, field_value in required_values.items()
+                if field_value is None
+            ]
+
+            if missing:
+                raise ValueError(
+                    "accepted commits require: " + ", ".join(sorted(missing))
+                )
+
+            if self.rejection_codes:
+                raise ValueError(
+                    "accepted commits must not contain rejection codes"
+                )
+
+        if self.status == CommitStatus.REJECTED:
+            if not self.rejection_codes:
+                raise ValueError(
+                    "rejected commits must contain at least one rejection code"
+                )
+
+            forbidden_values = {
+                "decision_id": self.decision_id,
+                "ledger_offset": self.ledger_offset,
+                "decision_hash": self.decision_hash,
+                "resulting_state_hash": self.resulting_state_hash,
+                "committed_at": self.committed_at,
+            }
+
+            present = [
+                field_name
+                for field_name, field_value in forbidden_values.items()
+                if field_value is not None
+            ]
+
+            if present:
+                raise ValueError(
+                    "rejected commits must not contain authoritative outputs: "
+                    + ", ".join(sorted(present))
+                )
+
+        return self
+
+
+class ReplayVerificationResult(FrozenContract):
+    """
+    Deterministic replay comparison for a committed batch.
+    """
+
+    replay_id: UUID
+    batch_id: UUID
+    decision_id: UUID
+
+    committed_decision_hash: str
+    replayed_decision_hash: str | None
+
+    committed_state_hash: str
+    replayed_state_hash: str | None
+
+    ordering_policy_version: str
+    policy_version: str
+    kernel_version: str
+
+    replay_status: ReplayStatus
+    equality: bool
+
+    divergence_codes: tuple[str, ...] = Field(default_factory=tuple)
+
+    replay_started_at: datetime
+    replay_completed_at: datetime
+
+    @field_validator(
+        "committed_decision_hash",
+        "replayed_decision_hash",
+        "committed_state_hash",
+        "replayed_state_hash",
+    )
+    @classmethod
+    def validate_hashes(cls, value: str | None, info) -> str | None:
+        if value is None:
+            return None
+
+        return _validate_sha256(value, info.field_name)
+
+    @field_validator(
+        "ordering_policy_version",
+        "policy_version",
+        "kernel_version",
+    )
+    @classmethod
+    def validate_versions(cls, value: str, info) -> str:
+        return _validate_version(value, info.field_name)
+
+    @field_validator("replay_started_at", "replay_completed_at")
+    @classmethod
+    def validate_timestamps(cls, value: datetime, info) -> datetime:
+        return _require_utc(value, info.field_name)
+
+    @model_validator(mode="after")
+    def validate_replay_result(self) -> ReplayVerificationResult:
+        if self.replay_completed_at < self.replay_started_at:
+            raise ValueError(
+                "replay_completed_at must not occur before replay_started_at"
+            )
+
+        hashes_are_equal = (
+            self.replayed_decision_hash is not None
+            and self.replayed_state_hash is not None
+            and self.committed_decision_hash == self.replayed_decision_hash
+            and self.committed_state_hash == self.replayed_state_hash
+        )
+
+        if self.replay_status == ReplayStatus.EQUAL:
+            if not self.equality:
+                raise ValueError("EQUAL replay status requires equality=True")
+
+            if not hashes_are_equal:
+                raise ValueError(
+                    "EQUAL replay status requires matching decision and state hashes"
+                )
+
+            if self.divergence_codes:
+                raise ValueError(
+                    "EQUAL replay status must not contain divergence codes"
+                )
+
+        if self.replay_status == ReplayStatus.DIVERGENT:
+            if self.equality:
+                raise ValueError(
+                    "DIVERGENT replay status requires equality=False"
+                )
+
+            if not self.divergence_codes:
+                raise ValueError(
+                    "DIVERGENT replay status requires divergence codes"
+                )
+
+            if hashes_are_equal:
+                raise ValueError(
+                    "DIVERGENT replay status cannot contain fully equal hashes"
+                )
+
+        if self.replay_status == ReplayStatus.INCOMPLETE:
+            if self.equality:
+                raise ValueError(
+                    "INCOMPLETE replay status requires equality=False"
+                )
+
+            if (
+                self.replayed_decision_hash is not None
+                and self.replayed_state_hash is not None
+            ):
+                raise ValueError(
+                    "INCOMPLETE replay status requires at least one missing replay hash"
+                )
+
+        return self
+
+============================================================
+RELATED TEST FILES
+============================================================

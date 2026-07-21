@@ -1,0 +1,461 @@
+﻿
+================================================================================
+CONSTITUTIONAL CALLERS
+================================================================================
+
+Path                                                                                                    LineNumber Line                                                                          
+----                                                                                                    ---------- ----                                                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                   3     CanonicalEvidenceCandidate,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                   5     ConstitutionalCommitRequest,                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                   6     ConstitutionalCommitResult,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                   8     ReplayVerificationResult,                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                   9     SequenceReceipt,                                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                  17     "CanonicalEvidenceCandidate",                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                  19     "ConstitutionalCommitRequest",                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                  20     "ConstitutionalCommitResult",                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                  22     "ReplayVerificationResult",                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\__init__.py                                  23     "SequenceReceipt",                                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 108 class CanonicalEvidenceCandidate(FrozenContract):                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 118     lifecycle_instance_id: str                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 128     candidate_hash: str                                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 139         "lifecycle_instance_id",                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 153     @field_validator("candidate_hash")                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 155     def validate_candidate_hash(cls, value: str) -> str:                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 156         return _validate_sha256(value, "candidate_hash")                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 175     def validate_candidate_timeline(self) -> CanonicalEvidenceCandidate:      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 185 class SequenceReceipt(FrozenContract):                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 193     candidate_hash: str                                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 196     lifecycle_instance_id: str                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 204     ordering_policy_version: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 206     previous_receipt_hash: str                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 207     receipt_hash: str                                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 213         "lifecycle_instance_id",                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 221     @field_validator("ordering_policy_version")                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 223     def validate_ordering_policy_version(cls, value: str) -> str:             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 224         return _validate_version(value, "ordering_policy_version")            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 227         "candidate_hash",                                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 228         "previous_receipt_hash",                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 229         "receipt_hash",                                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 252     lifecycle_instance_id: str                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 256     ordering_policy_version: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 264         "lifecycle_instance_id",                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 271     @field_validator("ordering_policy_version")                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 273     def validate_ordering_policy_version(cls, value: str) -> str:             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 274         return _validate_version(value, "ordering_policy_version")            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 301     lifecycle_instance_id: str                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 304     ordering_policy_version: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 318         "lifecycle_instance_id",                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 325     @field_validator("ordering_policy_version")                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 327     def validate_ordering_policy_version(cls, value: str) -> str:             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 328         return _validate_version(value, "ordering_policy_version")            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 371 class ConstitutionalCommitRequest(FrozenContract):                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 383     lifecycle_instance_id: str                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 390     ordering_policy_version: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 401         "lifecycle_instance_id",                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 410         "ordering_policy_version",                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 429     def validate_commit_request(self) -> ConstitutionalCommitRequest:         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 444 class ConstitutionalCommitResult(FrozenContract):                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 457     decision_hash: str | None = None                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 458     resulting_state_hash: str | None = None                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 464     @field_validator("decision_hash", "resulting_state_hash")                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 484     def validate_commit_result(self) -> ConstitutionalCommitResult:           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 489                 "decision_hash": self.decision_hash,                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 490                 "resulting_state_hash": self.resulting_state_hash,            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 519                 "decision_hash": self.decision_hash,                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 520                 "resulting_state_hash": self.resulting_state_hash,            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 539 class ReplayVerificationResult(FrozenContract):                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 548     committed_decision_hash: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 549     replayed_decision_hash: str | None                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 554     ordering_policy_version: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 567         "committed_decision_hash",                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 568         "replayed_decision_hash",                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 580         "ordering_policy_version",                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 594     def validate_replay_result(self) -> ReplayVerificationResult:             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 601             self.replayed_decision_hash is not None                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 603             and self.committed_decision_hash == self.replayed_decision_hash   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\contracts\constitutional_sequencer.py                 644                 self.replayed_decision_hash is not None                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                 14     CanonicalEvidenceCandidate,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                 47     - create CanonicalEvidenceCandidate contracts;                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                108     def calculate_candidate_hash(                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                112         lifecycle_instance_id: str,                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                140             "lifecycle_instance_id": cls._require_text(                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                141                 lifecycle_instance_id,                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                142                 "lifecycle_instance_id",                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                180         lifecycle_instance_id: str,                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                193     ) -> CanonicalEvidenceCandidate:                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                229         candidate_hash = cls.calculate_candidate_hash(                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                231             lifecycle_instance_id=lifecycle_instance_id,                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                242         return CanonicalEvidenceCandidate(                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                245             lifecycle_instance_id=lifecycle_instance_id,                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                252             candidate_hash=candidate_hash,                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                264         candidate: CanonicalEvidenceCandidate,                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                270         expected_hash = cls.calculate_candidate_hash(                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                272             lifecycle_instance_id=candidate.lifecycle_instance_id,            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                283         return expected_hash == candidate.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\canonical_evidence_service.py                288         candidate: CanonicalEvidenceCandidate,                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py         11     CanonicalEvidenceCandidate,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py         13     ConstitutionalCommitRequest,                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py         14     ConstitutionalCommitResult,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py         15     SequenceReceipt,                                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        118     resulting_state_hash: str                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        121     ordering_policy_version: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        122     candidate_hashes: tuple[str, ...]                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        123     receipt_hashes: tuple[str, ...]                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        137     lifecycle_instance_id: str                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        144     ordering_policy_version: str                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        150     resulting_state_hash: str                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        151     decision_hash: str                                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        171         self._records_by_decision_hash: dict[                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        190     def get_by_decision_hash(                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        192         decision_hash: str,                                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        194         return self._records_by_decision_hash.get(decision_hash)              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        231         if record.decision_hash in self._records_by_decision_hash:            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        251         self._records_by_decision_hash[                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        252             record.decision_hash                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        257         ] = record.resulting_state_hash                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        316         request: ConstitutionalCommitRequest,                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        317         candidates: Sequence[CanonicalEvidenceCandidate],                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        318         receipts: Sequence[SequenceReceipt],                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        322     ) -> ConstitutionalCommitResult:                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        410         resulting_state_hash = self.calculate_resulting_state_hash(           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        413             candidate_hashes=tuple(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        414                 candidate.candidate_hash                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        417             receipt_hashes=tuple(                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        418                 receipt.receipt_hash                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        421             ordering_policy_version=(                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        422                 request.ordering_policy_version                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        429         decision_hash = self.calculate_decision_hash(                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        435             resulting_state_hash=resulting_state_hash,                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        436             candidate_hashes=tuple(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        437                 candidate.candidate_hash                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        440             receipt_hashes=tuple(                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        441                 receipt.receipt_hash                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        444             ordering_policy_version=(                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        445                 request.ordering_policy_version                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        460             lifecycle_instance_id=(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        461                 request.lifecycle_instance_id                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        473             ordering_policy_version=(                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        474                 request.ordering_policy_version                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        480             resulting_state_hash=resulting_state_hash,                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        481             decision_hash=decision_hash,                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        488         return ConstitutionalCommitResult(                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        496             decision_hash=committed_record.decision_hash,                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        497             resulting_state_hash=(                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        498                 committed_record.resulting_state_hash                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        505     def calculate_resulting_state_hash(                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        510         candidate_hashes: tuple[str, ...],                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        511         receipt_hashes: tuple[str, ...],                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        512         ordering_policy_version: str,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        525         if not candidate_hashes:                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        527                 "candidate_hashes must not be empty"                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        530         if len(candidate_hashes) != len(receipt_hashes):                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        535         for candidate_hash in candidate_hashes:                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        537                 candidate_hash,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        538                 "candidate_hash",                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        541         for receipt_hash in receipt_hashes:                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        543                 receipt_hash,                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        544                 "receipt_hash",                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        553             "candidate_hashes": list(candidate_hashes),                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        554             "receipt_hashes": list(receipt_hashes),                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        555             "ordering_policy_version": (                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        556                 ordering_policy_version                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        565     def calculate_decision_hash(                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        573         resulting_state_hash: str,                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        574         candidate_hashes: tuple[str, ...],                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        575         receipt_hashes: tuple[str, ...],                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        576         ordering_policy_version: str,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        589             resulting_state_hash,                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        590             "resulting_state_hash",                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        602             "resulting_state_hash": resulting_state_hash,                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        603             "candidate_hashes": list(candidate_hashes),                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        604             "receipt_hashes": list(receipt_hashes),                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        605             "ordering_policy_version": (                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        606                 ordering_policy_version                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        615         candidates: tuple[CanonicalEvidenceCandidate, ...],                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        628         candidates: tuple[CanonicalEvidenceCandidate, ...],                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        629         receipts: tuple[SequenceReceipt, ...],                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        644         request: ConstitutionalCommitRequest,                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        645         candidates: tuple[CanonicalEvidenceCandidate, ...],                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        646         receipts: tuple[SequenceReceipt, ...],                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        666         request: ConstitutionalCommitRequest,                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        667         candidates: tuple[CanonicalEvidenceCandidate, ...],                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        668         receipts: tuple[SequenceReceipt, ...],                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        677                 candidate.lifecycle_instance_id                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        678                 != request.lifecycle_instance_id                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        696                 receipt.lifecycle_instance_id                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        697                 != request.lifecycle_instance_id                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        710         receipts: tuple[SequenceReceipt, ...],                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        725                 expected_previous_receipt_hash=(                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        726                     ordered_receipts[0].previous_receipt_hash                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        749         request: ConstitutionalCommitRequest,                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        750         candidates: tuple[CanonicalEvidenceCandidate, ...],                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        751         receipts: tuple[SequenceReceipt, ...],                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        798             if receipt.candidate_hash != candidate.candidate_hash:            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        800                     "receipt candidate_hash does not match candidate"         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        809                 receipt.lifecycle_instance_id                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        810                 != candidate.lifecycle_instance_id                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        813                     "receipt lifecycle_instance_id does not match candidate"  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        819         request: ConstitutionalCommitRequest,                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        820         receipts: tuple[SequenceReceipt, ...],                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        837                 receipt.ordering_policy_version                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        838                 != request.ordering_policy_version                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        847         candidates: tuple[CanonicalEvidenceCandidate, ...],                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        848         receipts: tuple[SequenceReceipt, ...],                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_commit_gate_service.py        849     ) -> tuple[CanonicalEvidenceCandidate, ...]:                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py           12     CanonicalEvidenceCandidate,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py           13     SequenceReceipt,                                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py           22 GENESIS_RECEIPT_HASH = "0" * 64                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py           86     receipts: tuple[SequenceReceipt, ...]                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          115     RECEIPT_HASH_CONTRACT_VERSION = "sequence-receipt-hash-v1"                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          116     DEFAULT_ORDERING_POLICY_VERSION = "OPV-1.0"                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          119             DEFAULT_ORDERING_POLICY_VERSION,                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          127         candidates: Sequence[CanonicalEvidenceCandidate],                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          131         ordering_policy_version: str = DEFAULT_ORDERING_POLICY_VERSION,       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          133         previous_receipt_hash: str = GENESIS_RECEIPT_HASH,                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          152             previous_receipt_hash,                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          153             "previous_receipt_hash",                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          155         cls._validate_ordering_policy(ordering_policy_version)                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          171             ordering_policy_version=ordering_policy_version,                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          176         receipts: list[SequenceReceipt] = []                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          177         current_previous_hash = previous_receipt_hash                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          182             receipt_hash = cls.calculate_receipt_hash(                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          184                 candidate_hash=candidate.candidate_hash,                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          186                 lifecycle_instance_id=candidate.lifecycle_instance_id,        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          192                 ordering_policy_version=ordering_policy_version,              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          193                 previous_receipt_hash=current_previous_hash,                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          197             receipt = SequenceReceipt(                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          200                 candidate_hash=candidate.candidate_hash,                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          202                 lifecycle_instance_id=candidate.lifecycle_instance_id,        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          208                 ordering_policy_version=ordering_policy_version,              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          209                 previous_receipt_hash=current_previous_hash,                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          210                 receipt_hash=receipt_hash,                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          215             current_previous_hash = receipt.receipt_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          221             lifecycle_instance_id=ordered_candidates[0].lifecycle_instance_id,
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          223             ordering_policy_version=ordering_policy_version,                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          243         candidates: Iterable[CanonicalEvidenceCandidate],                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          245         ordering_policy_version: str = DEFAULT_ORDERING_POLICY_VERSION,       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          246     ) -> tuple[CanonicalEvidenceCandidate, ...]:                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          261         cls._validate_ordering_policy(ordering_policy_version)                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          273     def calculate_receipt_hash(                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          277         candidate_hash: str,                                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          279         lifecycle_instance_id: str,                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          285         ordering_policy_version: str,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          286         previous_receipt_hash: str,                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          292         cls._validate_hash(candidate_hash, "candidate_hash")                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          294             previous_receipt_hash,                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          295             "previous_receipt_hash",                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          304         cls._validate_ordering_policy(ordering_policy_version)                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          312             "receipt_hash_contract_version": (                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          313                 cls.RECEIPT_HASH_CONTRACT_VERSION                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          316             "candidate_hash": candidate_hash,                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          318             "lifecycle_instance_id": lifecycle_instance_id,                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          324             "ordering_policy_version": ordering_policy_version,               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          325             "previous_receipt_hash": previous_receipt_hash,                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          346         receipt: SequenceReceipt,                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          351         expected_hash = cls.calculate_receipt_hash(                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          353             candidate_hash=receipt.candidate_hash,                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          355             lifecycle_instance_id=receipt.lifecycle_instance_id,              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          361             ordering_policy_version=receipt.ordering_policy_version,          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          362             previous_receipt_hash=receipt.previous_receipt_hash,              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          366         return expected_hash == receipt.receipt_hash                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          371         receipt: SequenceReceipt,                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          384         receipts: Sequence[SequenceReceipt],                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          387         expected_previous_receipt_hash: str = GENESIS_RECEIPT_HASH,           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          402             expected_previous_receipt_hash,                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          403             "expected_previous_receipt_hash",                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          411         expected_lifecycle_instance_id = (                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          412             first.lifecycle_instance_id                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          416             first.ordering_policy_version                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          422         previous_hash = expected_previous_receipt_hash                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          434             if receipt.previous_receipt_hash != previous_hash:                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          455                 receipt.lifecycle_instance_id                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          456                 != expected_lifecycle_instance_id                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          468                 receipt.ordering_policy_version                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          484             previous_hash = receipt.receipt_hash                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          492         candidate: CanonicalEvidenceCandidate,                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          493         receipt: SequenceReceipt,                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          503         if receipt.candidate_hash != candidate.candidate_hash:                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          505                 "receipt candidate_hash does not match candidate"             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          514             receipt.lifecycle_instance_id                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          515             != candidate.lifecycle_instance_id                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          518                 "receipt lifecycle_instance_id does not match candidate"      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          527         candidates: tuple[CanonicalEvidenceCandidate, ...],                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          531         candidate_hashes: set[str] = set()                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          535         expected_lifecycle_instance_id = (                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          536             first.lifecycle_instance_id                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          540             lifecycle_instance_id=expected_lifecycle_instance_id,             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          563                 candidate.lifecycle_instance_id                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          564                 != expected_lifecycle_instance_id                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          575             if candidate.candidate_hash in candidate_hashes:                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          577                     "sequencer batch contains duplicate candidate_hash"       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          588             candidate_hashes.add(candidate.candidate_hash)                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          594         lifecycle_instance_id: str,                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          605             not lifecycle_instance_id                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          606             or not lifecycle_instance_id.strip()                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          609                 "lifecycle_instance_id must not be empty"                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          614             f"{lifecycle_instance_id.strip()}"                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          619         candidate: CanonicalEvidenceCandidate,                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          642         ordering_policy_version: str,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          645             ordering_policy_version                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\constitutional_sequencer_service.py          650                 f"{ordering_policy_version}"                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\sequencer_partition_lease_service.py          10     CanonicalEvidenceCandidate,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\sequencer_partition_lease_service.py          13     GENESIS_RECEIPT_HASH,                                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\sequencer_partition_lease_service.py         346         candidates: Sequence[CanonicalEvidenceCandidate],                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\sequencer_partition_lease_service.py         351         ordering_policy_version: str = "OPV-1.0",                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\sequencer_partition_lease_service.py         353         previous_receipt_hash: str = GENESIS_RECEIPT_HASH,                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\sequencer_partition_lease_service.py         389             ordering_policy_version=ordering_policy_version,                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\sequencer_partition_lease_service.py         391             previous_receipt_hash=previous_receipt_hash,                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                           11     CanonicalEvidenceCandidate,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                           47         "lifecycle_instance_id": "lifecycle-001",                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                           73     assert isinstance(candidate, CanonicalEvidenceCandidate)                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                           75     assert len(candidate.candidate_hash) == 64                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                           81 def test_same_inputs_produce_same_candidate_hash():                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                           90     assert first.candidate_hash == second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          118     assert first.candidate_hash == second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          133     assert first.candidate_hash != second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          144     assert first.candidate_hash != second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          150     second_args["lifecycle_instance_id"] = "lifecycle-002"                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          155     assert first.candidate_hash != second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          166     assert first.candidate_hash != second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          177     assert first.candidate_hash != second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          190     assert first.candidate_hash == second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          203     assert first.candidate_hash == second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          225     assert first.candidate_hash == second.candidate_hash                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          422         update={"candidate_hash": "f" * 64}                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_canonical_evidence_service.py                          442         update={"candidate_hash": "f" * 64}                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                    7     ConstitutionalCommitRequest,                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                   70     lifecycle_instance_id: str = "lifecycle-001",                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                   77         lifecycle_instance_id=lifecycle_instance_id,                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  124     request = ConstitutionalCommitRequest(                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  128         lifecycle_instance_id="lifecycle-001",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  139         ordering_policy_version="OPV-1.0",                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  183     assert len(result.decision_hash) == 64                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  184     assert len(result.resulting_state_hash) == 64                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  198     assert current_state == result.resulting_state_hash                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  212     assert record.decision_hash == result.decision_hash                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  213     assert record.resulting_state_hash == (                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  214         result.resulting_state_hash                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  235         first_result.resulting_state_hash                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  236         == second_result.resulting_state_hash                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  240 def test_same_inputs_produce_same_decision_hash():                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  248         first_result.decision_hash                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  249         == second_result.decision_hash                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  253 def test_decision_id_does_not_change_decision_hash():                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  274     assert first_result.decision_hash == second_result.decision_hash          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  277 def test_committed_at_does_not_change_decision_hash():                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  295     assert first_result.decision_hash == second_result.decision_hash          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  298 def test_candidate_change_changes_resulting_state_hash():                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  306         first_result.resulting_state_hash                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  307         != second_result.resulting_state_hash                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  325         first_result.resulting_state_hash                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  326         != second_result.resulting_state_hash                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  494 def test_tampered_candidate_hash_is_rejected():                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  500             "candidate_hash": "f" * 64,                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  516 def test_tampered_receipt_hash_is_rejected():                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  522             "receipt_hash": "f" * 64,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  541             "previous_receipt_hash": "e" * 64,                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  629             "ordering_policy_version": "OPV-9.9",                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  752     assert history[0].decision_hash == result.decision_hash                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  761             "candidate_hash": "f" * 64,                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  808         previous_receipt_hash=(                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  809             pipeline["receipts"][-1].receipt_hash                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  813     second_request = ConstitutionalCommitRequest(                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  817         lifecycle_instance_id="lifecycle-001",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  824         ordering_policy_version="OPV-1.0",                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  827         prior_state_hash=first_result.resulting_state_hash,                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  841         second_result.resulting_state_hash                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  842         != first_result.resulting_state_hash                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  848         == second_result.resulting_state_hash                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  869         previous_receipt_hash=(                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  870             pipeline["receipts"][-1].receipt_hash                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  874     stale_request = ConstitutionalCommitRequest(                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  878         lifecycle_instance_id="lifecycle-001",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_commit_gate_service.py                  885         ordering_policy_version="OPV-1.0",                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                    9     CanonicalEvidenceCandidate,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   11     ConstitutionalCommitRequest,                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   12     ConstitutionalCommitResult,                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   14     ReplayVerificationResult,                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   15     SequenceReceipt,                                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   34 def make_candidate() -> CanonicalEvidenceCandidate:                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   35     return CanonicalEvidenceCandidate(                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   38         lifecycle_instance_id="lifecycle-001",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   48         candidate_hash=HASH_A,                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   57 def make_receipt(candidate: CanonicalEvidenceCandidate) -> SequenceReceipt:   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   58     return SequenceReceipt(                                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   61         candidate_hash=candidate.candidate_hash,                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   63         lifecycle_instance_id=candidate.lifecycle_instance_id,                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   69         ordering_policy_version="OPV-1.0",                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   70         previous_receipt_hash=HASH_B,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   71         receipt_hash=HASH_C,                                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   81     assert candidate.candidate_hash == HASH_A                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                   97         CanonicalEvidenceCandidate(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  100             lifecycle_instance_id="lifecycle-001",                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  106             candidate_hash="not-a-valid-hash",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  119         CanonicalEvidenceCandidate(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  122             lifecycle_instance_id="lifecycle-001",                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  128             candidate_hash=HASH_A,                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  141         CanonicalEvidenceCandidate(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  144             lifecycle_instance_id="lifecycle-001",                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  150             candidate_hash=HASH_A,                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  164     assert receipt.ordering_policy_version == "OPV-1.0"                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  172         SequenceReceipt(                                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  175             candidate_hash=candidate.candidate_hash,                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  177             lifecycle_instance_id=candidate.lifecycle_instance_id,            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  183             ordering_policy_version="OPV-1.0",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  184             previous_receipt_hash=HASH_B,                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  185             receipt_hash=HASH_C,                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  201             lifecycle_instance_id="lifecycle-001",                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  204             ordering_policy_version="OPV-1.0",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  219             lifecycle_instance_id="lifecycle-001",                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  221             ordering_policy_version="OPV-1.0",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  239             lifecycle_instance_id="lifecycle-001",                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  241             ordering_policy_version="OPV-1.0",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  254         ConstitutionalCommitRequest(                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  258             lifecycle_instance_id="lifecycle-001",                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  263             ordering_policy_version="OPV-1.0",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  277         ConstitutionalCommitResult(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  289         ConstitutionalCommitResult(                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  299     result = ConstitutionalCommitResult(                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  305         decision_hash=HASH_D,                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  306         resulting_state_hash=HASH_E,                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  316     result = ReplayVerificationResult(                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  320         committed_decision_hash=HASH_D,                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  321         replayed_decision_hash=HASH_D,                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  324         ordering_policy_version="OPV-1.0",                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  342         ReplayVerificationResult(                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  346             committed_decision_hash=HASH_D,                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  347             replayed_decision_hash=HASH_A,                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  350             ordering_policy_version="OPV-1.0",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  365         ReplayVerificationResult(                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  369             committed_decision_hash=HASH_D,                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  370             replayed_decision_hash=HASH_A,                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_contracts.py                  373             ordering_policy_version="OPV-1.0",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                     13     GENESIS_RECEIPT_HASH,                                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                     42     lifecycle_instance_id: str = "lifecycle-001",                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                     51         lifecycle_instance_id=lifecycle_instance_id,                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                     93     previous_receipt_hash: str = GENESIS_RECEIPT_HASH,                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    100         ordering_policy_version="OPV-1.0",                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    102         previous_receipt_hash=previous_receipt_hash,                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    113         lifecycle_instance_id="lifecycle-001",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    136         outcome.receipts[0].previous_receipt_hash                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    137         == GENESIS_RECEIPT_HASH                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    275         outcome.receipts[1].previous_receipt_hash                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    276         == outcome.receipts[0].receipt_hash                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    279         outcome.receipts[2].previous_receipt_hash                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    280         == outcome.receipts[1].receipt_hash                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    284 def test_same_inputs_produce_same_receipt_hashes():                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    301         receipt.receipt_hash                                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    304         receipt.receipt_hash                                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    319 def test_duplicate_candidate_hash_is_rejected():                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    330         match="duplicate candidate_hash",                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    357         lifecycle_instance_id="lifecycle-002",                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    384 def test_tampered_candidate_hash_is_rejected():                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    389             "candidate_hash": "f" * 64,                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    426             ordering_policy_version="OPV-99.0",                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    459 def test_verify_receipt_rejects_tampered_receipt_hash():                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    465             "receipt_hash": "f" * 64,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    483             "receipt_hash": "f" * 64,                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_constitutional_sequencer_service.py                    557             "previous_receipt_hash": "f" * 64,                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_sequencer_partition_lease_service.py                    61         lifecycle_instance_id="lifecycle-001",                                
+
+
