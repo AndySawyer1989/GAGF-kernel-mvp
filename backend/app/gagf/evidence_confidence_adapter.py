@@ -1,13 +1,24 @@
-﻿from backend.app.gagf.evidence_diagnostics_service import (
+from backend.app.gagf.evidence_diagnostics_service import (
     EvidenceDiagnosticsService,
 )
 from backend.app.gagf.schemas import EvidenceConfidence
+from backend.app.gagf.scientific_calculation_contract import (
+    EVIDENCE_CONFIDENCE_CONTRACT,
+)
 
 
-EVIDENCE_CONFIDENCE_CALCULATION_ID = "evidence-confidence"
-EVIDENCE_CONFIDENCE_CALCULATION_VERSION = "0.1.0-diagnostics"
-EVIDENCE_CONFIDENCE_CALCULATION_STATUS = "PROVISIONAL_HEURISTIC"
-EVIDENCE_CONFIDENCE_AUTHORITY = "NON_AUTHORITATIVE"
+EVIDENCE_CONFIDENCE_CALCULATION_ID = (
+    EVIDENCE_CONFIDENCE_CONTRACT.calculation_id
+)
+EVIDENCE_CONFIDENCE_CALCULATION_VERSION = (
+    EVIDENCE_CONFIDENCE_CONTRACT.calculation_version
+)
+EVIDENCE_CONFIDENCE_CALCULATION_STATUS = (
+    EVIDENCE_CONFIDENCE_CONTRACT.calculation_status.value
+)
+EVIDENCE_CONFIDENCE_AUTHORITY = (
+    EVIDENCE_CONFIDENCE_CONTRACT.authority.value
+)
 
 
 class EvidenceConfidenceAdapter:
@@ -60,12 +71,7 @@ class EvidenceConfidenceAdapter:
         }
 
     def get_calculation_metadata(self) -> dict[str, str]:
-        return {
-            "calculation_id": EVIDENCE_CONFIDENCE_CALCULATION_ID,
-            "calculation_version": EVIDENCE_CONFIDENCE_CALCULATION_VERSION,
-            "calculation_status": EVIDENCE_CONFIDENCE_CALCULATION_STATUS,
-            "authority": EVIDENCE_CONFIDENCE_AUTHORITY,
-        }
+        return EVIDENCE_CONFIDENCE_CONTRACT.to_metadata()
 
     def calculate_confidence_score(self, diagnostics: dict) -> float:
         quality_score = diagnostics["quality"]["average_quality_score"]

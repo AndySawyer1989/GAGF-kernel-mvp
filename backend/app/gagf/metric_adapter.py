@@ -9,17 +9,37 @@ from backend.app.gagf.schemas import (
     RawSecurityEvent,
     TimestampQuality,
 )
+from backend.app.gagf.scientific_calculation_contract import (
+    ADAPTIVE_STATE_NORMALIZATION_CONTRACT,
+    LEGACY_METRIC_CONFIDENCE_CONTRACT,
+)
 
 
-NORMALIZATION_RULESET_ID = "adaptive-state-normalization"
-NORMALIZATION_RULESET_VERSION = "0.1.0-legacy"
-NORMALIZATION_RULESET_STATUS = "LEGACY_HEURISTIC"
-NORMALIZATION_RULESET_AUTHORITY = "NON_AUTHORITATIVE"
+NORMALIZATION_RULESET_ID = (
+    ADAPTIVE_STATE_NORMALIZATION_CONTRACT.calculation_id
+)
+NORMALIZATION_RULESET_VERSION = (
+    ADAPTIVE_STATE_NORMALIZATION_CONTRACT.calculation_version
+)
+NORMALIZATION_RULESET_STATUS = (
+    ADAPTIVE_STATE_NORMALIZATION_CONTRACT.calculation_status.value
+)
+NORMALIZATION_RULESET_AUTHORITY = (
+    ADAPTIVE_STATE_NORMALIZATION_CONTRACT.authority.value
+)
 
-LEGACY_CONFIDENCE_CALCULATION_ID = "metric-adapter-evidence-confidence"
-LEGACY_CONFIDENCE_CALCULATION_VERSION = "0.1.0-legacy"
-LEGACY_CONFIDENCE_CALCULATION_STATUS = "LEGACY_HEURISTIC"
-LEGACY_CONFIDENCE_CALCULATION_AUTHORITY = "NON_AUTHORITATIVE"
+LEGACY_CONFIDENCE_CALCULATION_ID = (
+    LEGACY_METRIC_CONFIDENCE_CONTRACT.calculation_id
+)
+LEGACY_CONFIDENCE_CALCULATION_VERSION = (
+    LEGACY_METRIC_CONFIDENCE_CONTRACT.calculation_version
+)
+LEGACY_CONFIDENCE_CALCULATION_STATUS = (
+    LEGACY_METRIC_CONFIDENCE_CONTRACT.calculation_status.value
+)
+LEGACY_CONFIDENCE_CALCULATION_AUTHORITY = (
+    LEGACY_METRIC_CONFIDENCE_CONTRACT.authority.value
+)
 
 NORMALIZATION_DELTAS = {
     "honeyfile_interaction": ("uncertainty", 0.40),
@@ -97,22 +117,25 @@ class MetricAdapter:
     def get_normalization_ruleset_metadata(
         self,
     ) -> dict[str, str]:
+        contract_metadata = (
+            ADAPTIVE_STATE_NORMALIZATION_CONTRACT.to_metadata()
+        )
+
         return {
-            "ruleset_id": NORMALIZATION_RULESET_ID,
-            "ruleset_version": NORMALIZATION_RULESET_VERSION,
-            "ruleset_status": NORMALIZATION_RULESET_STATUS,
-            "authority": NORMALIZATION_RULESET_AUTHORITY,
+            "ruleset_id": contract_metadata["calculation_id"],
+            "ruleset_version": contract_metadata[
+                "calculation_version"
+            ],
+            "ruleset_status": contract_metadata[
+                "calculation_status"
+            ],
+            "authority": contract_metadata["authority"],
         }
 
     def get_legacy_confidence_calculation_metadata(
         self,
     ) -> dict[str, str]:
-        return {
-            "calculation_id": LEGACY_CONFIDENCE_CALCULATION_ID,
-            "calculation_version": LEGACY_CONFIDENCE_CALCULATION_VERSION,
-            "calculation_status": LEGACY_CONFIDENCE_CALCULATION_STATUS,
-            "authority": LEGACY_CONFIDENCE_CALCULATION_AUTHORITY,
-        }
+        return LEGACY_METRIC_CONFIDENCE_CONTRACT.to_metadata()
 
     def _calculate_evidence_confidence(
         self,
