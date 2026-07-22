@@ -1,4 +1,6 @@
-﻿from dataclasses import dataclass
+﻿import hashlib
+import json
+from dataclasses import dataclass
 
 from backend.app.gagf.scientific_calculation_contract import (
     CalculationAuthority,
@@ -9,6 +11,20 @@ from backend.app.gagf.scientific_calculation_contract import (
 
 AUTHORITY_POLICY_ID = "scientific-authority-escalation"
 AUTHORITY_POLICY_VERSION = "0.1.0"
+AUTHORITY_RECEIPT_SCHEMA_VERSION = "1.0.0"
+
+
+def canonical_json(value: dict) -> str:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+
+def sha256_hex(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +64,28 @@ class AuthorityEscalationEvidence:
             if not satisfied
         )
 
+    def to_dict(self) -> dict[str, bool]:
+        return {
+            "deterministic_replay_verified": (
+                self.deterministic_replay_verified
+            ),
+            "canonical_input_binding_verified": (
+                self.canonical_input_binding_verified
+            ),
+            "calculation_version_frozen": (
+                self.calculation_version_frozen
+            ),
+            "regression_suite_passed": (
+                self.regression_suite_passed
+            ),
+            "validation_report_present": (
+                self.validation_report_present
+            ),
+            "constitutional_approval_present": (
+                self.constitutional_approval_present
+            ),
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class AuthorityEscalationDecision:
@@ -75,6 +113,45 @@ class AuthorityEscalationDecision:
                 self.missing_requirements
             ),
         }
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorityDecisionReceipt:
+    receipt_schema_version: str
+    policy_id: str
+    policy_version: str
+    calculation_id: str
+    calculation_version: str
+    current_authority: str
+    requested_authority: str
+    evidence: dict[str, bool]
+    decision: dict
+    receipt_hash: str
+
+    def payload(self) -> dict:
+        return {
+            "receipt_schema_version": self.receipt_schema_version,
+            "policy_id": self.policy_id,
+            "policy_version": self.policy_version,
+            "calculation_id": self.calculation_id,
+            "calculation_version": self.calculation_version,
+            "current_authority": self.current_authority,
+            "requested_authority": self.requested_authority,
+            "evidence": dict(self.evidence),
+            "decision": dict(self.decision),
+        }
+
+    def to_dict(self) -> dict:
+        return {
+            **self.payload(),
+            "receipt_hash": self.receipt_hash,
+        }
+
+    def verify(self) -> bool:
+        expected_hash = sha256_hex(
+            canonical_json(self.payload())
+        )
+        return expected_hash == self.receipt_hash
 
 
 class ScientificAuthorityEscalationGuard:
@@ -121,6 +198,70 @@ class ScientificAuthorityEscalationGuard:
         return self._evaluate_authoritative_escalation(
             contract=contract,
             evidence=evidence,
+        )
+
+    def evaluate_with_receipt(
+        self,
+        *,
+        contract: ScientificCalculationContract,
+        requested_authority: CalculationAuthority,
+        evidence: AuthorityEscalationEvidence,
+    ) -> tuple[
+        AuthorityEscalationDecision,
+        AuthorityDecisionReceipt,
+    ]:
+        decision = self.evaluate(
+            contract=contract,
+            requested_authority=requested_authority,
+            evidence=evidence,
+        )
+
+        receipt = self.build_receipt(
+            contract=contract,
+            requested_authority=requested_authority,
+            evidence=evidence,
+            decision=decision,
+        )
+
+        return decision, receipt
+
+    def build_receipt(
+        self,
+        *,
+        contract: ScientificCalculationContract,
+        requested_authority: CalculationAuthority,
+        evidence: AuthorityEscalationEvidence,
+        decision: AuthorityEscalationDecision,
+    ) -> AuthorityDecisionReceipt:
+        payload = {
+            "receipt_schema_version": (
+                AUTHORITY_RECEIPT_SCHEMA_VERSION
+            ),
+            "policy_id": AUTHORITY_POLICY_ID,
+            "policy_version": AUTHORITY_POLICY_VERSION,
+            "calculation_id": contract.calculation_id,
+            "calculation_version": contract.calculation_version,
+            "current_authority": contract.authority.value,
+            "requested_authority": requested_authority.value,
+            "evidence": evidence.to_dict(),
+            "decision": decision.to_dict(),
+        }
+
+        receipt_hash = sha256_hex(canonical_json(payload))
+
+        return AuthorityDecisionReceipt(
+            receipt_schema_version=(
+                AUTHORITY_RECEIPT_SCHEMA_VERSION
+            ),
+            policy_id=AUTHORITY_POLICY_ID,
+            policy_version=AUTHORITY_POLICY_VERSION,
+            calculation_id=contract.calculation_id,
+            calculation_version=contract.calculation_version,
+            current_authority=contract.authority.value,
+            requested_authority=requested_authority.value,
+            evidence=evidence.to_dict(),
+            decision=decision.to_dict(),
+            receipt_hash=receipt_hash,
         )
 
     def _evaluate_advisory_escalation(
