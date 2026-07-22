@@ -17,6 +17,7 @@ from backend.app.gagf.assessment_factory_lite_invoice_creation_event_service imp
 from backend.app.gagf.assessment_factory_lite_payment_request_review_service import AssessmentFactoryLitePaymentRequestReviewService
 from backend.app.gagf.assessment_factory_lite_payment_request_event_service import AssessmentFactoryLitePaymentRequestEventService
 from backend.app.gagf.assessment_factory_lite_payment_confirmation_review_service import AssessmentFactoryLitePaymentConfirmationReviewService
+from backend.app.gagf.assessment_factory_lite_payment_confirmation_event_service import AssessmentFactoryLitePaymentConfirmationEventService
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -2160,3 +2161,59 @@ def build_assessment_factory_lite_payment_confirmation_review(payload: dict | No
         payment_confirmation_context=payload.get("payment_confirmation_context"),
     )
 
+
+@app.post("/products/assessment-factory-lite/payment-confirmation-event")
+def record_assessment_factory_lite_payment_confirmation_event(payload: dict | None = None):
+    payload = payload or {}
+
+    service = AssessmentFactoryLitePaymentConfirmationEventService()
+
+    return service.record_event(
+        payment_confirmation_review=payload.get("payment_confirmation_review"),
+        payment_request_event=payload.get("payment_request_event"),
+        payment_request_review=payload.get("payment_request_review"),
+        invoice_creation_event=payload.get("invoice_creation_event"),
+        invoice_creation_review=payload.get("invoice_creation_review"),
+        contract_execution_event=payload.get("contract_execution_event"),
+        contract_execution_review=payload.get("contract_execution_review"),
+        paid_assessment_agreement_review=payload.get("paid_assessment_agreement_review"),
+        paid_assessment_authorization_package=payload.get("paid_assessment_authorization_package"),
+        scope_call_event_record=payload.get("scope_call_event_record"),
+        scope_call_event_package=payload.get("scope_call_event_package"),
+        scope_call_agenda_message_event_record=payload.get("scope_call_agenda_message_event_record"),
+        scope_call_agenda_message=payload.get("scope_call_agenda_message"),
+        scope_call_package=payload.get("scope_call_package"),
+        follow_up_event_record=payload.get("follow_up_event_record"),
+        follow_up_message=payload.get("follow_up_message"),
+        tracker=payload.get("tracker"),
+        event_record=payload.get("event_record"),
+        message=payload.get("message"),
+        delivery_package=payload.get("delivery_package"),
+        export_package=payload.get("export_package"),
+        export=payload.get("export"),
+        document=payload.get("document"),
+        proposal=payload.get("proposal"),
+        offer=payload.get("offer"),
+        buyer_context=payload.get("buyer_context"),
+        operator_approval=payload.get("operator_approval"),
+        message_context=payload.get("message_context"),
+        event_context=payload.get("event_context"),
+        follow_up_context=payload.get("follow_up_context"),
+        follow_up_message_context=payload.get("follow_up_message_context"),
+        follow_up_event_context=payload.get("follow_up_event_context"),
+        scope_call_context=payload.get("scope_call_context"),
+        scope_call_message_context=payload.get("scope_call_message_context"),
+        scope_call_message_event_context=payload.get("scope_call_message_event_context"),
+        scope_call_event_context=payload.get("scope_call_event_context"),
+        scope_call_record_context=payload.get("scope_call_record_context"),
+        authorization_context=payload.get("authorization_context"),
+        agreement_context=payload.get("agreement_context"),
+        contract_context=payload.get("contract_context"),
+        contract_execution_context=payload.get("contract_execution_context"),
+        invoice_context=payload.get("invoice_context"),
+        invoice_creation_context=payload.get("invoice_creation_context"),
+        payment_request_context=payload.get("payment_request_context"),
+        payment_request_event_context=payload.get("payment_request_event_context"),
+        payment_confirmation_context=payload.get("payment_confirmation_context"),
+        payment_confirmation_event_context=payload.get("payment_confirmation_event_context"),
+    )
