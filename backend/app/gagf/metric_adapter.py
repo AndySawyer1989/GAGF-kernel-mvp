@@ -11,6 +11,12 @@ from backend.app.gagf.schemas import (
 )
 
 
+NORMALIZATION_RULESET_ID = "adaptive-state-normalization"
+NORMALIZATION_RULESET_VERSION = "0.1.0-legacy"
+NORMALIZATION_RULESET_STATUS = "LEGACY_HEURISTIC"
+NORMALIZATION_RULESET_AUTHORITY = "NON_AUTHORITATIVE"
+
+
 NORMALIZATION_DELTAS = {
     "honeyfile_interaction": ("uncertainty", 0.40),
     "failed_auth_burst": ("risk_index", 0.20),
@@ -24,13 +30,24 @@ NORMALIZATION_DELTAS = {
 }
 
 
-def clamp(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+def clamp(
+    value: float,
+    minimum: float = 0.0,
+    maximum: float = 1.0,
+) -> float:
     return max(minimum, min(maximum, value))
 
 
 class MetricAdapter:
-    def build_snapshot(self, events: Iterable[RawSecurityEvent]) -> MetricAdapterResult:
-        eligible_events = [event for event in events if event.kernel_eligible]
+    def build_snapshot(
+        self,
+        events: Iterable[RawSecurityEvent],
+    ) -> MetricAdapterResult:
+        eligible_events = [
+            event
+            for event in events
+            if event.kernel_eligible
+        ]
 
         state = AdaptiveState()
         evidence: List[str] = []
@@ -38,14 +55,21 @@ class MetricAdapter:
 
         for event in eligible_events:
             mapping = NORMALIZATION_DELTAS.get(event.event_type)
+
             if not mapping:
                 continue
 
             indicator, delta = mapping
             current_value = getattr(state, indicator)
-            setattr(state, indicator, clamp(current_value + delta))
+
+            setattr(
+                state,
+                indicator,
+                clamp(current_value + delta),
+            )
 
             evidence.append(event.event_id)
+
             applied.append(
                 NormalizationApplied(
                     event_id=event.event_id,
@@ -55,7 +79,9 @@ class MetricAdapter:
                 )
             )
 
-        confidence = self._calculate_evidence_confidence(eligible_events)
+        confidence = self._calculate_evidence_confidence(
+            eligible_events
+        )
 
         return MetricAdapterResult(
             adaptive_state=state,
@@ -64,8 +90,19 @@ class MetricAdapter:
             normalization_applied=applied,
         )
 
+    def get_normalization_ruleset_metadata(
+        self,
+    ) -> dict[str, str]:
+        return {
+            "ruleset_id": NORMALIZATION_RULESET_ID,
+            "ruleset_version": NORMALIZATION_RULESET_VERSION,
+            "ruleset_status": NORMALIZATION_RULESET_STATUS,
+            "authority": NORMALIZATION_RULESET_AUTHORITY,
+        }
+
     def _calculate_evidence_confidence(
-        self, events: List[RawSecurityEvent]
+        self,
+        events: List[RawSecurityEvent],
     ) -> EvidenceConfidence:
         if not events:
             return EvidenceConfidence(
@@ -78,21 +115,42 @@ class MetricAdapter:
                 },
             )
 
-        counts = Counter(event.timestamp_quality for event in events)
+        counts = Counter(
+            event.timestamp_quality
+            for event in events
+        )
+
         total = len(events)
 
         timestamp_quality_score = (
             counts[TimestampQuality.SOURCE_OCCURRED_AT] * 1.0
-            + counts[TimestampQuality.BACKFILLED_FROM_CREATED_AT] * 0.6
+            + counts[
+                TimestampQuality.BACKFILLED_FROM_CREATED_AT
+            ]
+            * 0.6
             + counts[TimestampQuality.MISSING_TIMESTAMP] * 0.0
         ) / total
 
-        source_systems = {event.source_system for event in events if event.source_system}
-        cross_source_agreement = 1.0 if len(source_systems) > 1 else 0.7
+        source_systems = {
+            event.source_system
+            for event in events
+            if event.source_system
+        }
 
-        telemetry_completeness = sum(
-            1 for event in events if event.event_occurred_at is not None
-        ) / total
+        cross_source_agreement = (
+            1.0
+            if len(source_systems) > 1
+            else 0.7
+        )
+
+        telemetry_completeness = (
+            sum(
+                1
+                for event in events
+                if event.event_occurred_at is not None
+            )
+            / total
+        )
 
         sensor_reliability = 0.90
 
@@ -106,9 +164,17 @@ class MetricAdapter:
         return EvidenceConfidence(
             score=round(clamp(score), 3),
             factors={
-                "timestamp_quality": round(timestamp_quality_score, 3),
+                "timestamp_quality": round(
+                    timestamp_quality_score,
+                    3,
+                ),
                 "sensor_reliability": sensor_reliability,
-                "cross_source_agreement": cross_source_agreement,
-                "telemetry_completeness": round(telemetry_completeness, 3),
+                "cross_source_agreement": (
+                    cross_source_agreement
+                ),
+                "telemetry_completeness": round(
+                    telemetry_completeness,
+                    3,
+                ),
             },
         )
