@@ -1,0 +1,151 @@
+﻿ADAPTIVE STATE EPISTEMIC CLASSIFICATION
+Generated: 2026-07-22T02:36:13.7698618+00:00
+
+SUMMARY
+--------------------------------------------------------------------------------
+Python files scanned: 404
+Caller matches found: 75
+AdaptiveState fields classified: 5
+Normalization rules found: 9
+Unknown rule targets: 0
+Default mismatches: 0
+Fields without callers: 0
+
+GOVERNING RULE
+--------------------------------------------------------------------------------
+Current AdaptiveState values are legacy heuristic indicators or research constructs.
+They are non-authoritative and are not empirically validated constitutional metrics.
+
+FIELD CLASSIFICATION
+--------------------------------------------------------------------------------
+
+Field               Classification               ExpectedDefault Authority         MatchCount Description                                                                      
+-----               --------------               --------------- ---------         ---------- -----------                                                                      
+risk_index          HEURISTIC_DERIVED_INDICATOR  0.10            NON_AUTHORITATIVE         11 Estimated operational risk derived from legacy event-to-delta rules.             
+uncertainty         HEURISTIC_DERIVED_INDICATOR  0.10            NON_AUTHORITATIVE          9 Estimated uncertainty derived from selected event types.                         
+coherence_psi       HEURISTIC_RESEARCH_CONSTRUCT 0.85            NON_AUTHORITATIVE          6 Research construct adjusted through fixed normalization deltas.                  
+revision_pressure   HEURISTIC_RESEARCH_CONSTRUCT 0.10            NON_AUTHORITATIVE          5 Research construct representing pressure to revise strategy or policy.           
+governance_momentum LEGACY_HEURISTIC_INDICATOR   0.50            NON_AUTHORITATIVE          5 Legacy heuristic indicator; not the future scientific Governance Momentum metric.
+
+
+
+SCHEMA DEFAULT VERIFICATION
+--------------------------------------------------------------------------------
+
+Field               ExpectedDefault ActualDefault MatchesExpected
+-----               --------------- ------------- ---------------
+risk_index          0.10            0.10                     True
+uncertainty         0.10            0.10                     True
+coherence_psi       0.85            0.85                     True
+revision_pressure   0.10            0.10                     True
+governance_momentum 0.50            0.50                     True
+
+
+
+NORMALIZATION RULES
+--------------------------------------------------------------------------------
+
+EventType                  Indicator           Delta RuleStatus                   Authority        
+---------                  ---------           ----- ----------                   ---------        
+honeyfile_interaction      uncertainty           0.4 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+failed_auth_burst          risk_index            0.2 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+unauthorized_api_call      risk_index            0.3 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+lateral_movement_pattern   risk_index            0.5 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+containment_success        risk_index           -0.4 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+verification_passed        uncertainty          -0.3 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+service_restored           coherence_psi         0.3 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+strategy_failure           revision_pressure    0.25 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+historically_valid_control governance_momentum   0.2 LEGACY_UNVERSIONED_HEURISTIC NON_AUTHORITATIVE
+
+
+
+UNKNOWN RULE TARGETS
+--------------------------------------------------------------------------------
+None
+
+FIELDS WITHOUT CALLERS
+--------------------------------------------------------------------------------
+None
+
+DETAILED CALLERS
+--------------------------------------------------------------------------------
+
+Path                                                                                                                 LineNumber Line                                                                                                            
+----                                                                                                                 ---------- ----                                                                                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                          1 from backend.app.gagf.schemas import AdaptiveStateSnapshot, ArbitrationResult, DecisionMeta                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         11         snapshot: AdaptiveStateSnapshot,                                                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         21         if state.risk_index >= thresholds["risk"]["high_enter"]:                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         22             return self._transition("Contain", ["risk_index_high"], True, snapshot, active_strategy, proposal)  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         24         if state.coherence_psi <= thresholds["coherence_psi"]["low_enter"]:                                     
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         25             return self._transition("Recover", ["coherence_psi_low"], True, snapshot, active_strategy, proposal)
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         28             state.revision_pressure >= thresholds["revision_pressure"]["high_enter"]                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         29             and state.governance_momentum >= thresholds["governance_momentum"]["high_enter"]                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         33         if state.uncertainty >= thresholds["uncertainty"]["high_enter"]:                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\arbitration_service.py                                         34             return self._transition("Probe", ["uncertainty_high"], False, snapshot, active_strategy, proposal)  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\assessment_factory_lite_buyer_export_polish_service.py        234             "ownership_gap": "Ownership gaps are creating uncertainty",                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                               5     AdaptiveState,                                                                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                               7     MetricAdapterResult,                                                                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                               8     NormalizationApplied,                                                                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              14 NORMALIZATION_DELTAS = {                                                                                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              15     "honeyfile_interaction": ("uncertainty", 0.40),                                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              16     "failed_auth_burst": ("risk_index", 0.20),                                                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              17     "unauthorized_api_call": ("risk_index", 0.30),                                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              18     "lateral_movement_pattern": ("risk_index", 0.50),                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              19     "containment_success": ("risk_index", -0.40),                                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              20     "verification_passed": ("uncertainty", -0.30),                                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              21     "service_restored": ("coherence_psi", 0.30),                                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              22     "strategy_failure": ("revision_pressure", 0.25),                                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              23     "historically_valid_control": ("governance_momentum", 0.20),                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              32     def build_snapshot(self, events: Iterable[RawSecurityEvent]) -> MetricAdapterResult:                        
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              35         state = AdaptiveState()                                                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              37         applied: List[NormalizationApplied] = []                                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              40             mapping = NORMALIZATION_DELTAS.get(event.event_type)                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              50                 NormalizationApplied(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\metric_adapter.py                                              60         return MetricAdapterResult(                                                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     23 class NormalizationApplied(BaseModel):                                                                          
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     35 class AdaptiveState(BaseModel):                                                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     36     risk_index: float = 0.10                                                                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     37     uncertainty: float = 0.10                                                                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     38     coherence_psi: float = 0.85                                                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     39     revision_pressure: float = 0.10                                                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     40     governance_momentum: float = 0.50                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     43 class MetricAdapterResult(BaseModel):                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     44     adaptive_state: AdaptiveState                                                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     47     normalization_applied: List[NormalizationApplied]                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     67 class AdaptiveStateSnapshot(BaseModel):                                                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\gagf\schemas.py                                                     72     adaptive_state: AdaptiveState                                                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\main.py                                                            184     AdaptiveState,                                                                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\main.py                                                            185     AdaptiveStateSnapshot,                                                                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\main.py                                                            541     snapshot = AdaptiveStateSnapshot(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\main.py                                                            611 def arbitrate(state: AdaptiveState):                                                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\main.py                                                            612     snapshot = AdaptiveStateSnapshot(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\main.py                                                            671     snapshot = AdaptiveStateSnapshot(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\ingestion_service.py                                       12 from backend.app.gagf.schemas import AdaptiveStateSnapshot                                                      
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\backend\app\services\ingestion_service.py                                       57         snapshot = AdaptiveStateSnapshot(                                                                       
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\test_snapshot_ledger.py                                                          2 from backend.app.gagf.schemas import RawSecurityEvent, AdaptiveStateSnapshot                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\test_snapshot_ledger.py                                                         16 snapshot = AdaptiveStateSnapshot(                                                                               
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_api_arbitrate.py                                                     19             "risk_index": 0.9,                                                                                  
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_api_arbitrate.py                                                     20             "uncertainty": 0.8,                                                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_api_arbitrate.py                                                     21             "coherence_psi": 0.85,                                                                              
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_api_arbitrate.py                                                     22             "revision_pressure": 0.1,                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_api_arbitrate.py                                                     23             "governance_momentum": 0.5,                                                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_api_arbitrate.py                                                     32     assert data["reason"] == ["risk_index_high"]                                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_decision_ledger.py                                                   12     reason=["uncertainty_high"],                                                                                
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_full_pipeline.py                                                      2 from backend.app.gagf.schemas import RawSecurityEvent, AdaptiveStateSnapshot                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_full_pipeline.py                                                     19     snapshot = AdaptiveStateSnapshot(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_full_pipeline.py                                                     41     assert snapshot.adaptive_state.risk_index == 0.9                                                            
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_invalid_snapshot_gate.py                                              3 from backend.app.gagf.schemas import AdaptiveState, AdaptiveStateSnapshot, EvidenceConfidence                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_invalid_snapshot_gate.py                                              7     snapshot = AdaptiveStateSnapshot(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_invalid_snapshot_gate.py                                             12         adaptive_state=AdaptiveState(),                                                                         
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                 3 from backend.app.gagf.schemas import AdaptiveState, AdaptiveStateSnapshot, EvidenceConfidence                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                 7     snapshot = AdaptiveStateSnapshot(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                12         adaptive_state=AdaptiveState(                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                13             risk_index=0.90,                                                                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                14             uncertainty=0.40,                                                                                   
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                15             coherence_psi=0.85,                                                                                 
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                16             revision_pressure=0.10,                                                                             
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_replay_determinism.py                                                17             governance_momentum=0.50,                                                                           
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_sustained_attack_lifecycle.py                                         2 from backend.app.gagf.schemas import RawSecurityEvent, AdaptiveStateSnapshot                                    
+C:\Users\Andy Sawyer\Desktop\gagf_kernel_mvp\tests\test_sustained_attack_lifecycle.py                                        10     return AdaptiveStateSnapshot(                                                                               
+
+
