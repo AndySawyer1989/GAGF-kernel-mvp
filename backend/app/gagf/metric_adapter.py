@@ -16,6 +16,10 @@ NORMALIZATION_RULESET_VERSION = "0.1.0-legacy"
 NORMALIZATION_RULESET_STATUS = "LEGACY_HEURISTIC"
 NORMALIZATION_RULESET_AUTHORITY = "NON_AUTHORITATIVE"
 
+LEGACY_CONFIDENCE_CALCULATION_ID = "metric-adapter-evidence-confidence"
+LEGACY_CONFIDENCE_CALCULATION_VERSION = "0.1.0-legacy"
+LEGACY_CONFIDENCE_CALCULATION_STATUS = "LEGACY_HEURISTIC"
+LEGACY_CONFIDENCE_CALCULATION_AUTHORITY = "NON_AUTHORITATIVE"
 
 NORMALIZATION_DELTAS = {
     "honeyfile_interaction": ("uncertainty", 0.40),
@@ -98,6 +102,16 @@ class MetricAdapter:
             "ruleset_version": NORMALIZATION_RULESET_VERSION,
             "ruleset_status": NORMALIZATION_RULESET_STATUS,
             "authority": NORMALIZATION_RULESET_AUTHORITY,
+        }
+
+    def get_legacy_confidence_calculation_metadata(
+        self,
+    ) -> dict[str, str]:
+        return {
+            "calculation_id": LEGACY_CONFIDENCE_CALCULATION_ID,
+            "calculation_version": LEGACY_CONFIDENCE_CALCULATION_VERSION,
+            "calculation_status": LEGACY_CONFIDENCE_CALCULATION_STATUS,
+            "authority": LEGACY_CONFIDENCE_CALCULATION_AUTHORITY,
         }
 
     def _calculate_evidence_confidence(
