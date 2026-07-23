@@ -124,7 +124,7 @@ def test_api_has_stable_identity():
         "tenant-namespaced-scientific-authority-api"
     )
     assert TENANT_NAMESPACED_AUTHORITY_API_VERSION == (
-        "0.3.0"
+        "0.4.0"
     )
 
 
@@ -544,6 +544,86 @@ def test_artifact_resolution_exposes_no_canonical_fields(
 
     assert forbidden.isdisjoint(keys)
 
-    assert (
-        body["authorization"]["receipt"]["receipt_hash"]
+    assert len(
+        body["authorization"]["receipt"][
+            "public_receipt_id"
+        ]
+    ) == 64
+
+    assert "receipt_hash" not in (
+        body["authorization"]["receipt"]
     )
+
+
+
+
+def test_successful_authorization_uses_public_view(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    body = create_execution(client)
+    authorization = body["authorization"]
+
+    assert authorization["view_id"] == (
+        "tenant-public-scientific-authorization-view"
+    )
+    assert authorization["decision"]["allowed"] is True
+    assert authorization["decision"]["tenant_id"] == (
+        "tenant-alpha"
+    )
+    assert len(
+        authorization["receipt"]["public_receipt_id"]
+    ) == 64
+    assert len(authorization["view_hash"]) == 64
+
+
+def test_authorization_response_exposes_no_identity_secrets(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    body = create_execution(client)
+    authorization = body["authorization"]
+
+    keys = _collect_artifact_response_keys(
+        authorization
+    )
+
+    forbidden = {
+        "actor_id",
+        "credential_id",
+        "session_id",
+        "request_id",
+        "correlation_id",
+        "trust_signals",
+        "receipt_hash",
+    }
+
+    assert forbidden.isdisjoint(keys)
+
+
+def test_denied_authorization_uses_public_view(tmp_path):
+    client = build_client(tmp_path)
+    headers = evaluation_headers()
+    headers["x-role-id"] = "scientific-observer"
+
+    response = client.post(
+        "/tenant-namespaced-scientific-authority/evaluate",
+        headers=headers,
+        json=evaluation_payload(),
+    )
+
+    assert response.status_code == 403
+
+    detail = response.json()["detail"]
+
+    assert detail["view_id"] == (
+        "tenant-public-scientific-authorization-view"
+    )
+    assert detail["decision"]["allowed"] is False
+    assert (
+        detail["decision"]["checks"]["action_permitted"]
+        is False
+    )
+    assert "authorization_receipt" not in detail

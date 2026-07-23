@@ -41,12 +41,15 @@ from backend.app.gagf.tenant_public_execution_view import (
 from backend.app.gagf.tenant_public_artifact_view import (
     TenantPublicArtifactViewBuilder,
 )
+from backend.app.gagf.tenant_public_authorization_view import (
+    TenantPublicAuthorizationViewBuilder,
+)
 
 
 TENANT_NAMESPACED_AUTHORITY_API_ID = (
     "tenant-namespaced-scientific-authority-api"
 )
-TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.3.0"
+TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.4.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +171,9 @@ def create_tenant_namespaced_authority_router(
     public_artifact_view_builder = (
         TenantPublicArtifactViewBuilder()
     )
+    public_authorization_view_builder = (
+        TenantPublicAuthorizationViewBuilder()
+    )
 
     def build_context(
         *,
@@ -222,6 +228,13 @@ def create_tenant_namespaced_authority_router(
             )
         )
 
+        public_authorization = (
+            public_authorization_view_builder.build(
+                decision=decision,
+                receipt=receipt,
+            )
+        )
+
         if not decision.allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -230,17 +243,11 @@ def create_tenant_namespaced_authority_router(
                         "Tenant namespaced scientific request "
                         "was denied."
                     ),
-                    "decision": decision.to_dict(),
-                    "authorization_receipt": (
-                        receipt.to_dict()
-                    ),
+                    **public_authorization.to_dict(),
                 },
             )
 
-        return {
-            "decision": decision.to_dict(),
-            "receipt": receipt.to_dict(),
-        }
+        return public_authorization.to_dict()
 
     def header_trust(
         *,
@@ -647,5 +654,6 @@ def create_tenant_namespaced_authority_router(
         }
 
     return router
+
 
 
