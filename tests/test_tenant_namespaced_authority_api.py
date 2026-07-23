@@ -31,6 +31,9 @@ def build_client(tmp_path) -> TestClient:
                 namespace_database_path=(
                     tmp_path / "namespaces.db"
                 ),
+            boundary_audit_database_path=(
+                tmp_path / "boundary-audit.db"
+            ),
             )
         )
     )
@@ -124,7 +127,7 @@ def test_api_has_stable_identity():
         "tenant-namespaced-scientific-authority-api"
     )
     assert TENANT_NAMESPACED_AUTHORITY_API_VERSION == (
-        "0.5.0"
+        "0.6.0"
     )
 
 
@@ -702,5 +705,6 @@ def test_denied_response_passes_boundary_audit(
 
     assert result.valid is True
     assert result.violation_count == 0
+
 
 

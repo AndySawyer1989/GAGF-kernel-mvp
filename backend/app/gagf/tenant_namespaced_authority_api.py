@@ -45,15 +45,17 @@ from backend.app.gagf.tenant_public_authorization_view import (
     TenantPublicAuthorizationViewBuilder,
 )
 from backend.app.gagf.tenant_public_response_gate import (
-    TenantPublicResponseGate,
     TenantPublicResponseRejectedError,
+)
+from backend.app.gagf.tenant_recorded_public_response_gate import (
+    TenantRecordedPublicResponseGate,
 )
 
 
 TENANT_NAMESPACED_AUTHORITY_API_ID = (
     "tenant-namespaced-scientific-authority-api"
 )
-TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.5.0"
+TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.6.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +66,7 @@ class TenantNamespacedAuthorityApiPaths:
     journal_database_path: Path
     context_binding_database_path: Path
     namespace_database_path: Path
+    boundary_audit_database_path: Path
 
 
 class NamespacedAuthorityEvidenceRequest(BaseModel):
@@ -178,7 +181,13 @@ def create_tenant_namespaced_authority_router(
     public_authorization_view_builder = (
         TenantPublicAuthorizationViewBuilder()
     )
-    public_response_gate = TenantPublicResponseGate()
+    public_response_gate = (
+        TenantRecordedPublicResponseGate(
+            database_path=(
+                paths.boundary_audit_database_path
+            )
+        )
+    )
 
     def build_context(
         *,
@@ -251,9 +260,10 @@ def create_tenant_namespaced_authority_router(
 
             try:
                 released_detail = (
-                    public_response_gate
-                    .release_error_detail(
-                        detail=detail
+                    public_response_gate.release_error_detail(
+                        tenant_id=context.tenant_id,
+                        response_kind="authorization-denial",
+                        detail=detail,
                     )
                 )
             except TenantPublicResponseRejectedError as exc:
@@ -326,18 +336,26 @@ def create_tenant_namespaced_authority_router(
         return public_view.to_dict()
 
     def release_public_response(
+        *,
+        tenant_id: str,
+        response_kind: str,
         response: dict,
     ) -> dict:
         try:
             return public_response_gate.release(
-                response=response
+                tenant_id=tenant_id,
+                response_kind=response_kind,
+                response=response,
             )
         except TenantPublicResponseRejectedError as exc:
             raise HTTPException(
                 status_code=(
                     status.HTTP_500_INTERNAL_SERVER_ERROR
                 ),
-                detail=str(exc),
+                detail=(
+                    "Tenant response failed public-boundary "
+                    "validation."
+                ),
             ) from exc
     @router.post(
         "/evaluate",
@@ -448,7 +466,9 @@ def create_tenant_namespaced_authority_router(
         }
 
         return release_public_response(
-            {
+            tenant_id=context.tenant_id,
+            response_kind="evaluation",
+            response={
                 "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
                 "api_version": (
                     TENANT_NAMESPACED_AUTHORITY_API_VERSION
@@ -523,7 +543,9 @@ def create_tenant_namespaced_authority_router(
         )
 
         return release_public_response(
-            {
+            tenant_id=context.tenant_id,
+            response_kind="authority-receipt-read",
+            response={
                 "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
                 "api_version": (
                     TENANT_NAMESPACED_AUTHORITY_API_VERSION
@@ -578,7 +600,9 @@ def create_tenant_namespaced_authority_router(
         )
 
         return release_public_response(
-            {
+            tenant_id=context.tenant_id,
+            response_kind="checkpoint-read",
+            response={
                 "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
                 "api_version": (
                     TENANT_NAMESPACED_AUTHORITY_API_VERSION
@@ -633,7 +657,9 @@ def create_tenant_namespaced_authority_router(
         )
 
         return release_public_response(
-            {
+            tenant_id=context.tenant_id,
+            response_kind="execution-read",
+            response={
                 "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
                 "api_version": (
                     TENANT_NAMESPACED_AUTHORITY_API_VERSION
@@ -688,7 +714,9 @@ def create_tenant_namespaced_authority_router(
         )
 
         return release_public_response(
-            {
+            tenant_id=context.tenant_id,
+            response_kind="context-binding-read",
+            response={
                 "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
                 "api_version": (
                     TENANT_NAMESPACED_AUTHORITY_API_VERSION
@@ -703,6 +731,11 @@ def create_tenant_namespaced_authority_router(
         )
 
     return router
+
+
+
+
+
 
 
 

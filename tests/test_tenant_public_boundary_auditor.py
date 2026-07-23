@@ -355,3 +355,30 @@ def test_public_boundary_audit_hash_is_allowed():
 
     assert result.valid is True
     assert result.violation_count == 0
+
+
+def test_public_boundary_ledger_proof_hashes_are_allowed():
+    response = safe_response()
+    response["boundary_audit_record"] = {
+        "schema_version": "1.0.0",
+        "ledger_id": (
+            "tenant-public-boundary-audit-ledger"
+        ),
+        "ledger_version": "0.1.0",
+        "sequence_number": 1,
+        "tenant_id": "tenant-alpha",
+        "response_kind": "evaluation",
+        "released": True,
+        "audit_valid": True,
+        "violation_count": 0,
+        "boundary_audit_hash": "a" * 64,
+        "previous_record_hash": "0" * 64,
+        "record_hash": "b" * 64,
+    }
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=response
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0
