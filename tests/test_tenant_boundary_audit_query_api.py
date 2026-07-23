@@ -96,7 +96,7 @@ def test_api_has_stable_identity():
         "tenant-boundary-audit-evidence-query-api"
     )
     assert TENANT_BOUNDARY_AUDIT_QUERY_API_VERSION == (
-        "0.1.0"
+        "0.2.0"
     )
 
 
@@ -330,7 +330,8 @@ def test_response_hides_global_ledger_fields(tmp_path):
 
     assert response.status_code == 200
 
-    keys = collect_keys(response.json())
+    body = response.json()
+    result_keys = collect_keys(body["result"])
 
     forbidden = {
         "sequence_number",
@@ -345,8 +346,15 @@ def test_response_hides_global_ledger_fields(tmp_path):
         "correlation_id",
     }
 
-    assert forbidden.isdisjoint(keys)
+    assert forbidden.isdisjoint(result_keys)
 
+    release_record = body["boundary_audit_record"]
+
+    assert release_record["response_kind"] == (
+        "boundary-audit-list"
+    )
+    assert release_record["released"] is True
+    assert release_record["audit_valid"] is True
 
 def test_response_passes_runtime_boundary_gate(
     tmp_path,
@@ -370,3 +378,109 @@ def test_response_passes_runtime_boundary_gate(
         ]
         == 0
     )
+
+
+
+def test_list_access_is_recorded(tmp_path):
+    client, ledger = build_client(tmp_path)
+
+    append_record(ledger)
+
+    response = client.get(
+        "/tenant-boundary-audit/records",
+        headers=trusted_headers(),
+    )
+
+    assert response.status_code == 200
+
+    records = ledger.list_records(
+        tenant_id="tenant-alpha"
+    )
+
+    assert records[-1].response_kind == (
+        "boundary-audit-list"
+    )
+    assert records[-1].released is True
+    assert records[-1].audit_valid is True
+
+
+def test_record_read_access_is_recorded(tmp_path):
+    client, ledger = build_client(tmp_path)
+
+    append_record(ledger)
+
+    listed = client.get(
+        "/tenant-boundary-audit/records",
+        headers=trusted_headers(),
+    ).json()
+
+    public_record_id = listed["result"]["records"][0][
+        "public_record_id"
+    ]
+
+    response = client.get(
+        "/tenant-boundary-audit/records/"
+        f"{public_record_id}",
+        headers=trusted_headers(),
+    )
+
+    assert response.status_code == 200
+
+    records = ledger.list_records(
+        tenant_id="tenant-alpha"
+    )
+
+    assert records[-1].response_kind == (
+        "boundary-audit-record-read"
+    )
+    assert records[-1].released is True
+
+
+def test_denied_query_is_recorded(tmp_path):
+    client, ledger = build_client(tmp_path)
+
+    response = client.get(
+        "/tenant-boundary-audit/records",
+        headers=trusted_headers(
+            role_id="scientific-observer"
+        ),
+    )
+
+    assert response.status_code == 403
+
+    records = ledger.list_records(
+        tenant_id="tenant-alpha"
+    )
+
+    assert len(records) == 1
+    assert records[0].response_kind == (
+        "boundary-audit-query-denial"
+    )
+    assert records[0].released is True
+    assert records[0].audit_valid is True
+
+
+def test_query_response_contains_ledger_evidence(
+    tmp_path,
+):
+    client, ledger = build_client(tmp_path)
+
+    append_record(ledger)
+
+    response = client.get(
+        "/tenant-boundary-audit/records",
+        headers=trusted_headers(),
+    )
+
+    assert response.status_code == 200
+
+    record = response.json()[
+        "boundary_audit_record"
+    ]
+
+    assert record["response_kind"] == (
+        "boundary-audit-list"
+    )
+    assert record["released"] is True
+    assert record["audit_valid"] is True
+

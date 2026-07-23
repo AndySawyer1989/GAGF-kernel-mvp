@@ -6,15 +6,17 @@ from backend.app.gagf.tenant_boundary_audit_query import (
     TenantBoundaryAuditEvidenceQueryService,
 )
 from backend.app.gagf.tenant_public_response_gate import (
-    TenantPublicResponseGate,
     TenantPublicResponseRejectedError,
+)
+from backend.app.gagf.tenant_recorded_public_response_gate import (
+    TenantRecordedPublicResponseGate,
 )
 
 
 TENANT_BOUNDARY_AUDIT_QUERY_API_ID = (
     "tenant-boundary-audit-evidence-query-api"
 )
-TENANT_BOUNDARY_AUDIT_QUERY_API_VERSION = "0.1.0"
+TENANT_BOUNDARY_AUDIT_QUERY_API_VERSION = "0.2.0"
 
 TENANT_BOUNDARY_AUDIT_READ_SCOPE = (
     "boundary-audit:read"
@@ -63,7 +65,9 @@ def create_tenant_boundary_audit_query_router(
             database_path=database_path
         )
     )
-    response_gate = TenantPublicResponseGate()
+    response_gate = TenantRecordedPublicResponseGate(
+        database_path=database_path
+    )
 
     def authorize(
         *,
@@ -178,6 +182,10 @@ def create_tenant_boundary_audit_query_router(
         if not allowed:
             try:
                 detail = response_gate.release_error_detail(
+                    tenant_id=normalized_tenant_id,
+                    response_kind=(
+                        "boundary-audit-query-denial"
+                    ),
                     detail={
                         "message": (
                             "Tenant boundary-audit query "
@@ -206,11 +214,15 @@ def create_tenant_boundary_audit_query_router(
 
     def release_response(
         *,
+        tenant_id: str,
+        response_kind: str,
         response: dict,
     ) -> dict:
         try:
             return response_gate.release(
-                response=response
+                tenant_id=tenant_id,
+                response_kind=response_kind,
+                response=response,
             )
         except TenantPublicResponseRejectedError as exc:
             raise HTTPException(
@@ -222,7 +234,6 @@ def create_tenant_boundary_audit_query_router(
                     "public-boundary validation."
                 ),
             ) from exc
-
     @router.get("/records")
     def list_records(
         x_tenant_id: str = Header(
@@ -273,6 +284,8 @@ def create_tenant_boundary_audit_query_router(
         )
 
         return release_response(
+            tenant_id=x_tenant_id,
+            response_kind="boundary-audit-list",
             response={
                 "api_id": (
                     TENANT_BOUNDARY_AUDIT_QUERY_API_ID
@@ -348,6 +361,8 @@ def create_tenant_boundary_audit_query_router(
             )
 
         return release_response(
+            tenant_id=x_tenant_id,
+            response_kind="boundary-audit-record-read",
             response={
                 "api_id": (
                     TENANT_BOUNDARY_AUDIT_QUERY_API_ID
@@ -361,3 +376,9 @@ def create_tenant_boundary_audit_query_router(
         )
 
     return router
+
+
+
+
+
+
