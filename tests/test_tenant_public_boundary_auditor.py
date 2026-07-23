@@ -382,3 +382,47 @@ def test_public_boundary_ledger_proof_hashes_are_allowed():
 
     assert result.valid is True
     assert result.violation_count == 0
+
+
+def test_public_query_result_hash_is_allowed():
+    response = safe_response()
+    response["result"] = {
+        "service_id": (
+            "tenant-boundary-audit-"
+            "evidence-query-service"
+        ),
+        "service_version": "0.1.0",
+        "tenant_id": "tenant-alpha",
+        "record_count": 0,
+        "records": [],
+        "result_hash": "a" * 64,
+    }
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=response
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0
+
+
+def test_public_query_result_hash_is_allowed():
+    response = safe_response()
+    response["result"] = {
+        "service_id": (
+            "tenant-boundary-audit-"
+            "evidence-query-service"
+        ),
+        "service_version": "0.1.0",
+        "tenant_id": "tenant-alpha",
+        "record_count": 0,
+        "records": [],
+        "result_hash": "a" * 64,
+    }
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=response
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0
