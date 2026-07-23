@@ -2,6 +2,12 @@
 
 from fastapi import APIRouter, Header, HTTPException, status
 
+from backend.app.gagf.tenant_boundary_audit_pagination import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    TenantBoundaryAuditCursorError,
+    TenantBoundaryAuditPaginationService,
+)
 from backend.app.gagf.tenant_boundary_audit_query import (
     TenantBoundaryAuditEvidenceQueryService,
 )
@@ -16,7 +22,7 @@ from backend.app.gagf.tenant_recorded_public_response_gate import (
 TENANT_BOUNDARY_AUDIT_QUERY_API_ID = (
     "tenant-boundary-audit-evidence-query-api"
 )
-TENANT_BOUNDARY_AUDIT_QUERY_API_VERSION = "0.2.0"
+TENANT_BOUNDARY_AUDIT_QUERY_API_VERSION = "0.3.0"
 
 TENANT_BOUNDARY_AUDIT_READ_SCOPE = (
     "boundary-audit:read"
@@ -62,6 +68,11 @@ def create_tenant_boundary_audit_query_router(
 
     query_service = (
         TenantBoundaryAuditEvidenceQueryService(
+            database_path=database_path
+        )
+    )
+    pagination_service = (
+        TenantBoundaryAuditPaginationService(
             database_path=database_path
         )
     )
@@ -236,6 +247,8 @@ def create_tenant_boundary_audit_query_router(
             ) from exc
     @router.get("/records")
     def list_records(
+        page_size: int = DEFAULT_PAGE_SIZE,
+        cursor: str | None = None,
         x_tenant_id: str = Header(
             ...,
             alias="x-tenant-id",
@@ -279,9 +292,22 @@ def create_tenant_boundary_audit_query_router(
             ),
         )
 
-        result = query_service.list_for_tenant(
-            tenant_id=x_tenant_id
-        )
+        try:
+            page = pagination_service.list_page(
+                tenant_id=x_tenant_id,
+                page_size=page_size,
+                cursor=cursor,
+            )
+        except TenantBoundaryAuditCursorError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
 
         return release_response(
             tenant_id=x_tenant_id,
@@ -294,10 +320,9 @@ def create_tenant_boundary_audit_query_router(
                     TENANT_BOUNDARY_AUDIT_QUERY_API_VERSION
                 ),
                 "authorization": authorization,
-                "result": result.to_dict(),
-            }
+                "page": page.to_dict(),
+            },
         )
-
     @router.get(
         "/records/{public_record_id}"
     )
@@ -376,6 +401,9 @@ def create_tenant_boundary_audit_query_router(
         )
 
     return router
+
+
+
 
 
 

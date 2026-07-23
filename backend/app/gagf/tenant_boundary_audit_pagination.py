@@ -14,7 +14,7 @@ from backend.app.gagf.tenant_boundary_audit_query import (
 TENANT_BOUNDARY_AUDIT_PAGINATION_SERVICE_ID = (
     "tenant-boundary-audit-pagination-service"
 )
-TENANT_BOUNDARY_AUDIT_PAGINATION_SERVICE_VERSION = "0.1.0"
+TENANT_BOUNDARY_AUDIT_PAGINATION_SERVICE_VERSION = "0.2.0"
 
 DEFAULT_PAGE_SIZE = 25
 MAX_PAGE_SIZE = 100
@@ -25,12 +25,19 @@ class TenantBoundaryAuditCursorError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class TenantBoundaryAuditCursor:
+    position: int
+    snapshot_sequence: int
+
+
+@dataclass(frozen=True, slots=True)
 class TenantBoundaryAuditPage:
     service_id: str
     service_version: str
     tenant_id: str
     page_size: int
     returned_count: int
+    snapshot_sequence: int
     records: tuple[
         TenantPublicBoundaryAuditRecord,
         ...,
@@ -46,6 +53,9 @@ class TenantBoundaryAuditPage:
             "tenant_id": self.tenant_id,
             "page_size": self.page_size,
             "returned_count": self.returned_count,
+            "snapshot_sequence": (
+                self.snapshot_sequence
+            ),
             "records": [
                 record.to_dict()
                 for record in self.records
@@ -108,23 +118,36 @@ class TenantBoundaryAuditPaginationService:
                 f"page_size must not exceed {MAX_PAGE_SIZE}."
             )
 
-        start_sequence = self._decode_cursor(
-            tenant_id=normalized_tenant_id,
-            cursor=cursor,
-        )
-
         query_result = (
             self.query_service.list_for_tenant(
                 tenant_id=normalized_tenant_id
             )
         )
 
+        if cursor is None:
+            cursor_state = TenantBoundaryAuditCursor(
+                position=0,
+                snapshot_sequence=(
+                    query_result.records[-1]
+                    .tenant_sequence_number
+                    if query_result.records
+                    else 0
+                ),
+            )
+        else:
+            cursor_state = self._decode_cursor(
+                tenant_id=normalized_tenant_id,
+                cursor=cursor,
+            )
+
         eligible_records = tuple(
             record
             for record in query_result.records
             if (
                 record.tenant_sequence_number
-                > start_sequence
+                > cursor_state.position
+                and record.tenant_sequence_number
+                <= cursor_state.snapshot_sequence
             )
         )
 
@@ -142,9 +165,12 @@ class TenantBoundaryAuditPaginationService:
         if has_more and selected_records:
             next_cursor = self._encode_cursor(
                 tenant_id=normalized_tenant_id,
-                tenant_sequence_number=(
+                position=(
                     selected_records[-1]
                     .tenant_sequence_number
+                ),
+                snapshot_sequence=(
+                    cursor_state.snapshot_sequence
                 ),
             )
 
@@ -159,6 +185,9 @@ class TenantBoundaryAuditPaginationService:
             "page_size": page_size,
             "returned_count": len(
                 selected_records
+            ),
+            "snapshot_sequence": (
+                cursor_state.snapshot_sequence
             ),
             "records": [
                 record.to_dict()
@@ -180,6 +209,9 @@ class TenantBoundaryAuditPaginationService:
             returned_count=len(
                 selected_records
             ),
+            snapshot_sequence=(
+                cursor_state.snapshot_sequence
+            ),
             records=selected_records,
             next_cursor=next_cursor,
             has_more=has_more,
@@ -192,32 +224,35 @@ class TenantBoundaryAuditPaginationService:
         self,
         *,
         tenant_id: str,
-        tenant_sequence_number: int,
+        position: int,
+        snapshot_sequence: int,
     ) -> str:
         payload = {
             "cursor_id": (
                 "tenant-boundary-audit-page-cursor"
             ),
-            "cursor_version": "1.0.0",
+            "cursor_version": "2.0.0",
             "tenant_id": tenant_id,
-            "tenant_sequence_number": (
-                tenant_sequence_number
-            ),
+            "position": position,
+            "snapshot_sequence": snapshot_sequence,
         }
 
-        return sha256_hex(
+        cursor_hash = sha256_hex(
             canonical_json(payload)
-        ) + f".{tenant_sequence_number}"
+        )
+
+        return (
+            f"{cursor_hash}."
+            f"{position}."
+            f"{snapshot_sequence}"
+        )
 
     def _decode_cursor(
         self,
         *,
         tenant_id: str,
-        cursor: str | None,
-    ) -> int:
-        if cursor is None:
-            return 0
-
+        cursor: str,
+    ) -> TenantBoundaryAuditCursor:
         normalized_cursor = cursor.strip()
 
         if not normalized_cursor:
@@ -227,30 +262,37 @@ class TenantBoundaryAuditPaginationService:
 
         parts = normalized_cursor.split(".")
 
-        if len(parts) != 2:
+        if len(parts) != 3:
             raise TenantBoundaryAuditCursorError(
                 "cursor format is invalid."
             )
 
-        cursor_hash, sequence_text = parts
+        _, position_text, snapshot_text = parts
 
         try:
-            sequence_number = int(
-                sequence_text
+            position = int(position_text)
+            snapshot_sequence = int(
+                snapshot_text
             )
         except ValueError as exc:
             raise TenantBoundaryAuditCursorError(
                 "cursor sequence is invalid."
             ) from exc
 
-        if sequence_number < 1:
+        if position < 1:
             raise TenantBoundaryAuditCursorError(
-                "cursor sequence must be positive."
+                "cursor position must be positive."
+            )
+
+        if snapshot_sequence < position:
+            raise TenantBoundaryAuditCursorError(
+                "cursor snapshot is invalid."
             )
 
         expected_cursor = self._encode_cursor(
             tenant_id=tenant_id,
-            tenant_sequence_number=sequence_number,
+            position=position,
+            snapshot_sequence=snapshot_sequence,
         )
 
         if expected_cursor != normalized_cursor:
@@ -258,4 +300,7 @@ class TenantBoundaryAuditPaginationService:
                 "cursor verification failed."
             )
 
-        return sequence_number
+        return TenantBoundaryAuditCursor(
+            position=position,
+            snapshot_sequence=snapshot_sequence,
+        )

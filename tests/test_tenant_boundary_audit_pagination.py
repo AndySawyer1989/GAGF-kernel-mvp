@@ -65,7 +65,7 @@ def test_pagination_service_has_stable_identity():
     )
     assert (
         TENANT_BOUNDARY_AUDIT_PAGINATION_SERVICE_VERSION
-        == "0.1.0"
+        == "0.2.0"
     )
     assert DEFAULT_PAGE_SIZE == 25
     assert MAX_PAGE_SIZE == 100
@@ -337,3 +337,4 @@ def test_page_is_immutable(tmp_path):
 
     with pytest.raises(FrozenInstanceError):
         page.tenant_id = "tenant-beta"
+
