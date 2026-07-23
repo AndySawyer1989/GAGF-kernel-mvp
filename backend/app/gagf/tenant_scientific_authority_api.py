@@ -30,9 +30,14 @@ from backend.app.gagf.scientific_execution_context import (
 from backend.app.gagf.scientific_pipeline_execution_journal import (
     ScientificPipelineRecoveryCoordinator,
 )
+from backend.app.gagf.tenant_artifact_collision_guard import (
+    CrossTenantArtifactCollisionError,
+    TenantArtifactCollisionGuard,
+)
 from backend.app.gagf.tenant_scientific_artifact_access import (
     TenantScientificArtifactAccessDeniedError,
     TenantScientificArtifactAccessService,
+    TenantScientificArtifactBindingConflictError,
     TenantScientificArtifactNotFoundError,
     TenantScientificArtifactUnboundError,
 )
@@ -126,12 +131,15 @@ def create_tenant_scientific_authority_router(
         checkpoint_database_path=paths.checkpoint_database_path,
         journal_database_path=paths.journal_database_path,
     )
+
     binding_ledger = ScientificContextBindingLedger(
         paths.context_binding_database_path
     )
+
     authorization_policy = (
         ScientificAuthorityAuthorizationPolicy()
     )
+
     artifact_access = TenantScientificArtifactAccessService(
         authority_database_path=paths.authority_database_path,
         checkpoint_database_path=paths.checkpoint_database_path,
@@ -139,6 +147,10 @@ def create_tenant_scientific_authority_router(
         context_binding_database_path=(
             paths.context_binding_database_path
         ),
+    )
+
+    collision_guard = TenantArtifactCollisionGuard(
+        paths.context_binding_database_path
     )
 
     def build_context(
@@ -168,6 +180,24 @@ def create_tenant_scientific_authority_router(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
             ) from exc
+
+    def build_trust_signals(
+        *,
+        credential_verified: bool,
+        session_verified: bool,
+        device_trusted: bool,
+        tenant_membership_verified: bool,
+        step_up_verified: bool = False,
+    ) -> ScientificTrustSignals:
+        return ScientificTrustSignals(
+            credential_verified=credential_verified,
+            session_verified=session_verified,
+            device_trusted=device_trusted,
+            step_up_verified=step_up_verified,
+            tenant_membership_verified=(
+                tenant_membership_verified
+            ),
+        )
 
     def authorize(
         *,
@@ -212,24 +242,6 @@ def create_tenant_scientific_authority_router(
             "receipt": receipt.to_dict(),
         }
 
-    def trusted_headers(
-        *,
-        credential_verified: bool,
-        session_verified: bool,
-        device_trusted: bool,
-        tenant_membership_verified: bool,
-        step_up_verified: bool = False,
-    ) -> ScientificTrustSignals:
-        return ScientificTrustSignals(
-            credential_verified=credential_verified,
-            session_verified=session_verified,
-            device_trusted=device_trusted,
-            step_up_verified=step_up_verified,
-            tenant_membership_verified=(
-                tenant_membership_verified
-            ),
-        )
-
     def handle_artifact_error(
         exc: Exception,
     ) -> None:
@@ -244,7 +256,10 @@ def create_tenant_scientific_authority_router(
 
         if isinstance(
             exc,
-            TenantScientificArtifactAccessDeniedError,
+            (
+                TenantScientificArtifactAccessDeniedError,
+                TenantScientificArtifactUnboundError,
+            ),
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -253,10 +268,10 @@ def create_tenant_scientific_authority_router(
 
         if isinstance(
             exc,
-            TenantScientificArtifactUnboundError,
+            TenantScientificArtifactBindingConflictError,
         ):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_409_CONFLICT,
                 detail=str(exc),
             ) from exc
 
@@ -327,14 +342,29 @@ def create_tenant_scientific_authority_router(
                 )
             )
 
+            collision_decision = collision_guard.enforce(
+                binding
+            )
+
             binding_record = binding_ledger.append(
                 binding
             )
+
+        except CrossTenantArtifactCollisionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+
         except ScientificContextBindingConflictError as exc:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=str(exc),
             ) from exc
+
+        except HTTPException:
+            raise
+
         except Exception as exc:
             raise HTTPException(
                 status_code=(
@@ -354,6 +384,9 @@ def create_tenant_scientific_authority_router(
             ),
             "authorization": authorization,
             "execution": pipeline_result.to_dict(),
+            "artifact_collision_guard": (
+                collision_decision.to_dict()
+            ),
             "context_binding": binding_record.to_dict(),
         }
 
@@ -388,7 +421,7 @@ def create_tenant_scientific_authority_router(
             context=context,
             action=ScientificAuthorityAction.READ_RECEIPT,
             target_tenant_id=x_tenant_id,
-            trust_signals=trusted_headers(
+            trust_signals=build_trust_signals(
                 credential_verified=x_credential_verified,
                 session_verified=x_session_verified,
                 device_trusted=x_device_trusted,
@@ -447,7 +480,7 @@ def create_tenant_scientific_authority_router(
             context=context,
             action=ScientificAuthorityAction.READ_CHECKPOINT,
             target_tenant_id=x_tenant_id,
-            trust_signals=trusted_headers(
+            trust_signals=build_trust_signals(
                 credential_verified=x_credential_verified,
                 session_verified=x_session_verified,
                 device_trusted=x_device_trusted,
@@ -508,7 +541,7 @@ def create_tenant_scientific_authority_router(
             context=context,
             action=ScientificAuthorityAction.VERIFY_CHECKPOINT,
             target_tenant_id=x_tenant_id,
-            trust_signals=trusted_headers(
+            trust_signals=build_trust_signals(
                 credential_verified=x_credential_verified,
                 session_verified=x_session_verified,
                 device_trusted=x_device_trusted,
@@ -527,12 +560,13 @@ def create_tenant_scientific_authority_router(
             handle_artifact_error(exc)
             raise
 
-        checkpoint = (
-            artifact_access.checkpoint_ledger
-            .get_by_hash(checkpoint_hash)
+        checkpoint_record = (
+            artifact_access.checkpoint_ledger.get_by_hash(
+                checkpoint_hash
+            )
         )
 
-        if checkpoint is None:
+        if checkpoint_record is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=(
@@ -540,14 +574,16 @@ def create_tenant_scientific_authority_router(
                 ),
             )
 
-        result = (
+        verification = (
             ScientificEvidenceCheckpointReplayVerifier()
             .verify(
-                checkpoint=checkpoint.checkpoint,
+                checkpoint=checkpoint_record.checkpoint,
                 authority_database_path=(
                     paths.authority_database_path
                 ),
-                audit_database_path=paths.audit_database_path,
+                audit_database_path=(
+                    paths.audit_database_path
+                ),
             )
         )
 
@@ -558,7 +594,7 @@ def create_tenant_scientific_authority_router(
             ),
             "authorization": authorization,
             "binding_hash": access.binding_hash,
-            "verification": result.to_dict(),
+            "verification": verification.to_dict(),
         }
 
     @router.get("/executions/{execution_id}")
@@ -592,7 +628,7 @@ def create_tenant_scientific_authority_router(
             context=context,
             action=ScientificAuthorityAction.READ_EXECUTION,
             target_tenant_id=x_tenant_id,
-            trust_signals=trusted_headers(
+            trust_signals=build_trust_signals(
                 credential_verified=x_credential_verified,
                 session_verified=x_session_verified,
                 device_trusted=x_device_trusted,
@@ -651,7 +687,7 @@ def create_tenant_scientific_authority_router(
             context=context,
             action=ScientificAuthorityAction.READ_EXECUTION,
             target_tenant_id=x_tenant_id,
-            trust_signals=trusted_headers(
+            trust_signals=build_trust_signals(
                 credential_verified=x_credential_verified,
                 session_verified=x_session_verified,
                 device_trusted=x_device_trusted,
@@ -710,7 +746,7 @@ def create_tenant_scientific_authority_router(
             context=context,
             action=ScientificAuthorityAction.READ_EXECUTION,
             target_tenant_id=tenant_id,
-            trust_signals=trusted_headers(
+            trust_signals=build_trust_signals(
                 credential_verified=x_credential_verified,
                 session_verified=x_session_verified,
                 device_trusted=x_device_trusted,

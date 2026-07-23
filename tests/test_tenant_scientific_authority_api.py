@@ -382,3 +382,107 @@ def test_untrusted_binding_read_is_denied(tmp_path):
     assert response.status_code == 403
 
 
+
+
+def test_cross_tenant_identical_evaluation_is_rejected(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    alpha_response = client.post(
+        "/tenant-scientific-authority/evaluate",
+        headers=evaluation_headers(
+            tenant_id="tenant-alpha",
+            target_tenant_id="tenant-alpha",
+            request_id="request-alpha",
+        ),
+        json=evaluation_payload(),
+    )
+
+    beta_response = client.post(
+        "/tenant-scientific-authority/evaluate",
+        headers=evaluation_headers(
+            tenant_id="tenant-beta",
+            target_tenant_id="tenant-beta",
+            request_id="request-beta",
+        ),
+        json=evaluation_payload(),
+    )
+
+    assert alpha_response.status_code == 200
+    assert beta_response.status_code == 409
+    assert "Cross-tenant deterministic artifact collision" in (
+        beta_response.json()["detail"]
+    )
+
+
+def test_successful_evaluation_returns_collision_guard_proof(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    response = client.post(
+        "/tenant-scientific-authority/evaluate",
+        headers=evaluation_headers(),
+        json=evaluation_payload(),
+    )
+
+    assert response.status_code == 200
+
+    guard = response.json()["artifact_collision_guard"]
+
+    assert guard["allowed"] is True
+    assert guard["collisions"] == []
+    assert guard["tenant_id"] == "tenant-alpha"
+
+
+def test_cross_tenant_identical_evaluation_is_rejected(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    alpha_response = client.post(
+        "/tenant-scientific-authority/evaluate",
+        headers=evaluation_headers(
+            tenant_id="tenant-alpha",
+            target_tenant_id="tenant-alpha",
+            request_id="request-alpha",
+        ),
+        json=evaluation_payload(),
+    )
+
+    beta_response = client.post(
+        "/tenant-scientific-authority/evaluate",
+        headers=evaluation_headers(
+            tenant_id="tenant-beta",
+            target_tenant_id="tenant-beta",
+            request_id="request-beta",
+        ),
+        json=evaluation_payload(),
+    )
+
+    assert alpha_response.status_code == 200
+    assert beta_response.status_code == 409
+    assert "Cross-tenant deterministic artifact collision" in (
+        beta_response.json()["detail"]
+    )
+
+
+def test_successful_evaluation_returns_collision_guard_proof(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    response = client.post(
+        "/tenant-scientific-authority/evaluate",
+        headers=evaluation_headers(),
+        json=evaluation_payload(),
+    )
+
+    assert response.status_code == 200
+
+    guard = response.json()["artifact_collision_guard"]
+
+    assert guard["allowed"] is True
+    assert guard["collisions"] == []
+    assert guard["tenant_id"] == "tenant-alpha"
