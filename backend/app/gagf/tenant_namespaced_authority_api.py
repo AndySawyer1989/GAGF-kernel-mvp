@@ -35,12 +35,15 @@ from backend.app.gagf.tenant_namespaced_execution import (
     TenantNamespacedExecutionPaths,
     TenantNamespacedScientificExecutionService,
 )
+from backend.app.gagf.tenant_public_execution_view import (
+    TenantPublicExecutionViewBuilder,
+)
 
 
 TENANT_NAMESPACED_AUTHORITY_API_ID = (
     "tenant-namespaced-scientific-authority-api"
 )
-TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.1.0"
+TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.2.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +158,9 @@ def create_tenant_namespaced_authority_router(
 
     authorization_policy = (
         ScientificAuthorityAuthorizationPolicy()
+    )
+    public_view_builder = (
+        TenantPublicExecutionViewBuilder()
     )
 
     def build_context(
@@ -334,6 +340,10 @@ def create_tenant_namespaced_authority_router(
                 ),
                 evidence=request.evidence.to_domain(),
             )
+
+            public_view = public_view_builder.build(
+                result=result
+            )
         except (
             ScientificContextBindingConflictError,
             TenantArtifactNamespaceConflictError,
@@ -389,7 +399,7 @@ def create_tenant_namespaced_authority_router(
             "tenant_id": context.tenant_id,
             "authorization": authorization,
             "public_artifacts": public_artifacts,
-            "execution": result.to_dict(),
+            "execution": public_view.to_dict(),
         }
 
     def build_read_context(
@@ -627,3 +637,4 @@ def create_tenant_namespaced_authority_router(
         }
 
     return router
+

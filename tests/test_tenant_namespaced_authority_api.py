@@ -124,7 +124,7 @@ def test_api_has_stable_identity():
         "tenant-namespaced-scientific-authority-api"
     )
     assert TENANT_NAMESPACED_AUTHORITY_API_VERSION == (
-        "0.1.0"
+        "0.2.0"
     )
 
 
@@ -157,16 +157,13 @@ def test_identical_cross_tenant_evaluations_are_allowed(
         request_id="request-beta",
     )
 
-    assert alpha["execution"]["pipeline_result"][
-        "execution_id"
-    ] == beta["execution"]["pipeline_result"][
-        "execution_id"
-    ]
-
     assert alpha["public_artifacts"]["execution_id"] != (
         beta["public_artifacts"]["execution_id"]
     )
 
+    assert alpha["public_artifacts"]["checkpoint_id"] != (
+        beta["public_artifacts"]["checkpoint_id"]
+    )
 
 def test_same_tenant_replay_returns_same_public_ids(
     tmp_path,
@@ -179,9 +176,7 @@ def test_same_tenant_replay_returns_same_public_ids(
     assert first["public_artifacts"] == (
         second["public_artifacts"]
     )
-    assert second["execution"]["pipeline_result"][
-        "resumed"
-    ] is True
+    assert second["execution"]["resumed"] is True
 
 
 def test_tenant_reads_public_authority_receipt(tmp_path):
@@ -366,3 +361,87 @@ def test_unknown_contract_returns_404(tmp_path):
     )
 
     assert response.status_code == 404
+
+
+
+def _collect_response_strings(value):
+    values = []
+
+    if isinstance(value, str):
+        values.append(value)
+
+    elif isinstance(value, dict):
+        for item in value.values():
+            values.extend(
+                _collect_response_strings(item)
+            )
+
+    elif isinstance(value, list):
+        for item in value:
+            values.extend(
+                _collect_response_strings(item)
+            )
+
+    return values
+
+
+def test_evaluation_uses_redacted_public_execution_view(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    response = client.post(
+        "/tenant-namespaced-scientific-authority/evaluate",
+        headers=evaluation_headers(),
+        json=evaluation_payload(),
+    )
+
+    assert response.status_code == 200
+
+    execution = response.json()["execution"]
+
+    assert execution["view_id"] == (
+        "tenant-public-scientific-execution-view"
+    )
+    assert execution["view_version"] == "0.1.0"
+    assert execution["decision_allowed"] is True
+    assert execution["checkpoint_valid"] is True
+    assert execution["public_artifacts"] == (
+        response.json()["public_artifacts"]
+    )
+    assert len(execution["view_hash"]) == 64
+
+
+def test_evaluation_response_exposes_no_canonical_fields(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+
+    body = create_execution(client)
+    visible_keys = set()
+
+    def collect_keys(value):
+        if isinstance(value, dict):
+            visible_keys.update(value.keys())
+
+            for item in value.values():
+                collect_keys(item)
+
+        elif isinstance(value, list):
+            for item in value:
+                collect_keys(item)
+
+    collect_keys(body)
+
+    forbidden_keys = {
+        "canonical_artifact_id",
+        "authority_receipt_hash",
+        "audit_receipt_hash",
+        "checkpoint_hash",
+        "execution_receipt_hash",
+        "binding_hash",
+    }
+
+    assert forbidden_keys.isdisjoint(visible_keys)
+
+
