@@ -121,7 +121,7 @@ def test_tenant_api_has_stable_identity():
         "tenant-scientific-authority-api"
     )
     assert TENANT_SCIENTIFIC_AUTHORITY_API_VERSION == (
-        "0.1.0"
+        "0.2.0"
     )
 
 
@@ -380,3 +380,5 @@ def test_untrusted_binding_read_is_denied(tmp_path):
     )
 
     assert response.status_code == 403
+
+

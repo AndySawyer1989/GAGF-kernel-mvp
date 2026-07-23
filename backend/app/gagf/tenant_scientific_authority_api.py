@@ -17,6 +17,9 @@ from backend.app.gagf.scientific_calculation_contract import (
     CalculationAuthority,
     get_calculation_contract,
 )
+from backend.app.gagf.scientific_evidence_checkpoint_replay_verifier import (
+    ScientificEvidenceCheckpointReplayVerifier,
+)
 from backend.app.gagf.scientific_execution_context import (
     ScientificContextBindingConflictError,
     ScientificContextBindingLedger,
@@ -27,12 +30,18 @@ from backend.app.gagf.scientific_execution_context import (
 from backend.app.gagf.scientific_pipeline_execution_journal import (
     ScientificPipelineRecoveryCoordinator,
 )
+from backend.app.gagf.tenant_scientific_artifact_access import (
+    TenantScientificArtifactAccessDeniedError,
+    TenantScientificArtifactAccessService,
+    TenantScientificArtifactNotFoundError,
+    TenantScientificArtifactUnboundError,
+)
 
 
 TENANT_SCIENTIFIC_AUTHORITY_API_ID = (
     "tenant-scientific-authority-api"
 )
-TENANT_SCIENTIFIC_AUTHORITY_API_VERSION = "0.1.0"
+TENANT_SCIENTIFIC_AUTHORITY_API_VERSION = "0.2.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,6 +132,135 @@ def create_tenant_scientific_authority_router(
     authorization_policy = (
         ScientificAuthorityAuthorizationPolicy()
     )
+    artifact_access = TenantScientificArtifactAccessService(
+        authority_database_path=paths.authority_database_path,
+        checkpoint_database_path=paths.checkpoint_database_path,
+        journal_database_path=paths.journal_database_path,
+        context_binding_database_path=(
+            paths.context_binding_database_path
+        ),
+    )
+
+    def build_context(
+        *,
+        tenant_id: str,
+        actor_id: str,
+        credential_id: str,
+        session_id: str,
+        role_id: str,
+        policy_scope: str,
+        request_id: str,
+        correlation_id: str,
+    ) -> ScientificExecutionContext:
+        try:
+            return ScientificExecutionContext(
+                tenant_id=tenant_id,
+                actor_id=actor_id,
+                credential_id=credential_id,
+                session_id=session_id,
+                role_id=role_id,
+                policy_scope=policy_scope,
+                request_id=request_id,
+                correlation_id=correlation_id,
+            )
+        except ScientificExecutionContextError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+    def authorize(
+        *,
+        context: ScientificExecutionContext,
+        action: ScientificAuthorityAction,
+        target_tenant_id: str,
+        trust_signals: ScientificTrustSignals,
+        requested_authority: CalculationAuthority | None = None,
+        constitutional_approval_submitted: bool = False,
+    ) -> dict:
+        authorization_request = ScientificAuthorizationRequest(
+            context=context,
+            action=action,
+            target_tenant_id=target_tenant_id,
+            requested_authority=requested_authority,
+            constitutional_approval_submitted=(
+                constitutional_approval_submitted
+            ),
+            trust_signals=trust_signals,
+        )
+
+        decision, receipt = (
+            authorization_policy.evaluate_with_receipt(
+                authorization_request
+            )
+        )
+
+        if not decision.allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "message": (
+                        "Scientific authority request was denied."
+                    ),
+                    "decision": decision.to_dict(),
+                    "authorization_receipt": receipt.to_dict(),
+                },
+            )
+
+        return {
+            "decision": decision.to_dict(),
+            "receipt": receipt.to_dict(),
+        }
+
+    def trusted_headers(
+        *,
+        credential_verified: bool,
+        session_verified: bool,
+        device_trusted: bool,
+        tenant_membership_verified: bool,
+        step_up_verified: bool = False,
+    ) -> ScientificTrustSignals:
+        return ScientificTrustSignals(
+            credential_verified=credential_verified,
+            session_verified=session_verified,
+            device_trusted=device_trusted,
+            step_up_verified=step_up_verified,
+            tenant_membership_verified=(
+                tenant_membership_verified
+            ),
+        )
+
+    def handle_artifact_error(
+        exc: Exception,
+    ) -> None:
+        if isinstance(
+            exc,
+            TenantScientificArtifactNotFoundError,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            ) from exc
+
+        if isinstance(
+            exc,
+            TenantScientificArtifactAccessDeniedError,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(exc),
+            ) from exc
+
+        if isinstance(
+            exc,
+            TenantScientificArtifactUnboundError,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(exc),
+            ) from exc
+
+        raise exc
 
     @router.post(
         "/evaluate",
@@ -140,25 +278,19 @@ def create_tenant_scientific_authority_router(
         x_correlation_id: str = Header(...),
         x_target_tenant_id: str = Header(...),
     ) -> dict:
-        try:
-            execution_context = ScientificExecutionContext(
-                tenant_id=x_tenant_id,
-                actor_id=x_actor_id,
-                credential_id=x_credential_id,
-                session_id=x_session_id,
-                role_id=x_role_id,
-                policy_scope=x_policy_scope,
-                request_id=x_request_id,
-                correlation_id=x_correlation_id,
-            )
-        except ScientificExecutionContextError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(exc),
-            ) from exc
+        context = build_context(
+            tenant_id=x_tenant_id,
+            actor_id=x_actor_id,
+            credential_id=x_credential_id,
+            session_id=x_session_id,
+            role_id=x_role_id,
+            policy_scope=x_policy_scope,
+            request_id=x_request_id,
+            correlation_id=x_correlation_id,
+        )
 
-        authorization_request = ScientificAuthorizationRequest(
-            context=execution_context,
+        authorization = authorize(
+            context=context,
             action=ScientificAuthorityAction.EVALUATE,
             target_tenant_id=x_target_tenant_id,
             requested_authority=request.requested_authority,
@@ -167,26 +299,6 @@ def create_tenant_scientific_authority_router(
             ),
             trust_signals=request.trust_signals.to_domain(),
         )
-
-        authorization_decision, authorization_receipt = (
-            authorization_policy.evaluate_with_receipt(
-                authorization_request
-            )
-        )
-
-        if not authorization_decision.allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "message": (
-                        "Scientific authority request was denied."
-                    ),
-                    "decision": authorization_decision.to_dict(),
-                    "authorization_receipt": (
-                        authorization_receipt.to_dict()
-                    ),
-                },
-            )
 
         try:
             contract = get_calculation_contract(
@@ -210,7 +322,7 @@ def create_tenant_scientific_authority_router(
             binding = (
                 ScientificExecutionContextBindingBuilder()
                 .build(
-                    context=execution_context,
+                    context=context,
                     result=pipeline_result,
                 )
             )
@@ -240,17 +352,334 @@ def create_tenant_scientific_authority_router(
             "api_version": (
                 TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
             ),
-            "authorization": {
-                "decision": authorization_decision.to_dict(),
-                "receipt": authorization_receipt.to_dict(),
-            },
+            "authorization": authorization,
             "execution": pipeline_result.to_dict(),
             "context_binding": binding_record.to_dict(),
         }
 
-    @router.get(
-        "/tenants/{tenant_id}/bindings"
+    @router.get("/receipts/{receipt_hash}")
+    def get_receipt(
+        receipt_hash: str,
+        x_tenant_id: str = Header(...),
+        x_actor_id: str = Header(...),
+        x_credential_id: str = Header(...),
+        x_session_id: str = Header(...),
+        x_role_id: str = Header(...),
+        x_policy_scope: str = Header(...),
+        x_request_id: str = Header(...),
+        x_correlation_id: str = Header(...),
+        x_credential_verified: bool = Header(...),
+        x_session_verified: bool = Header(...),
+        x_device_trusted: bool = Header(...),
+        x_tenant_membership_verified: bool = Header(...),
+    ) -> dict:
+        context = build_context(
+            tenant_id=x_tenant_id,
+            actor_id=x_actor_id,
+            credential_id=x_credential_id,
+            session_id=x_session_id,
+            role_id=x_role_id,
+            policy_scope=x_policy_scope,
+            request_id=x_request_id,
+            correlation_id=x_correlation_id,
+        )
+
+        authorization = authorize(
+            context=context,
+            action=ScientificAuthorityAction.READ_RECEIPT,
+            target_tenant_id=x_tenant_id,
+            trust_signals=trusted_headers(
+                credential_verified=x_credential_verified,
+                session_verified=x_session_verified,
+                device_trusted=x_device_trusted,
+                tenant_membership_verified=(
+                    x_tenant_membership_verified
+                ),
+            ),
+        )
+
+        try:
+            access = artifact_access.get_authority_receipt(
+                tenant_id=x_tenant_id,
+                receipt_hash=receipt_hash,
+            )
+        except Exception as exc:
+            handle_artifact_error(exc)
+            raise
+
+        return {
+            "api_id": TENANT_SCIENTIFIC_AUTHORITY_API_ID,
+            "api_version": (
+                TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
+            ),
+            "authorization": authorization,
+            **access.to_dict(),
+        }
+
+    @router.get("/checkpoints/{checkpoint_hash}")
+    def get_checkpoint(
+        checkpoint_hash: str,
+        x_tenant_id: str = Header(...),
+        x_actor_id: str = Header(...),
+        x_credential_id: str = Header(...),
+        x_session_id: str = Header(...),
+        x_role_id: str = Header(...),
+        x_policy_scope: str = Header(...),
+        x_request_id: str = Header(...),
+        x_correlation_id: str = Header(...),
+        x_credential_verified: bool = Header(...),
+        x_session_verified: bool = Header(...),
+        x_device_trusted: bool = Header(...),
+        x_tenant_membership_verified: bool = Header(...),
+    ) -> dict:
+        context = build_context(
+            tenant_id=x_tenant_id,
+            actor_id=x_actor_id,
+            credential_id=x_credential_id,
+            session_id=x_session_id,
+            role_id=x_role_id,
+            policy_scope=x_policy_scope,
+            request_id=x_request_id,
+            correlation_id=x_correlation_id,
+        )
+
+        authorization = authorize(
+            context=context,
+            action=ScientificAuthorityAction.READ_CHECKPOINT,
+            target_tenant_id=x_tenant_id,
+            trust_signals=trusted_headers(
+                credential_verified=x_credential_verified,
+                session_verified=x_session_verified,
+                device_trusted=x_device_trusted,
+                tenant_membership_verified=(
+                    x_tenant_membership_verified
+                ),
+            ),
+        )
+
+        try:
+            access = artifact_access.get_checkpoint(
+                tenant_id=x_tenant_id,
+                checkpoint_hash=checkpoint_hash,
+            )
+        except Exception as exc:
+            handle_artifact_error(exc)
+            raise
+
+        return {
+            "api_id": TENANT_SCIENTIFIC_AUTHORITY_API_ID,
+            "api_version": (
+                TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
+            ),
+            "authorization": authorization,
+            **access.to_dict(),
+        }
+
+    @router.post(
+        "/checkpoints/{checkpoint_hash}/verify"
     )
+    def verify_checkpoint(
+        checkpoint_hash: str,
+        x_tenant_id: str = Header(...),
+        x_actor_id: str = Header(...),
+        x_credential_id: str = Header(...),
+        x_session_id: str = Header(...),
+        x_role_id: str = Header(...),
+        x_policy_scope: str = Header(...),
+        x_request_id: str = Header(...),
+        x_correlation_id: str = Header(...),
+        x_credential_verified: bool = Header(...),
+        x_session_verified: bool = Header(...),
+        x_device_trusted: bool = Header(...),
+        x_tenant_membership_verified: bool = Header(...),
+    ) -> dict:
+        context = build_context(
+            tenant_id=x_tenant_id,
+            actor_id=x_actor_id,
+            credential_id=x_credential_id,
+            session_id=x_session_id,
+            role_id=x_role_id,
+            policy_scope=x_policy_scope,
+            request_id=x_request_id,
+            correlation_id=x_correlation_id,
+        )
+
+        authorization = authorize(
+            context=context,
+            action=ScientificAuthorityAction.VERIFY_CHECKPOINT,
+            target_tenant_id=x_tenant_id,
+            trust_signals=trusted_headers(
+                credential_verified=x_credential_verified,
+                session_verified=x_session_verified,
+                device_trusted=x_device_trusted,
+                tenant_membership_verified=(
+                    x_tenant_membership_verified
+                ),
+            ),
+        )
+
+        try:
+            access = artifact_access.get_checkpoint(
+                tenant_id=x_tenant_id,
+                checkpoint_hash=checkpoint_hash,
+            )
+        except Exception as exc:
+            handle_artifact_error(exc)
+            raise
+
+        checkpoint = (
+            artifact_access.checkpoint_ledger
+            .get_by_hash(checkpoint_hash)
+        )
+
+        if checkpoint is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Scientific evidence checkpoint was not found."
+                ),
+            )
+
+        result = (
+            ScientificEvidenceCheckpointReplayVerifier()
+            .verify(
+                checkpoint=checkpoint.checkpoint,
+                authority_database_path=(
+                    paths.authority_database_path
+                ),
+                audit_database_path=paths.audit_database_path,
+            )
+        )
+
+        return {
+            "api_id": TENANT_SCIENTIFIC_AUTHORITY_API_ID,
+            "api_version": (
+                TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
+            ),
+            "authorization": authorization,
+            "binding_hash": access.binding_hash,
+            "verification": result.to_dict(),
+        }
+
+    @router.get("/executions/{execution_id}")
+    def get_execution(
+        execution_id: str,
+        x_tenant_id: str = Header(...),
+        x_actor_id: str = Header(...),
+        x_credential_id: str = Header(...),
+        x_session_id: str = Header(...),
+        x_role_id: str = Header(...),
+        x_policy_scope: str = Header(...),
+        x_request_id: str = Header(...),
+        x_correlation_id: str = Header(...),
+        x_credential_verified: bool = Header(...),
+        x_session_verified: bool = Header(...),
+        x_device_trusted: bool = Header(...),
+        x_tenant_membership_verified: bool = Header(...),
+    ) -> dict:
+        context = build_context(
+            tenant_id=x_tenant_id,
+            actor_id=x_actor_id,
+            credential_id=x_credential_id,
+            session_id=x_session_id,
+            role_id=x_role_id,
+            policy_scope=x_policy_scope,
+            request_id=x_request_id,
+            correlation_id=x_correlation_id,
+        )
+
+        authorization = authorize(
+            context=context,
+            action=ScientificAuthorityAction.READ_EXECUTION,
+            target_tenant_id=x_tenant_id,
+            trust_signals=trusted_headers(
+                credential_verified=x_credential_verified,
+                session_verified=x_session_verified,
+                device_trusted=x_device_trusted,
+                tenant_membership_verified=(
+                    x_tenant_membership_verified
+                ),
+            ),
+        )
+
+        try:
+            access = artifact_access.get_execution(
+                tenant_id=x_tenant_id,
+                execution_id=execution_id,
+            )
+        except Exception as exc:
+            handle_artifact_error(exc)
+            raise
+
+        return {
+            "api_id": TENANT_SCIENTIFIC_AUTHORITY_API_ID,
+            "api_version": (
+                TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
+            ),
+            "authorization": authorization,
+            **access.to_dict(),
+        }
+
+    @router.get("/bindings/{binding_hash}")
+    def get_binding(
+        binding_hash: str,
+        x_tenant_id: str = Header(...),
+        x_actor_id: str = Header(...),
+        x_credential_id: str = Header(...),
+        x_session_id: str = Header(...),
+        x_role_id: str = Header(...),
+        x_policy_scope: str = Header(...),
+        x_request_id: str = Header(...),
+        x_correlation_id: str = Header(...),
+        x_credential_verified: bool = Header(...),
+        x_session_verified: bool = Header(...),
+        x_device_trusted: bool = Header(...),
+        x_tenant_membership_verified: bool = Header(...),
+    ) -> dict:
+        context = build_context(
+            tenant_id=x_tenant_id,
+            actor_id=x_actor_id,
+            credential_id=x_credential_id,
+            session_id=x_session_id,
+            role_id=x_role_id,
+            policy_scope=x_policy_scope,
+            request_id=x_request_id,
+            correlation_id=x_correlation_id,
+        )
+
+        authorization = authorize(
+            context=context,
+            action=ScientificAuthorityAction.READ_EXECUTION,
+            target_tenant_id=x_tenant_id,
+            trust_signals=trusted_headers(
+                credential_verified=x_credential_verified,
+                session_verified=x_session_verified,
+                device_trusted=x_device_trusted,
+                tenant_membership_verified=(
+                    x_tenant_membership_verified
+                ),
+            ),
+        )
+
+        try:
+            access = artifact_access.get_context_binding(
+                tenant_id=x_tenant_id,
+                binding_hash=binding_hash,
+            )
+        except Exception as exc:
+            handle_artifact_error(exc)
+            raise
+
+        return {
+            "api_id": TENANT_SCIENTIFIC_AUTHORITY_API_ID,
+            "api_version": (
+                TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
+            ),
+            "authorization": authorization,
+            **access.to_dict(),
+        }
+
+    @router.get("/tenants/{tenant_id}/bindings")
     def list_tenant_bindings(
         tenant_id: str,
         x_tenant_id: str = Header(...),
@@ -266,62 +695,33 @@ def create_tenant_scientific_authority_router(
         x_device_trusted: bool = Header(...),
         x_tenant_membership_verified: bool = Header(...),
     ) -> dict:
-        try:
-            execution_context = ScientificExecutionContext(
-                tenant_id=x_tenant_id,
-                actor_id=x_actor_id,
-                credential_id=x_credential_id,
-                session_id=x_session_id,
-                role_id=x_role_id,
-                policy_scope=x_policy_scope,
-                request_id=x_request_id,
-                correlation_id=x_correlation_id,
-            )
-        except ScientificExecutionContextError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(exc),
-            ) from exc
+        context = build_context(
+            tenant_id=x_tenant_id,
+            actor_id=x_actor_id,
+            credential_id=x_credential_id,
+            session_id=x_session_id,
+            role_id=x_role_id,
+            policy_scope=x_policy_scope,
+            request_id=x_request_id,
+            correlation_id=x_correlation_id,
+        )
 
-        authorization_request = ScientificAuthorizationRequest(
-            context=execution_context,
+        authorization = authorize(
+            context=context,
             action=ScientificAuthorityAction.READ_EXECUTION,
             target_tenant_id=tenant_id,
-            requested_authority=None,
-            constitutional_approval_submitted=False,
-            trust_signals=ScientificTrustSignals(
+            trust_signals=trusted_headers(
                 credential_verified=x_credential_verified,
                 session_verified=x_session_verified,
                 device_trusted=x_device_trusted,
-                step_up_verified=False,
                 tenant_membership_verified=(
                     x_tenant_membership_verified
                 ),
             ),
         )
 
-        decision, receipt = (
-            authorization_policy.evaluate_with_receipt(
-                authorization_request
-            )
-        )
-
-        if not decision.allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "message": (
-                        "Tenant binding access was denied."
-                    ),
-                    "decision": decision.to_dict(),
-                    "authorization_receipt": (
-                        receipt.to_dict()
-                    ),
-                },
-            )
-
-        records = binding_ledger.list_for_tenant(
-            tenant_id
+        records = artifact_access.list_tenant_bindings(
+            tenant_id=tenant_id
         )
 
         return {
@@ -329,6 +729,7 @@ def create_tenant_scientific_authority_router(
             "api_version": (
                 TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
             ),
+            "authorization": authorization,
             "tenant_id": tenant_id,
             "count": len(records),
             "bindings": [
