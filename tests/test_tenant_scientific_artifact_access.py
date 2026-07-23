@@ -100,7 +100,7 @@ def test_service_has_stable_identity():
     assert TENANT_ARTIFACT_ACCESS_SERVICE_ID == (
         "tenant-scientific-artifact-access-service"
     )
-    assert TENANT_ARTIFACT_ACCESS_SERVICE_VERSION == "0.1.0"
+    assert TENANT_ARTIFACT_ACCESS_SERVICE_VERSION == "0.2.0"
 
 
 def test_tenant_can_access_bound_authority_receipt(
@@ -372,3 +372,4 @@ def test_access_serialization_preserves_binding_proof(
     assert serialized["binding_hash"] == (
         binding_record.binding.binding_hash
     )
+

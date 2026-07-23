@@ -6,6 +6,10 @@ from backend.app.gagf.scientific_authority_receipt_ledger import (
     AuthorityReceiptLedgerRecord,
     ScientificAuthorityReceiptLedger,
 )
+from backend.app.gagf.scientific_context_binding_index import (
+    DuplicateScientificArtifactBindingError,
+    ScientificContextBindingArtifactIndex,
+)
 from backend.app.gagf.scientific_evidence_checkpoint_ledger import (
     ScientificEvidenceCheckpointLedger,
     ScientificEvidenceCheckpointLedgerRecord,
@@ -24,7 +28,7 @@ from backend.app.gagf.scientific_pipeline_execution_journal import (
 TENANT_ARTIFACT_ACCESS_SERVICE_ID = (
     "tenant-scientific-artifact-access-service"
 )
-TENANT_ARTIFACT_ACCESS_SERVICE_VERSION = "0.1.0"
+TENANT_ARTIFACT_ACCESS_SERVICE_VERSION = "0.2.0"
 
 
 ScientificArtifactType = Literal[
@@ -52,6 +56,12 @@ class TenantScientificArtifactAccessDeniedError(
 
 
 class TenantScientificArtifactUnboundError(
+    TenantScientificArtifactAccessError
+):
+    pass
+
+
+class TenantScientificArtifactBindingConflictError(
     TenantScientificArtifactAccessError
 ):
     pass
@@ -123,6 +133,9 @@ class TenantScientificArtifactAccessService:
             journal_database_path
         )
         self.binding_ledger = ScientificContextBindingLedger(
+            context_binding_database_path
+        )
+        self.binding_index = ScientificContextBindingArtifactIndex(
             context_binding_database_path
         )
 
@@ -215,32 +228,42 @@ class TenantScientificArtifactAccessService:
         tenant_id: str,
         binding_hash: str,
     ) -> TenantArtifactAccessResult:
-        record = self.binding_ledger.get_by_hash(
-            binding_hash
-        )
+        try:
+            record = self.binding_index.find_for_tenant(
+                tenant_id=tenant_id,
+                artifact_type="context_binding",
+                artifact_id=binding_hash,
+            )
+        except DuplicateScientificArtifactBindingError as exc:
+            raise TenantScientificArtifactBindingConflictError(
+                str(exc)
+            ) from exc
 
-        if record is None:
-            raise TenantScientificArtifactNotFoundError(
-                "Scientific execution context binding was not found."
+        if record is not None:
+            return TenantArtifactAccessResult(
+                service_id=TENANT_ARTIFACT_ACCESS_SERVICE_ID,
+                service_version=(
+                    TENANT_ARTIFACT_ACCESS_SERVICE_VERSION
+                ),
+                tenant_id=tenant_id,
+                artifact_type="context_binding",
+                artifact_id=binding_hash,
+                binding_hash=binding_hash,
+                artifact=record.to_dict(),
             )
 
-        bound_tenant = record.binding.context["tenant_id"]
+        owner = self.binding_index.find_owner(
+            artifact_type="context_binding",
+            artifact_id=binding_hash,
+        )
 
-        if bound_tenant != tenant_id:
+        if owner is not None:
             raise TenantScientificArtifactAccessDeniedError(
                 "Cross-tenant context-binding access is denied."
             )
 
-        return TenantArtifactAccessResult(
-            service_id=TENANT_ARTIFACT_ACCESS_SERVICE_ID,
-            service_version=(
-                TENANT_ARTIFACT_ACCESS_SERVICE_VERSION
-            ),
-            tenant_id=tenant_id,
-            artifact_type="context_binding",
-            artifact_id=binding_hash,
-            binding_hash=binding_hash,
-            artifact=record.to_dict(),
+        raise TenantScientificArtifactNotFoundError(
+            "Scientific execution context binding was not found."
         )
 
     def list_tenant_bindings(
@@ -274,32 +297,31 @@ class TenantScientificArtifactAccessService:
         artifact_type: ScientificArtifactType,
         artifact_id: str,
     ) -> ScientificContextBindingLedgerRecord:
-        tenant_bindings = self.binding_ledger.list_for_tenant(
-            tenant_id
-        )
+        try:
+            tenant_binding = self.binding_index.find_for_tenant(
+                tenant_id=tenant_id,
+                artifact_type=artifact_type,
+                artifact_id=artifact_id,
+            )
+        except DuplicateScientificArtifactBindingError as exc:
+            raise TenantScientificArtifactBindingConflictError(
+                str(exc)
+            ) from exc
 
-        matching_tenant_binding = next(
-            (
-                record
-                for record in tenant_bindings
-                if self._binding_matches_artifact(
-                    record=record,
-                    artifact_type=artifact_type,
-                    artifact_id=artifact_id,
-                )
-            ),
-            None,
-        )
+        if tenant_binding is not None:
+            return tenant_binding
 
-        if matching_tenant_binding is not None:
-            return matching_tenant_binding
+        try:
+            owner = self.binding_index.find_owner(
+                artifact_type=artifact_type,
+                artifact_id=artifact_id,
+            )
+        except DuplicateScientificArtifactBindingError as exc:
+            raise TenantScientificArtifactBindingConflictError(
+                str(exc)
+            ) from exc
 
-        all_other_tenant_match = self._find_binding_across_all_tenants(
-            artifact_type=artifact_type,
-            artifact_id=artifact_id,
-        )
-
-        if all_other_tenant_match is not None:
+        if owner is not None:
             raise TenantScientificArtifactAccessDeniedError(
                 "Cross-tenant scientific artifact access is denied."
             )
@@ -308,64 +330,6 @@ class TenantScientificArtifactAccessService:
             "Scientific artifact exists but is not bound to a "
             "tenant execution context."
         )
-
-    def _find_binding_across_all_tenants(
-        self,
-        *,
-        artifact_type: ScientificArtifactType,
-        artifact_id: str,
-    ) -> ScientificContextBindingLedgerRecord | None:
-        with self.binding_ledger._connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT binding_hash
-                FROM scientific_execution_context_bindings
-                ORDER BY sequence_number ASC
-                """
-            ).fetchall()
-
-        for row in rows:
-            record = self.binding_ledger.get_by_hash(
-                row["binding_hash"]
-            )
-
-            if (
-                record is not None
-                and self._binding_matches_artifact(
-                    record=record,
-                    artifact_type=artifact_type,
-                    artifact_id=artifact_id,
-                )
-            ):
-                return record
-
-        return None
-
-    def _binding_matches_artifact(
-        self,
-        *,
-        record: ScientificContextBindingLedgerRecord,
-        artifact_type: ScientificArtifactType,
-        artifact_id: str,
-    ) -> bool:
-        binding = record.binding
-
-        if artifact_type == "authority_receipt":
-            return (
-                binding.authority_receipt_hash
-                == artifact_id
-            )
-
-        if artifact_type == "checkpoint":
-            return binding.checkpoint_hash == artifact_id
-
-        if artifact_type == "execution":
-            return binding.execution_id == artifact_id
-
-        if artifact_type == "context_binding":
-            return binding.binding_hash == artifact_id
-
-        return False
 
     def _authority_receipt_result(
         self,
