@@ -333,3 +333,25 @@ def test_audit_result_is_immutable():
 
     with pytest.raises(FrozenInstanceError):
         result.valid = False
+
+
+def test_public_boundary_audit_hash_is_allowed():
+    response = safe_response()
+    response["boundary_audit"] = {
+        "schema_version": "1.0.0",
+        "auditor_id": (
+            "tenant-public-boundary-leak-auditor"
+        ),
+        "auditor_version": "0.1.0",
+        "valid": True,
+        "violation_count": 0,
+        "violations": [],
+        "audit_hash": "a" * 64,
+    }
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=response
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0

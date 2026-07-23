@@ -44,12 +44,16 @@ from backend.app.gagf.tenant_public_artifact_view import (
 from backend.app.gagf.tenant_public_authorization_view import (
     TenantPublicAuthorizationViewBuilder,
 )
+from backend.app.gagf.tenant_public_response_gate import (
+    TenantPublicResponseGate,
+    TenantPublicResponseRejectedError,
+)
 
 
 TENANT_NAMESPACED_AUTHORITY_API_ID = (
     "tenant-namespaced-scientific-authority-api"
 )
-TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.4.0"
+TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.5.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,6 +178,7 @@ def create_tenant_namespaced_authority_router(
     public_authorization_view_builder = (
         TenantPublicAuthorizationViewBuilder()
     )
+    public_response_gate = TenantPublicResponseGate()
 
     def build_context(
         *,
@@ -236,15 +241,35 @@ def create_tenant_namespaced_authority_router(
         )
 
         if not decision.allowed:
+            detail = {
+                "message": (
+                    "Tenant namespaced scientific request "
+                    "was denied."
+                ),
+                **public_authorization.to_dict(),
+            }
+
+            try:
+                released_detail = (
+                    public_response_gate
+                    .release_error_detail(
+                        detail=detail
+                    )
+                )
+            except TenantPublicResponseRejectedError as exc:
+                raise HTTPException(
+                    status_code=(
+                        status.HTTP_500_INTERNAL_SERVER_ERROR
+                    ),
+                    detail=(
+                        "Tenant response failed public-boundary "
+                        "validation."
+                    ),
+                ) from exc
+
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "message": (
-                        "Tenant namespaced scientific request "
-                        "was denied."
-                    ),
-                    **public_authorization.to_dict(),
-                },
+                detail=released_detail,
             )
 
         return public_authorization.to_dict()
@@ -300,6 +325,20 @@ def create_tenant_namespaced_authority_router(
 
         return public_view.to_dict()
 
+    def release_public_response(
+        response: dict,
+    ) -> dict:
+        try:
+            return public_response_gate.release(
+                response=response
+            )
+        except TenantPublicResponseRejectedError as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
+                detail=str(exc),
+            ) from exc
     @router.post(
         "/evaluate",
         status_code=status.HTTP_200_OK,
@@ -408,16 +447,18 @@ def create_tenant_namespaced_authority_router(
             ),
         }
 
-        return {
-            "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
-            "api_version": (
-                TENANT_NAMESPACED_AUTHORITY_API_VERSION
-            ),
-            "tenant_id": context.tenant_id,
-            "authorization": authorization,
-            "public_artifacts": public_artifacts,
-            "execution": public_view.to_dict(),
-        }
+        return release_public_response(
+            {
+                "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
+                "api_version": (
+                    TENANT_NAMESPACED_AUTHORITY_API_VERSION
+                ),
+                "tenant_id": context.tenant_id,
+                "authorization": authorization,
+                "public_artifacts": public_artifacts,
+                "execution": public_view.to_dict(),
+            }
+        )
 
     def build_read_context(
         *,
@@ -481,18 +522,20 @@ def create_tenant_namespaced_authority_router(
             ),
         )
 
-        return {
-            "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
-            "api_version": (
-                TENANT_NAMESPACED_AUTHORITY_API_VERSION
-            ),
-            "authorization": authorization,
-            **resolve_or_raise(
-                tenant_id=x_tenant_id,
-                artifact_type="authority_receipt",
-                public_id=public_id,
-            ),
-        }
+        return release_public_response(
+            {
+                "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
+                "api_version": (
+                    TENANT_NAMESPACED_AUTHORITY_API_VERSION
+                ),
+                "authorization": authorization,
+                **resolve_or_raise(
+                    tenant_id=x_tenant_id,
+                    artifact_type="authority_receipt",
+                    public_id=public_id,
+                ),
+            }
+        )
 
     @router.get("/checkpoints/{public_id}")
     def get_checkpoint(
@@ -534,18 +577,20 @@ def create_tenant_namespaced_authority_router(
             ),
         )
 
-        return {
-            "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
-            "api_version": (
-                TENANT_NAMESPACED_AUTHORITY_API_VERSION
-            ),
-            "authorization": authorization,
-            **resolve_or_raise(
-                tenant_id=x_tenant_id,
-                artifact_type="checkpoint",
-                public_id=public_id,
-            ),
-        }
+        return release_public_response(
+            {
+                "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
+                "api_version": (
+                    TENANT_NAMESPACED_AUTHORITY_API_VERSION
+                ),
+                "authorization": authorization,
+                **resolve_or_raise(
+                    tenant_id=x_tenant_id,
+                    artifact_type="checkpoint",
+                    public_id=public_id,
+                ),
+            }
+        )
 
     @router.get("/executions/{public_id}")
     def get_execution(
@@ -587,18 +632,20 @@ def create_tenant_namespaced_authority_router(
             ),
         )
 
-        return {
-            "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
-            "api_version": (
-                TENANT_NAMESPACED_AUTHORITY_API_VERSION
-            ),
-            "authorization": authorization,
-            **resolve_or_raise(
-                tenant_id=x_tenant_id,
-                artifact_type="execution",
-                public_id=public_id,
-            ),
-        }
+        return release_public_response(
+            {
+                "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
+                "api_version": (
+                    TENANT_NAMESPACED_AUTHORITY_API_VERSION
+                ),
+                "authorization": authorization,
+                **resolve_or_raise(
+                    tenant_id=x_tenant_id,
+                    artifact_type="execution",
+                    public_id=public_id,
+                ),
+            }
+        )
 
     @router.get("/bindings/{public_id}")
     def get_binding(
@@ -640,20 +687,25 @@ def create_tenant_namespaced_authority_router(
             ),
         )
 
-        return {
-            "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
-            "api_version": (
-                TENANT_NAMESPACED_AUTHORITY_API_VERSION
-            ),
-            "authorization": authorization,
-            **resolve_or_raise(
-                tenant_id=x_tenant_id,
-                artifact_type="context_binding",
-                public_id=public_id,
-            ),
-        }
+        return release_public_response(
+            {
+                "api_id": TENANT_NAMESPACED_AUTHORITY_API_ID,
+                "api_version": (
+                    TENANT_NAMESPACED_AUTHORITY_API_VERSION
+                ),
+                "authorization": authorization,
+                **resolve_or_raise(
+                    tenant_id=x_tenant_id,
+                    artifact_type="context_binding",
+                    public_id=public_id,
+                ),
+            }
+        )
 
     return router
+
+
+
 
 
 

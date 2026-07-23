@@ -20,6 +20,13 @@ TENANT_PUBLIC_ARTIFACT_VIEW_SCHEMA_VERSION = "1.0.0"
 _FORBIDDEN_EXACT_KEYS = frozenset(
     {
         "canonical_artifact_id",
+        "actor_id",
+        "credential_id",
+        "session_id",
+        "request_id",
+        "correlation_id",
+        "trust_signals",
+        "authorization_receipt",
         "artifact_id",
         "binding_hash",
         "receipt_hash",
@@ -263,3 +270,4 @@ class TenantPublicArtifactViewBuilder:
             or normalized.startswith("canonical_")
             or normalized.endswith("_hash")
         )
+

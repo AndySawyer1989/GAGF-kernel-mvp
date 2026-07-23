@@ -289,3 +289,37 @@ def test_public_artifact_view_is_immutable(tmp_path):
 
     with pytest.raises(FrozenInstanceError):
         view.tenant_id = "tenant-beta"
+
+
+def test_context_binding_public_view_removes_identity_context(
+    tmp_path,
+):
+    resolver, result = build_system(tmp_path)
+
+    resolution = resolver.resolve_context_binding(
+        tenant_id="tenant-alpha",
+        namespaced_artifact_id=(
+            result.namespace_bundle.context_binding
+            .namespaced_artifact_id
+        ),
+    )
+
+    serialized = TenantPublicArtifactViewBuilder().build(
+        resolution=resolution
+    ).to_dict()
+
+    nested_keys = collect_keys(serialized)
+
+    forbidden_identity_keys = {
+        "actor_id",
+        "credential_id",
+        "session_id",
+        "request_id",
+        "correlation_id",
+        "trust_signals",
+        "authorization_receipt",
+    }
+
+    assert forbidden_identity_keys.isdisjoint(
+        nested_keys
+    )
