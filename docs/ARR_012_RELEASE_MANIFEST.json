@@ -1,0 +1,58 @@
+﻿{
+    "epic_id":  "ARR-012",
+    "title":  "Multi-Tenant Cognitive Isolation",
+    "status":  "complete",
+    "release_readiness":  "verified",
+    "story_range":  {
+                        "first":  "ARR-012-001",
+                        "last":  "ARR-012-025",
+                        "total":  25
+                    },
+    "authoritative_test_count_before_closure":  3086,
+    "security_posture":  "fail-closed",
+    "isolation_unit":  "tenant",
+    "authority_model":  "deterministic-gagf-kernel",
+    "completed_capabilities":  [
+                                   "tenant-bound-scientific-authority",
+                                   "tenant-scoped-artifact-access",
+                                   "tenant-scoped-scientific-artifact-api",
+                                   "tenant-scoped-ledger-query-hardening",
+                                   "cross-tenant-artifact-collision-guard",
+                                   "tenant-namespace-derivation",
+                                   "namespaced-evaluation-integration",
+                                   "namespaced-artifact-resolution",
+                                   "namespaced-scientific-authority-api",
+                                   "canonical-identifier-redaction",
+                                   "public-artifact-resolution-redaction",
+                                   "public-authorization-evidence-projection",
+                                   "tenant-public-boundary-leak-auditor",
+                                   "runtime-public-boundary-enforcement",
+                                   "boundary-audit-evidence-ledger",
+                                   "runtime-boundary-audit-ledger-integration",
+                                   "tenant-scoped-boundary-audit-query",
+                                   "tenant-boundary-audit-query-api",
+                                   "recorded-boundary-audit-query-access",
+                                   "bounded-tenant-audit-pagination",
+                                   "paginated-boundary-audit-query-api",
+                                   "central-application-router-registration",
+                                   "multi-tenant-end-to-end-isolation-proof",
+                                   "isolation-invariant-and-threat-model",
+                                   "sprint-closure-and-release-milestone"
+                               ],
+    "required_release_evidence":  [
+                                      "full-regression-suite-green",
+                                      "changes-pushed-to-git",
+                                      "end-to-end-two-tenant-isolation-green",
+                                      "runtime-boundary-enforcement-green",
+                                      "append-only-audit-ledger-green",
+                                      "tenant-scoped-query-isolation-green",
+                                      "snapshot-pagination-green",
+                                      "threat-model-documented"
+                                  ],
+    "authoritative_documents":  [
+                                    "docs/ARR_012_MULTI_TENANT_COGNITIVE_ISOLATION.md",
+                                    "docs/ARR_012_SPRINT_CLOSURE.md",
+                                    "docs/ARR_012_RELEASE_MANIFEST.json"
+                                ],
+    "closure_rule":  "ARR-012 closes only after the full suite passes and the closure artifacts are pushed to Git."
+}
