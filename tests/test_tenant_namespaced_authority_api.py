@@ -124,7 +124,7 @@ def test_api_has_stable_identity():
         "tenant-namespaced-scientific-authority-api"
     )
     assert TENANT_NAMESPACED_AUTHORITY_API_VERSION == (
-        "0.2.0"
+        "0.3.0"
     )
 
 
@@ -445,3 +445,105 @@ def test_evaluation_response_exposes_no_canonical_fields(
     assert forbidden_keys.isdisjoint(visible_keys)
 
 
+
+
+
+def _collect_artifact_response_keys(value):
+    keys = set()
+
+    if isinstance(value, dict):
+        keys.update(value.keys())
+
+        for item in value.values():
+            keys.update(
+                _collect_artifact_response_keys(item)
+            )
+
+    elif isinstance(value, list):
+        for item in value:
+            keys.update(
+                _collect_artifact_response_keys(item)
+            )
+
+    return keys
+
+
+def test_artifact_resolution_uses_public_view(tmp_path):
+    client = build_client(tmp_path)
+    created = create_execution(client)
+
+    public_id = created["public_artifacts"][
+        "checkpoint_id"
+    ]
+
+    response = client.get(
+        "/tenant-namespaced-scientific-authority/"
+        f"checkpoints/{public_id}",
+        headers=read_headers(
+            scope="scientific-authority:read-checkpoint"
+        ),
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["view_id"] == (
+        "tenant-public-scientific-artifact-view"
+    )
+    assert body["public_artifact_id"] == public_id
+    assert body["artifact_type"] == "checkpoint"
+    assert len(body["view_hash"]) == 64
+
+
+def test_artifact_resolution_exposes_no_canonical_fields(
+    tmp_path,
+):
+    client = build_client(tmp_path)
+    created = create_execution(client)
+
+    public_id = created["public_artifacts"][
+        "execution_id"
+    ]
+
+    response = client.get(
+        "/tenant-namespaced-scientific-authority/"
+        f"executions/{public_id}",
+        headers=read_headers(),
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    public_view = {
+        key: value
+        for key, value in body.items()
+        if key not in {
+            "api_id",
+            "api_version",
+            "authorization",
+        }
+    }
+
+    keys = _collect_artifact_response_keys(
+        public_view
+    )
+
+    forbidden = {
+        "canonical_artifact_id",
+        "artifact_id",
+        "binding_hash",
+        "receipt_hash",
+        "execution_receipt_hash",
+        "authority_receipt_hash",
+        "audit_receipt_hash",
+        "checkpoint_hash",
+        "context_hash",
+    }
+
+    assert forbidden.isdisjoint(keys)
+
+    assert (
+        body["authorization"]["receipt"]["receipt_hash"]
+    )

@@ -38,12 +38,15 @@ from backend.app.gagf.tenant_namespaced_execution import (
 from backend.app.gagf.tenant_public_execution_view import (
     TenantPublicExecutionViewBuilder,
 )
+from backend.app.gagf.tenant_public_artifact_view import (
+    TenantPublicArtifactViewBuilder,
+)
 
 
 TENANT_NAMESPACED_AUTHORITY_API_ID = (
     "tenant-namespaced-scientific-authority-api"
 )
-TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.2.0"
+TENANT_NAMESPACED_AUTHORITY_API_VERSION = "0.3.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +164,9 @@ def create_tenant_namespaced_authority_router(
     )
     public_view_builder = (
         TenantPublicExecutionViewBuilder()
+    )
+    public_artifact_view_builder = (
+        TenantPublicArtifactViewBuilder()
     )
 
     def build_context(
@@ -281,7 +287,11 @@ def create_tenant_namespaced_authority_router(
                 detail=str(exc),
             ) from exc
 
-        return resolution.to_dict()
+        public_view = public_artifact_view_builder.build(
+            resolution=resolution
+        )
+
+        return public_view.to_dict()
 
     @router.post(
         "/evaluate",
@@ -637,4 +647,5 @@ def create_tenant_namespaced_authority_router(
         }
 
     return router
+
 
