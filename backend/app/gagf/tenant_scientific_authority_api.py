@@ -1,0 +1,340 @@
+﻿from dataclasses import dataclass
+from pathlib import Path
+
+from fastapi import APIRouter, Header, HTTPException, status
+from pydantic import BaseModel
+
+from backend.app.gagf.scientific_authority_guard import (
+    AuthorityEscalationEvidence,
+)
+from backend.app.gagf.scientific_authorization import (
+    ScientificAuthorityAction,
+    ScientificAuthorityAuthorizationPolicy,
+    ScientificAuthorizationRequest,
+    ScientificTrustSignals,
+)
+from backend.app.gagf.scientific_calculation_contract import (
+    CalculationAuthority,
+    get_calculation_contract,
+)
+from backend.app.gagf.scientific_execution_context import (
+    ScientificContextBindingConflictError,
+    ScientificContextBindingLedger,
+    ScientificExecutionContext,
+    ScientificExecutionContextBindingBuilder,
+    ScientificExecutionContextError,
+)
+from backend.app.gagf.scientific_pipeline_execution_journal import (
+    ScientificPipelineRecoveryCoordinator,
+)
+
+
+TENANT_SCIENTIFIC_AUTHORITY_API_ID = (
+    "tenant-scientific-authority-api"
+)
+TENANT_SCIENTIFIC_AUTHORITY_API_VERSION = "0.1.0"
+
+
+@dataclass(frozen=True, slots=True)
+class TenantScientificAuthorityApiPaths:
+    authority_database_path: Path
+    audit_database_path: Path
+    checkpoint_database_path: Path
+    journal_database_path: Path
+    context_binding_database_path: Path
+
+
+class TenantAuthorityEvidenceRequest(BaseModel):
+    deterministic_replay_verified: bool
+    canonical_input_binding_verified: bool
+    calculation_version_frozen: bool
+    regression_suite_passed: bool
+    validation_report_present: bool
+    constitutional_approval_present: bool
+
+    def to_domain(self) -> AuthorityEscalationEvidence:
+        return AuthorityEscalationEvidence(
+            deterministic_replay_verified=(
+                self.deterministic_replay_verified
+            ),
+            canonical_input_binding_verified=(
+                self.canonical_input_binding_verified
+            ),
+            calculation_version_frozen=(
+                self.calculation_version_frozen
+            ),
+            regression_suite_passed=(
+                self.regression_suite_passed
+            ),
+            validation_report_present=(
+                self.validation_report_present
+            ),
+            constitutional_approval_present=(
+                self.constitutional_approval_present
+            ),
+        )
+
+
+class TenantTrustSignalsRequest(BaseModel):
+    credential_verified: bool
+    session_verified: bool
+    device_trusted: bool
+    step_up_verified: bool = False
+    tenant_membership_verified: bool
+
+    def to_domain(self) -> ScientificTrustSignals:
+        return ScientificTrustSignals(
+            credential_verified=self.credential_verified,
+            session_verified=self.session_verified,
+            device_trusted=self.device_trusted,
+            step_up_verified=self.step_up_verified,
+            tenant_membership_verified=(
+                self.tenant_membership_verified
+            ),
+        )
+
+
+class TenantScientificAuthorityEvaluationRequest(BaseModel):
+    calculation_id: str
+    requested_authority: CalculationAuthority
+    constitutional_approval_submitted: bool = False
+    evidence: TenantAuthorityEvidenceRequest
+    trust_signals: TenantTrustSignalsRequest
+
+
+def create_tenant_scientific_authority_router(
+    *,
+    paths: TenantScientificAuthorityApiPaths,
+) -> APIRouter:
+    router = APIRouter(
+        prefix="/tenant-scientific-authority",
+        tags=["tenant-scientific-authority"],
+    )
+
+    coordinator = ScientificPipelineRecoveryCoordinator(
+        authority_database_path=paths.authority_database_path,
+        audit_database_path=paths.audit_database_path,
+        checkpoint_database_path=paths.checkpoint_database_path,
+        journal_database_path=paths.journal_database_path,
+    )
+    binding_ledger = ScientificContextBindingLedger(
+        paths.context_binding_database_path
+    )
+    authorization_policy = (
+        ScientificAuthorityAuthorizationPolicy()
+    )
+
+    @router.post(
+        "/evaluate",
+        status_code=status.HTTP_200_OK,
+    )
+    def evaluate(
+        request: TenantScientificAuthorityEvaluationRequest,
+        x_tenant_id: str = Header(...),
+        x_actor_id: str = Header(...),
+        x_credential_id: str = Header(...),
+        x_session_id: str = Header(...),
+        x_role_id: str = Header(...),
+        x_policy_scope: str = Header(...),
+        x_request_id: str = Header(...),
+        x_correlation_id: str = Header(...),
+        x_target_tenant_id: str = Header(...),
+    ) -> dict:
+        try:
+            execution_context = ScientificExecutionContext(
+                tenant_id=x_tenant_id,
+                actor_id=x_actor_id,
+                credential_id=x_credential_id,
+                session_id=x_session_id,
+                role_id=x_role_id,
+                policy_scope=x_policy_scope,
+                request_id=x_request_id,
+                correlation_id=x_correlation_id,
+            )
+        except ScientificExecutionContextError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        authorization_request = ScientificAuthorizationRequest(
+            context=execution_context,
+            action=ScientificAuthorityAction.EVALUATE,
+            target_tenant_id=x_target_tenant_id,
+            requested_authority=request.requested_authority,
+            constitutional_approval_submitted=(
+                request.constitutional_approval_submitted
+            ),
+            trust_signals=request.trust_signals.to_domain(),
+        )
+
+        authorization_decision, authorization_receipt = (
+            authorization_policy.evaluate_with_receipt(
+                authorization_request
+            )
+        )
+
+        if not authorization_decision.allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "message": (
+                        "Scientific authority request was denied."
+                    ),
+                    "decision": authorization_decision.to_dict(),
+                    "authorization_receipt": (
+                        authorization_receipt.to_dict()
+                    ),
+                },
+            )
+
+        try:
+            contract = get_calculation_contract(
+                request.calculation_id
+            )
+        except KeyError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Scientific calculation contract was not found."
+                ),
+            ) from exc
+
+        try:
+            pipeline_result = coordinator.execute(
+                contract=contract,
+                requested_authority=request.requested_authority,
+                evidence=request.evidence.to_domain(),
+            )
+
+            binding = (
+                ScientificExecutionContextBindingBuilder()
+                .build(
+                    context=execution_context,
+                    result=pipeline_result,
+                )
+            )
+
+            binding_record = binding_ledger.append(
+                binding
+            )
+        except ScientificContextBindingConflictError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_500_INTERNAL_SERVER_ERROR
+                ),
+                detail=(
+                    "Tenant-bound scientific authority "
+                    "execution failed: "
+                    + str(exc)
+                ),
+            ) from exc
+
+        return {
+            "api_id": TENANT_SCIENTIFIC_AUTHORITY_API_ID,
+            "api_version": (
+                TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
+            ),
+            "authorization": {
+                "decision": authorization_decision.to_dict(),
+                "receipt": authorization_receipt.to_dict(),
+            },
+            "execution": pipeline_result.to_dict(),
+            "context_binding": binding_record.to_dict(),
+        }
+
+    @router.get(
+        "/tenants/{tenant_id}/bindings"
+    )
+    def list_tenant_bindings(
+        tenant_id: str,
+        x_tenant_id: str = Header(...),
+        x_actor_id: str = Header(...),
+        x_credential_id: str = Header(...),
+        x_session_id: str = Header(...),
+        x_role_id: str = Header(...),
+        x_policy_scope: str = Header(...),
+        x_request_id: str = Header(...),
+        x_correlation_id: str = Header(...),
+        x_credential_verified: bool = Header(...),
+        x_session_verified: bool = Header(...),
+        x_device_trusted: bool = Header(...),
+        x_tenant_membership_verified: bool = Header(...),
+    ) -> dict:
+        try:
+            execution_context = ScientificExecutionContext(
+                tenant_id=x_tenant_id,
+                actor_id=x_actor_id,
+                credential_id=x_credential_id,
+                session_id=x_session_id,
+                role_id=x_role_id,
+                policy_scope=x_policy_scope,
+                request_id=x_request_id,
+                correlation_id=x_correlation_id,
+            )
+        except ScientificExecutionContextError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        authorization_request = ScientificAuthorizationRequest(
+            context=execution_context,
+            action=ScientificAuthorityAction.READ_EXECUTION,
+            target_tenant_id=tenant_id,
+            requested_authority=None,
+            constitutional_approval_submitted=False,
+            trust_signals=ScientificTrustSignals(
+                credential_verified=x_credential_verified,
+                session_verified=x_session_verified,
+                device_trusted=x_device_trusted,
+                step_up_verified=False,
+                tenant_membership_verified=(
+                    x_tenant_membership_verified
+                ),
+            ),
+        )
+
+        decision, receipt = (
+            authorization_policy.evaluate_with_receipt(
+                authorization_request
+            )
+        )
+
+        if not decision.allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "message": (
+                        "Tenant binding access was denied."
+                    ),
+                    "decision": decision.to_dict(),
+                    "authorization_receipt": (
+                        receipt.to_dict()
+                    ),
+                },
+            )
+
+        records = binding_ledger.list_for_tenant(
+            tenant_id
+        )
+
+        return {
+            "api_id": TENANT_SCIENTIFIC_AUTHORITY_API_ID,
+            "api_version": (
+                TENANT_SCIENTIFIC_AUTHORITY_API_VERSION
+            ),
+            "tenant_id": tenant_id,
+            "count": len(records),
+            "bindings": [
+                record.to_dict()
+                for record in records
+            ],
+        }
+
+    return router
