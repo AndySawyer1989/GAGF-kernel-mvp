@@ -627,3 +627,78 @@ def test_denied_authorization_uses_public_view(tmp_path):
         is False
     )
     assert "authorization_receipt" not in detail
+
+
+def test_complete_evaluation_response_passes_boundary_audit(
+    tmp_path,
+):
+    from backend.app.gagf.tenant_public_boundary_auditor import (
+        TenantPublicBoundaryAuditor,
+    )
+
+    client = build_client(tmp_path)
+    body = create_execution(client)
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=body
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0
+
+
+def test_complete_artifact_response_passes_boundary_audit(
+    tmp_path,
+):
+    from backend.app.gagf.tenant_public_boundary_auditor import (
+        TenantPublicBoundaryAuditor,
+    )
+
+    client = build_client(tmp_path)
+    created = create_execution(client)
+
+    public_id = created["public_artifacts"][
+        "execution_id"
+    ]
+
+    response = client.get(
+        "/tenant-namespaced-scientific-authority/"
+        f"executions/{public_id}",
+        headers=read_headers(),
+    )
+
+    assert response.status_code == 200
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=response.json()
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0
+
+
+def test_denied_response_passes_boundary_audit(
+    tmp_path,
+):
+    from backend.app.gagf.tenant_public_boundary_auditor import (
+        TenantPublicBoundaryAuditor,
+    )
+
+    client = build_client(tmp_path)
+    headers = evaluation_headers()
+    headers["x-role-id"] = "scientific-observer"
+
+    response = client.post(
+        "/tenant-namespaced-scientific-authority/evaluate",
+        headers=headers,
+        json=evaluation_payload(),
+    )
+
+    assert response.status_code == 403
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=response.json()["detail"]
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0
