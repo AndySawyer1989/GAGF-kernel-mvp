@@ -2217,3 +2217,21 @@ def record_assessment_factory_lite_payment_confirmation_event(payload: dict | No
         payment_confirmation_context=payload.get("payment_confirmation_context"),
         payment_confirmation_event_context=payload.get("payment_confirmation_event_context"),
     )
+
+# GRA-002-005: Governance Assessment API
+from pathlib import Path as _AssessmentPath
+
+from backend.app.gagf.governance_assessment_api_registration import (
+    register_governance_assessment_api as _register_governance_assessment_api,
+)
+
+_ASSESSMENT_DATABASE_PATH = (
+    _AssessmentPath(__file__).resolve().parent
+    / "data"
+    / "governance_assessments.sqlite3"
+)
+
+_register_governance_assessment_api(
+    app=app,
+    database_path=_ASSESSMENT_DATABASE_PATH,
+)
