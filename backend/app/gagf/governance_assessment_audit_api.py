@@ -11,6 +11,12 @@ from backend.app.gagf.governance_assessment_audit_checkpoint import (
     AssessmentAuditCheckpointStore,
     create_assessment_audit_checkpoint,
 )
+from backend.app.gagf.governance_assessment_audit_checkpoint_signature import (
+    sign_assessment_audit_checkpoint,
+)
+from backend.app.gagf.governance_assessment_audit_checkpoint_signature_store import (
+    SignedAssessmentAuditCheckpointStore,
+)
 from backend.app.gagf.governance_assessment_auth import (
     ASSESSMENT_ADMIN_ROLE,
     AssessmentActorContext,
@@ -18,7 +24,7 @@ from backend.app.gagf.governance_assessment_auth import (
 )
 
 
-ASSESSMENT_AUDIT_API_VERSION = "1.2.0"
+ASSESSMENT_AUDIT_API_VERSION = "1.3.0"
 
 
 def require_assessment_audit_admin(
@@ -69,6 +75,11 @@ def create_governance_assessment_audit_router(
     *,
     ledger: AssessmentAuditLedger,
     checkpoint_store: AssessmentAuditCheckpointStore | None = None,
+    signed_checkpoint_store: (
+        SignedAssessmentAuditCheckpointStore | None
+    ) = None,
+    checkpoint_signing_key_id: str | None = None,
+    checkpoint_signing_secret: bytes | None = None,
 ) -> APIRouter:
     router = APIRouter(
         prefix="/api/v1/governance-assessments",
@@ -158,7 +169,28 @@ def create_governance_assessment_audit_router(
         )
         checkpoint_store.append(checkpoint)
 
-        return checkpoint.to_dict()
+        signing_configured = (
+            signed_checkpoint_store is not None
+            and checkpoint_signing_key_id is not None
+            and checkpoint_signing_secret is not None
+        )
+
+        if not signing_configured:
+            return {
+                "checkpoint": checkpoint.to_dict(),
+                "signed": False,
+            }
+
+        signed_checkpoint = sign_assessment_audit_checkpoint(
+            checkpoint=checkpoint,
+            key_id=checkpoint_signing_key_id,
+            secret=checkpoint_signing_secret,
+        )
+        signed_checkpoint_store.append(signed_checkpoint)
+
+        response = signed_checkpoint.to_dict()
+        response["signed"] = True
+        return response
 
     @router.get("/audit-checkpoints")
     def list_audit_checkpoints(
@@ -197,6 +229,50 @@ def create_governance_assessment_audit_router(
                 for checkpoint in checkpoints
             ],
             "count": len(checkpoints),
+            "limit": limit,
+        }
+
+    @router.get("/audit-checkpoints/signed")
+    def list_signed_audit_checkpoints(
+        tenant_id: str,
+        limit: int = Query(default=100, ge=1, le=500),
+        context: AssessmentActorContext = Depends(
+            require_assessment_audit_admin
+        ),
+    ) -> dict[str, Any]:
+        enforce_audit_tenant_match(
+            requested_tenant_id=tenant_id,
+            context=context,
+        )
+
+        if signed_checkpoint_store is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": (
+                        "ASSESSMENT_SIGNED_CHECKPOINT_STORE_UNAVAILABLE"
+                    ),
+                    "message": (
+                        "signed assessment checkpoint storage "
+                        "is unavailable"
+                    ),
+                },
+            )
+
+        signed_checkpoints = (
+            signed_checkpoint_store.list_signed_checkpoints(
+                tenant_id=context.tenant_id,
+                limit=limit,
+            )
+        )
+
+        return {
+            "tenant_id": context.tenant_id,
+            "items": [
+                item.to_dict()
+                for item in signed_checkpoints
+            ],
+            "count": len(signed_checkpoints),
             "limit": limit,
         }
 

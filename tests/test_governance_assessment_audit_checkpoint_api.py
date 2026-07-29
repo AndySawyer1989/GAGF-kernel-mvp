@@ -69,13 +69,18 @@ def test_admin_can_create_checkpoint(tmp_path):
 
     assert response.status_code == 201
     payload = response.json()
-    assert payload["tenant_id"] == "tenant-alpha"
-    assert payload["valid"] is True
-    assert payload["checked_count"] == 1
-    assert len(payload["chain_head_hash"]) == 64
-    assert len(store.list_checkpoints(
-        tenant_id="tenant-alpha"
-    )) == 1
+    assert payload["signed"] is False
+
+    checkpoint = payload["checkpoint"]
+    assert checkpoint["tenant_id"] == "tenant-alpha"
+    assert checkpoint["valid"] is True
+    assert checkpoint["checked_count"] == 1
+    assert len(checkpoint["chain_head_hash"]) == 64
+    assert len(
+        store.list_checkpoints(
+            tenant_id="tenant-alpha"
+        )
+    ) == 1
 
 
 def test_admin_can_list_checkpoints(tmp_path):
