@@ -180,6 +180,11 @@ def test_registered_list_endpoint_is_reachable(tmp_path):
     response = client.get(
         "/api/v1/governance-assessments",
         params={"tenant_id": "tenant-alpha"},
+        headers={
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "actor-001",
+            "X-Actor-Roles": "assessment:read",
+        },
     )
 
     assert response.status_code == 200
@@ -200,7 +205,12 @@ def test_registered_unknown_assessment_returns_404(tmp_path):
     response = client.get(
         "/api/v1/governance-assessments/"
         "tenant-alpha/client-acme/"
-        "engagement-001/missing"
+        "engagement-001/missing",
+        headers={
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "actor-001",
+            "X-Actor-Roles": "assessment:read",
+        },
     )
 
     assert response.status_code == 404

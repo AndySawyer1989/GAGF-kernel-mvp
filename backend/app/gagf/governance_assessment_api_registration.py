@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 
 from backend.app.gagf.governance_assessment_api import (
     create_governance_assessment_router,
@@ -14,6 +14,10 @@ from backend.app.gagf.governance_assessment_repository import (
     GovernanceAssessmentRepository,
 )
 
+
+from backend.app.gagf.governance_assessment_auth import (
+    require_assessment_actor,
+)
 
 ASSESSMENT_API_REGISTRATION_VERSION = "1.0.0"
 ASSESSMENT_API_REGISTERED_STATE_KEY = (
@@ -78,7 +82,8 @@ def register_governance_assessment_api(
         repository=resolved_repository
     )
     router = create_governance_assessment_router(
-        service=service
+        service=service,
+        dependencies=[Depends(require_assessment_actor)],
     )
 
     app.router.routes.extend(router.routes)

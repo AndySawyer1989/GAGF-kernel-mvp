@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from backend.app.gagf.governance_assessment_application import (
@@ -158,10 +158,12 @@ def error_detail(
 def create_governance_assessment_router(
     *,
     service: GovernanceAssessmentApplicationService,
+    dependencies: list[Depends] | None = None,
 ) -> APIRouter:
     router = APIRouter(
         prefix="/api/v1/governance-assessments",
         tags=["governance-assessments"],
+        dependencies=dependencies or [],
     )
 
     @router.post(
