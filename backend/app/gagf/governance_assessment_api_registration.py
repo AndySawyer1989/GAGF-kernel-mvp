@@ -4,6 +4,10 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI
 
+from backend.app.gagf.governance_assessment_audit_api import (
+    create_governance_assessment_audit_router,
+)
+
 from backend.app.gagf.governance_assessment_audit import (
     AssessmentAuditLedger,
 )
@@ -121,6 +125,11 @@ def register_governance_assessment_api(
         app=app,
         ledger=audit_ledger,
     )
+
+    audit_router = create_governance_assessment_audit_router(
+        ledger=audit_ledger,
+    )
+    app.router.routes.extend(audit_router.routes)
 
     app.state.governance_assessment_repository = (
         resolved_repository
