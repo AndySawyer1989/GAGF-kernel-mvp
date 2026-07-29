@@ -4,6 +4,13 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI
 
+from backend.app.gagf.governance_assessment_audit import (
+    AssessmentAuditLedger,
+)
+from backend.app.gagf.governance_assessment_audit_middleware import (
+    install_assessment_audit_middleware,
+)
+
 from backend.app.gagf.governance_assessment_api import (
     create_governance_assessment_router,
 )
@@ -87,6 +94,33 @@ def register_governance_assessment_api(
     )
 
     app.router.routes.extend(router.routes)
+
+    assessment_database_path = database_path
+
+    if assessment_database_path is None:
+        assessment_database_path = getattr(
+            repository,
+            "database_path",
+            None,
+        )
+
+    if assessment_database_path is None:
+        raise AssessmentApiRegistrationError(
+            "assessment database path could not be resolved"
+        )
+
+    audit_database_path = Path(
+        assessment_database_path
+    ).with_name(
+        "governance_assessment_audit.sqlite3"
+    )
+    audit_ledger = AssessmentAuditLedger(
+        audit_database_path
+    )
+    install_assessment_audit_middleware(
+        app=app,
+        ledger=audit_ledger,
+    )
 
     app.state.governance_assessment_repository = (
         resolved_repository
