@@ -7,6 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from backend.app.gagf.governance_assessment_audit import (
     AssessmentAuditLedger,
 )
+from backend.app.gagf.governance_assessment_audit_checkpoint import (
+    AssessmentAuditCheckpointStore,
+    create_assessment_audit_checkpoint,
+)
 from backend.app.gagf.governance_assessment_auth import (
     ASSESSMENT_ADMIN_ROLE,
     AssessmentActorContext,
@@ -14,7 +18,7 @@ from backend.app.gagf.governance_assessment_auth import (
 )
 
 
-ASSESSMENT_AUDIT_API_VERSION = "1.1.0"
+ASSESSMENT_AUDIT_API_VERSION = "1.2.0"
 
 
 def require_assessment_audit_admin(
@@ -64,6 +68,7 @@ def enforce_audit_tenant_match(
 def create_governance_assessment_audit_router(
     *,
     ledger: AssessmentAuditLedger,
+    checkpoint_store: AssessmentAuditCheckpointStore | None = None,
 ) -> APIRouter:
     router = APIRouter(
         prefix="/api/v1/governance-assessments",
@@ -116,10 +121,83 @@ def create_governance_assessment_audit_router(
             "valid": verification.valid,
             "checked_count": verification.checked_count,
             "failure_index": verification.failure_index,
-            "failure_event_id": (
-                verification.failure_event_id
-            ),
+            "failure_event_id": verification.failure_event_id,
             "reason_code": verification.reason_code,
+        }
+
+    @router.post(
+        "/audit-checkpoints",
+        status_code=status.HTTP_201_CREATED,
+    )
+    def create_audit_checkpoint(
+        tenant_id: str,
+        context: AssessmentActorContext = Depends(
+            require_assessment_audit_admin
+        ),
+    ) -> dict[str, Any]:
+        enforce_audit_tenant_match(
+            requested_tenant_id=tenant_id,
+            context=context,
+        )
+
+        if checkpoint_store is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "ASSESSMENT_CHECKPOINT_STORE_UNAVAILABLE",
+                    "message": (
+                        "assessment audit checkpoint storage "
+                        "is unavailable"
+                    ),
+                },
+            )
+
+        checkpoint = create_assessment_audit_checkpoint(
+            tenant_id=context.tenant_id,
+            ledger=ledger,
+        )
+        checkpoint_store.append(checkpoint)
+
+        return checkpoint.to_dict()
+
+    @router.get("/audit-checkpoints")
+    def list_audit_checkpoints(
+        tenant_id: str,
+        limit: int = Query(default=100, ge=1, le=500),
+        context: AssessmentActorContext = Depends(
+            require_assessment_audit_admin
+        ),
+    ) -> dict[str, Any]:
+        enforce_audit_tenant_match(
+            requested_tenant_id=tenant_id,
+            context=context,
+        )
+
+        if checkpoint_store is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "ASSESSMENT_CHECKPOINT_STORE_UNAVAILABLE",
+                    "message": (
+                        "assessment audit checkpoint storage "
+                        "is unavailable"
+                    ),
+                },
+            )
+
+        checkpoints = checkpoint_store.list_checkpoints(
+            tenant_id=context.tenant_id,
+            limit=limit,
+        )
+
+        return {
+            "tenant_id": context.tenant_id,
+            "items": [
+                checkpoint.to_dict()
+                for checkpoint in checkpoints
+            ],
+            "count": len(checkpoints),
+            "limit": limit,
         }
 
     return router
