@@ -11,9 +11,6 @@ from backend.app.gagf.governance_assessment_audit_checkpoint import (
     AssessmentAuditCheckpointStore,
     create_assessment_audit_checkpoint,
 )
-from backend.app.gagf.governance_assessment_audit_checkpoint_signature import (
-    sign_assessment_audit_checkpoint,
-)
 from backend.app.gagf.governance_assessment_audit_checkpoint_signature_store import (
     SignedAssessmentAuditCheckpointStore,
 )
@@ -22,9 +19,15 @@ from backend.app.gagf.governance_assessment_auth import (
     AssessmentActorContext,
     require_assessment_actor,
 )
+from backend.app.gagf.governance_assessment_checkpoint_key_registry import (
+    AssessmentCheckpointSigningKeyRegistry,
+)
+from backend.app.gagf.governance_assessment_checkpoint_key_service import (
+    AssessmentCheckpointKeyService,
+)
 
 
-ASSESSMENT_AUDIT_API_VERSION = "1.3.0"
+ASSESSMENT_AUDIT_API_VERSION = "1.4.0"
 
 
 def require_assessment_audit_admin(
@@ -78,12 +81,21 @@ def create_governance_assessment_audit_router(
     signed_checkpoint_store: (
         SignedAssessmentAuditCheckpointStore | None
     ) = None,
-    checkpoint_signing_key_id: str | None = None,
-    checkpoint_signing_secret: bytes | None = None,
+    checkpoint_key_registry: (
+        AssessmentCheckpointSigningKeyRegistry | None
+    ) = None,
 ) -> APIRouter:
     router = APIRouter(
         prefix="/api/v1/governance-assessments",
         tags=["governance-assessment-audit"],
+    )
+
+    key_service = (
+        AssessmentCheckpointKeyService(
+            registry=checkpoint_key_registry
+        )
+        if checkpoint_key_registry is not None
+        else None
     )
 
     @router.get("/audit-events")
@@ -169,25 +181,30 @@ def create_governance_assessment_audit_router(
         )
         checkpoint_store.append(checkpoint)
 
-        signing_configured = (
-            signed_checkpoint_store is not None
-            and checkpoint_signing_key_id is not None
-            and checkpoint_signing_secret is not None
-        )
-
-        if not signing_configured:
+        if key_service is None or signed_checkpoint_store is None:
             return {
                 "checkpoint": checkpoint.to_dict(),
                 "signed": False,
             }
 
-        signed_checkpoint = sign_assessment_audit_checkpoint(
-            checkpoint=checkpoint,
-            key_id=checkpoint_signing_key_id,
-            secret=checkpoint_signing_secret,
-        )
-        signed_checkpoint_store.append(signed_checkpoint)
+        try:
+            signed_checkpoint = key_service.sign_checkpoint(
+                checkpoint=checkpoint
+            )
+        except KeyError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "ASSESSMENT_ACTIVE_SIGNING_KEY_UNAVAILABLE",
+                    "message": (
+                        "no active assessment checkpoint signing "
+                        "key is configured for the tenant"
+                    ),
+                    "tenant_id": context.tenant_id,
+                },
+            )
 
+        signed_checkpoint_store.append(signed_checkpoint)
         response = signed_checkpoint.to_dict()
         response["signed"] = True
         return response
@@ -273,6 +290,70 @@ def create_governance_assessment_audit_router(
                 for item in signed_checkpoints
             ],
             "count": len(signed_checkpoints),
+            "limit": limit,
+        }
+
+    @router.get("/audit-checkpoints/signed/verification")
+    def verify_signed_audit_checkpoints(
+        tenant_id: str,
+        limit: int = Query(default=100, ge=1, le=500),
+        context: AssessmentActorContext = Depends(
+            require_assessment_audit_admin
+        ),
+    ) -> dict[str, Any]:
+        enforce_audit_tenant_match(
+            requested_tenant_id=tenant_id,
+            context=context,
+        )
+
+        if signed_checkpoint_store is None or key_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "ASSESSMENT_CHECKPOINT_VERIFIER_UNAVAILABLE",
+                    "message": (
+                        "assessment checkpoint signature verification "
+                        "is unavailable"
+                    ),
+                },
+            )
+
+        signed_checkpoints = (
+            signed_checkpoint_store.list_signed_checkpoints(
+                tenant_id=context.tenant_id,
+                limit=limit,
+            )
+        )
+
+        results = [
+            key_service.verify_signed_checkpoint(
+                signed_checkpoint=item
+            )
+            for item in signed_checkpoints
+        ]
+
+        return {
+            "tenant_id": context.tenant_id,
+            "items": [
+                {
+                    "checkpoint_id": item.checkpoint.checkpoint_id,
+                    "key_id": result.key_id,
+                    "valid": result.valid,
+                    "reason_code": result.reason_code,
+                }
+                for item, result in zip(
+                    signed_checkpoints,
+                    results,
+                    strict=True,
+                )
+            ],
+            "count": len(results),
+            "valid_count": sum(
+                1 for result in results if result.valid
+            ),
+            "invalid_count": sum(
+                1 for result in results if not result.valid
+            ),
             "limit": limit,
         }
 
