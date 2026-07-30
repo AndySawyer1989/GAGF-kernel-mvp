@@ -19,6 +19,9 @@ from backend.app.gagf.governance_assessment_auth import (
     AssessmentActorContext,
     require_assessment_actor,
 )
+from backend.app.gagf.governance_assessment_checkpoint_durable_key_service import (
+    AssessmentCheckpointDurableKeyService,
+)
 from backend.app.gagf.governance_assessment_checkpoint_key_registry import (
     AssessmentCheckpointSigningKeyRegistry,
 )
@@ -27,7 +30,7 @@ from backend.app.gagf.governance_assessment_checkpoint_key_service import (
 )
 
 
-ASSESSMENT_AUDIT_API_VERSION = "1.4.0"
+ASSESSMENT_AUDIT_API_VERSION = "1.5.0"
 
 
 def require_assessment_audit_admin(
@@ -84,6 +87,9 @@ def create_governance_assessment_audit_router(
     checkpoint_key_registry: (
         AssessmentCheckpointSigningKeyRegistry | None
     ) = None,
+    durable_checkpoint_key_service: (
+        AssessmentCheckpointDurableKeyService | None
+    ) = None,
 ) -> APIRouter:
     router = APIRouter(
         prefix="/api/v1/governance-assessments",
@@ -91,11 +97,15 @@ def create_governance_assessment_audit_router(
     )
 
     key_service = (
-        AssessmentCheckpointKeyService(
-            registry=checkpoint_key_registry
+        durable_checkpoint_key_service
+        if durable_checkpoint_key_service is not None
+        else (
+            AssessmentCheckpointKeyService(
+                registry=checkpoint_key_registry
+            )
+            if checkpoint_key_registry is not None
+            else None
         )
-        if checkpoint_key_registry is not None
-        else None
     )
 
     @router.get("/audit-events")
@@ -191,20 +201,21 @@ def create_governance_assessment_audit_router(
             signed_checkpoint = key_service.sign_checkpoint(
                 checkpoint=checkpoint
             )
-        except KeyError:
+        except KeyError as error:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail={
                     "code": "ASSESSMENT_ACTIVE_SIGNING_KEY_UNAVAILABLE",
                     "message": (
                         "no active assessment checkpoint signing "
-                        "key is configured for the tenant"
+                        "key or secret is available for the tenant"
                     ),
                     "tenant_id": context.tenant_id,
                 },
-            )
+            ) from error
 
         signed_checkpoint_store.append(signed_checkpoint)
+
         response = signed_checkpoint.to_dict()
         response["signed"] = True
         return response
