@@ -1,4 +1,4 @@
-﻿from dataclasses import replace
+from dataclasses import replace
 
 import pytest
 
@@ -9,6 +9,7 @@ from backend.app.gagf.governance_assessment_checkpoint_durable_key_service impor
     AssessmentCheckpointDurableKeyService,
 )
 from backend.app.gagf.governance_assessment_checkpoint_key_store import (
+    AssessmentCheckpointSigningKeyMetadata,
     AssessmentCheckpointSigningKeyMetadataStore,
 )
 from backend.app.gagf.governance_assessment_checkpoint_secret_resolver import (
@@ -227,3 +228,156 @@ def test_modified_checkpoint_returns_invalid_signature(tmp_path):
     assert result.reason_code == (
         "ASSESSMENT_CHECKPOINT_SIGNATURE_INVALID"
     )
+
+
+def test_activate_key_delegates_to_atomic_store_rotation(
+    tmp_path,
+    monkeypatch,
+):
+    metadata_store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    resolver = InMemoryAssessmentCheckpointSecretResolver()
+    resolver.register_secret(
+        secret_reference="secret://key-001",
+        secret=b"secret-001",
+    )
+    resolver.register_secret(
+        secret_reference="secret://key-002",
+        secret=b"secret-002",
+    )
+    service = AssessmentCheckpointDurableKeyService(
+        metadata_store=metadata_store,
+        secret_resolver=resolver,
+    )
+    service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-001",
+        secret_reference="secret://key-001",
+        make_active=True,
+    )
+    service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        secret_reference="secret://key-002",
+        make_active=False,
+    )
+
+    calls = []
+    original_rotate = metadata_store.rotate_active_key
+
+    def tracked_rotate_active_key(**kwargs):
+        calls.append(kwargs)
+        return original_rotate(**kwargs)
+
+    monkeypatch.setattr(
+        metadata_store,
+        "rotate_active_key",
+        tracked_rotate_active_key,
+    )
+
+    result = service.activate_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+    )
+
+    assert result.key_id == "key-002"
+    assert result.active is True
+    assert len(calls) == 1
+    assert calls[0]["tenant_id"] == "tenant-alpha"
+    assert calls[0]["key_id"] == "key-002"
+    assert calls[0]["retired_at"]
+
+
+def test_atomic_service_rotation_retires_previous_key(tmp_path):
+    metadata_store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    resolver = InMemoryAssessmentCheckpointSecretResolver()
+    resolver.register_secret(
+        secret_reference="secret://key-001",
+        secret=b"secret-001",
+    )
+    resolver.register_secret(
+        secret_reference="secret://key-002",
+        secret=b"secret-002",
+    )
+    service = AssessmentCheckpointDurableKeyService(
+        metadata_store=metadata_store,
+        secret_resolver=resolver,
+    )
+    service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-001",
+        secret_reference="secret://key-001",
+        make_active=True,
+    )
+    service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        secret_reference="secret://key-002",
+        make_active=False,
+    )
+
+    service.activate_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+    )
+
+    previous = metadata_store.get_key(
+        tenant_id="tenant-alpha",
+        key_id="key-001",
+    )
+    active = metadata_store.get_active_key(
+        tenant_id="tenant-alpha",
+    )
+
+    assert previous.active is False
+    assert previous.retired_at is not None
+    assert active.key_id == "key-002"
+    assert active.retired_at is None
+
+
+def test_failed_secret_resolution_preserves_active_key(tmp_path):
+    metadata_store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    resolver = InMemoryAssessmentCheckpointSecretResolver()
+    resolver.register_secret(
+        secret_reference="secret://key-001",
+        secret=b"secret-001",
+    )
+    service = AssessmentCheckpointDurableKeyService(
+        metadata_store=metadata_store,
+        secret_resolver=resolver,
+    )
+    service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-001",
+        secret_reference="secret://key-001",
+        make_active=True,
+    )
+
+    metadata_store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-002",
+            secret_reference="secret://missing-key",
+            active=False,
+            created_at="2026-07-30T23:00:00+00:00",
+        )
+    )
+
+    with pytest.raises(KeyError):
+        service.activate_key(
+            tenant_id="tenant-alpha",
+            key_id="key-002",
+        )
+
+    active = metadata_store.get_active_key(
+        tenant_id="tenant-alpha",
+    )
+
+    assert active.key_id == "key-001"
+    assert active.active is True
+    assert active.retired_at is None

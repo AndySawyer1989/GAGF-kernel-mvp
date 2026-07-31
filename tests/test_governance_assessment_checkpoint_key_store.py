@@ -1,4 +1,6 @@
-﻿import sqlite3
+﻿import pytest
+
+import sqlite3
 
 import pytest
 
@@ -152,3 +154,195 @@ def test_duplicate_secret_reference_is_rejected():
             secret_reference="secret://key-001",
             secret=b"replacement-secret",
         )
+
+
+def test_rotate_active_key_retires_previous_key(tmp_path):
+    store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-001",
+            secret_reference="secret://key-001",
+            active=True,
+            created_at="2026-07-30T01:00:00+00:00",
+        )
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-002",
+            secret_reference="secret://key-002",
+            active=False,
+            created_at="2026-07-30T02:00:00+00:00",
+        )
+    )
+
+    activated = store.rotate_active_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        retired_at="2026-07-30T03:00:00+00:00",
+    )
+
+    previous = store.get_key(
+        tenant_id="tenant-alpha",
+        key_id="key-001",
+    )
+
+    assert activated.key_id == "key-002"
+    assert activated.active is True
+    assert activated.retired_at is None
+    assert previous.active is False
+    assert previous.retired_at == (
+        "2026-07-30T03:00:00+00:00"
+    )
+
+
+def test_rotate_active_key_preserves_exactly_one_active_key(
+    tmp_path,
+):
+    store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-001",
+            secret_reference="secret://key-001",
+            active=True,
+            created_at="2026-07-30T01:00:00+00:00",
+        )
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-002",
+            secret_reference="secret://key-002",
+            active=False,
+            created_at="2026-07-30T02:00:00+00:00",
+        )
+    )
+
+    store.rotate_active_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        retired_at="2026-07-30T03:00:00+00:00",
+    )
+
+    active_keys = [
+        item
+        for item in store.list_keys(
+            tenant_id="tenant-alpha"
+        )
+        if item.active
+    ]
+
+    assert len(active_keys) == 1
+    assert active_keys[0].key_id == "key-002"
+
+
+def test_rotate_already_active_key_is_idempotent(tmp_path):
+    store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-001",
+            secret_reference="secret://key-001",
+            active=True,
+            created_at="2026-07-30T01:00:00+00:00",
+        )
+    )
+
+    result = store.rotate_active_key(
+        tenant_id="tenant-alpha",
+        key_id="key-001",
+        retired_at="2026-07-30T03:00:00+00:00",
+    )
+
+    assert result.active is True
+    assert result.retired_at is None
+
+
+def test_rotate_unknown_key_rolls_back_existing_state(tmp_path):
+    store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-001",
+            secret_reference="secret://key-001",
+            active=True,
+            created_at="2026-07-30T01:00:00+00:00",
+        )
+    )
+
+    with pytest.raises(
+        KeyError,
+        match="metadata was not found",
+    ):
+        store.rotate_active_key(
+            tenant_id="tenant-alpha",
+            key_id="missing-key",
+            retired_at="2026-07-30T03:00:00+00:00",
+        )
+
+    active = store.get_active_key(
+        tenant_id="tenant-alpha"
+    )
+
+    assert active.key_id == "key-001"
+    assert active.active is True
+    assert active.retired_at is None
+
+
+def test_rotation_is_tenant_scoped(tmp_path):
+    store = AssessmentCheckpointSigningKeyMetadataStore(
+        tmp_path / "keys.sqlite3"
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-001",
+            secret_reference="secret://alpha/key-001",
+            active=True,
+            created_at="2026-07-30T01:00:00+00:00",
+        )
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-alpha",
+            key_id="key-002",
+            secret_reference="secret://alpha/key-002",
+            active=False,
+            created_at="2026-07-30T02:00:00+00:00",
+        )
+    )
+    store.insert(
+        AssessmentCheckpointSigningKeyMetadata(
+            tenant_id="tenant-beta",
+            key_id="key-001",
+            secret_reference="secret://beta/key-001",
+            active=True,
+            created_at="2026-07-30T01:00:00+00:00",
+        )
+    )
+
+    store.rotate_active_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        retired_at="2026-07-30T03:00:00+00:00",
+    )
+
+    alpha_active = store.get_active_key(
+        tenant_id="tenant-alpha"
+    )
+    beta_active = store.get_active_key(
+        tenant_id="tenant-beta"
+    )
+
+    assert alpha_active.key_id == "key-002"
+    assert beta_active.key_id == "key-001"

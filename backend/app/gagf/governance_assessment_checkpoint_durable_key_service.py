@@ -1,7 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
+from datetime import datetime, timezone
 
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
 
 from backend.app.gagf.governance_assessment_audit_checkpoint import (
     AssessmentAuditCheckpoint,
@@ -94,30 +95,19 @@ class AssessmentCheckpointDurableKeyService:
             key_id=key_id,
         )
 
-        try:
-            current = self.metadata_store.get_active_key(
-                tenant_id=tenant_id
-            )
-        except KeyError:
-            current = None
-
-        if current is not None and current.key_id != key_id:
-            retired = replace(
-                current,
-                active=False,
-                retired_at=datetime.now(
-                    timezone.utc
-                ).isoformat(),
-            )
-            self.metadata_store.replace(retired)
-
-        activated = replace(
-            selected,
-            active=True,
-            retired_at=None,
+        self.secret_resolver.resolve_secret(
+            secret_reference=selected.secret_reference
         )
-        self.metadata_store.replace(activated)
-        return activated
+
+        retired_at = datetime.now(
+            timezone.utc
+        ).isoformat()
+
+        return self.metadata_store.rotate_active_key(
+            tenant_id=tenant_id,
+            key_id=key_id,
+            retired_at=retired_at,
+        )
 
     def sign_checkpoint(
         self,

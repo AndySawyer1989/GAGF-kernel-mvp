@@ -7,7 +7,7 @@ from threading import RLock
 from typing import Any
 
 
-ASSESSMENT_CHECKPOINT_KEY_STORE_VERSION = "1.0.0"
+ASSESSMENT_CHECKPOINT_KEY_STORE_VERSION = "1.1.0"
 
 
 @dataclass(frozen=True)
@@ -131,6 +131,87 @@ class AssessmentCheckpointSigningKeyMetadataStore:
                 )
 
             connection.commit()
+
+    def rotate_active_key(
+        self,
+        *,
+        tenant_id: str,
+        key_id: str,
+        retired_at: str,
+    ) -> AssessmentCheckpointSigningKeyMetadata:
+        with self._lock, self._connect() as connection:
+            try:
+                connection.execute("BEGIN IMMEDIATE")
+
+                selected_row = connection.execute(
+                    """
+                    SELECT *
+                    FROM assessment_checkpoint_signing_keys
+                    WHERE tenant_id = ?
+                      AND key_id = ?
+                    """,
+                    (tenant_id, key_id),
+                ).fetchone()
+
+                if selected_row is None:
+                    raise KeyError(
+                        "checkpoint signing key metadata was not found"
+                    )
+
+                selected = self._row_to_metadata(selected_row)
+
+                if selected.active:
+                    connection.commit()
+                    return selected
+
+                connection.execute(
+                    """
+                    UPDATE assessment_checkpoint_signing_keys
+                    SET active = 0,
+                        retired_at = ?
+                    WHERE tenant_id = ?
+                      AND active = 1
+                    """,
+                    (retired_at, tenant_id),
+                )
+
+                cursor = connection.execute(
+                    """
+                    UPDATE assessment_checkpoint_signing_keys
+                    SET active = 1,
+                        retired_at = NULL
+                    WHERE tenant_id = ?
+                      AND key_id = ?
+                    """,
+                    (tenant_id, key_id),
+                )
+
+                if cursor.rowcount != 1:
+                    raise KeyError(
+                        "checkpoint signing key metadata was not found"
+                    )
+
+                activated_row = connection.execute(
+                    """
+                    SELECT *
+                    FROM assessment_checkpoint_signing_keys
+                    WHERE tenant_id = ?
+                      AND key_id = ?
+                    """,
+                    (tenant_id, key_id),
+                ).fetchone()
+
+                if activated_row is None:
+                    raise KeyError(
+                        "checkpoint signing key metadata was not found"
+                    )
+
+                connection.commit()
+                return self._row_to_metadata(activated_row)
+
+            except Exception:
+                connection.rollback()
+                raise
 
     def get_key(
         self,
