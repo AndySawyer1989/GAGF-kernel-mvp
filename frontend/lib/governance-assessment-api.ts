@@ -83,6 +83,67 @@ export type GovernanceAssessmentArtifactList = {
 };
 
 
+export type GovernanceAssessmentReportSection = {
+  section_id: string;
+  kind: string;
+  order: number;
+  title: string;
+  markdown: string;
+};
+
+export type GovernanceAssessmentReportManifest = {
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  assessment_name: string;
+  report_id: string;
+  section_count: number;
+  section_ids: string[];
+  markdown_hash: string;
+  package_hash: string;
+  schema_version: string;
+  source_commitments: Record<string, string>;
+};
+
+export type GovernanceAssessmentClientReport = {
+  hierarchy_key: string;
+  title: string;
+  report_id: string;
+  markdown: string;
+  manifest: GovernanceAssessmentReportManifest;
+  sections: GovernanceAssessmentReportSection[];
+};
+
+export function extractClientReport(
+  artifacts: GovernanceAssessmentArtifactList
+): GovernanceAssessmentClientReport | null {
+  const artifact = artifacts.items.find(
+    (item) =>
+      item.artifact_type === "client-report-package"
+  );
+
+  if (!artifact) {
+    return null;
+  }
+
+  const payload = artifact.payload;
+
+  if (
+    typeof payload.title !== "string" ||
+    typeof payload.report_id !== "string" ||
+    typeof payload.markdown !== "string" ||
+    !Array.isArray(payload.sections) ||
+    typeof payload.manifest !== "object" ||
+    payload.manifest === null
+  ) {
+    return null;
+  }
+
+  return payload as GovernanceAssessmentClientReport;
+}
+
+
 export type AssessmentEvidenceRequirement = {
   requirement_id: string;
   source_kind: "csv";

@@ -361,6 +361,23 @@ export default function AssessmentDetailPage() {
               Back to assessments
             </Link>
 
+            <Link
+              className="secondary-button button-link"
+              href={
+                "/assessments/"
+                + encodeURIComponent(identity.tenantId)
+                + "/"
+                + encodeURIComponent(identity.clientId)
+                + "/"
+                + encodeURIComponent(identity.engagementId)
+                + "/"
+                + encodeURIComponent(identity.assessmentId)
+                + "/report"
+              }
+            >
+              View client report
+            </Link>
+
             <button
               className="refresh-button"
               type="button"

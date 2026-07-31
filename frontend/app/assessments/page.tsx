@@ -20,7 +20,7 @@ import {
 
 function readString(
   record: GovernanceAssessmentListItem,
-  ...keys: string[]
+  ...keys: Array<keyof GovernanceAssessmentListItem>
 ): string | null {
   for (const key of keys) {
     const value = record[key];
@@ -60,15 +60,13 @@ function AssessmentCard({
   assessment: GovernanceAssessmentListItem;
 }) {
   const assessmentId =
-    readString(assessment, "assessment_id", "id") ??
+    readString(assessment, "assessment_id") ??
     "Unidentified assessment";
 
   const assessmentName =
     readString(
       assessment,
-      "assessment_name",
-      "name",
-      "title"
+      "assessment_name"
     ) ?? assessmentId;
 
   const clientId =
@@ -82,17 +80,12 @@ function AssessmentCard({
   const status =
     readString(
       assessment,
-      "status",
-      "assessment_status",
-      "state"
+      "status"
     ) ?? "Recorded";
 
   const createdAt = readString(
     assessment,
-    "created_at",
-    "executed_at",
-    "generated_at",
-    "timestamp"
+    "created_at"
   );
 
   return (
@@ -396,8 +389,7 @@ export default function AssessmentsPage() {
                     key={
                       readString(
                         assessment,
-                        "assessment_id",
-                        "id"
+                        "assessment_id"
                       ) ?? `assessment-${index}`
                     }
                     assessment={assessment}
