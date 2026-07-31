@@ -1,0 +1,211 @@
+﻿import sqlite3
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from backend.app.gagf.governance_assessment_api_registration import (
+    AssessmentApiRegistrationError,
+    register_governance_assessment_api,
+)
+
+
+def admin_headers():
+    return {
+        "X-Tenant-ID": "tenant-alpha",
+        "X-Actor-ID": "actor-admin",
+        "X-Actor-Roles": "assessment:admin",
+    }
+
+
+def signing_environment():
+    return {
+        "GAGF_ASSESSMENT_CHECKPOINT_TENANT_ID": (
+            "tenant-alpha"
+        ),
+        "GAGF_ASSESSMENT_CHECKPOINT_KEY_ID": "key-001",
+        "GAGF_ASSESSMENT_CHECKPOINT_SECRET_REFERENCE": (
+            "env://GAGF_ASSESSMENT_CHECKPOINT_SIGNING_SECRET"
+        ),
+        "GAGF_ASSESSMENT_CHECKPOINT_SIGNING_SECRET": (
+            "private-signing-secret"
+        ),
+    }
+
+
+def test_registration_without_configuration_starts_unsigned(
+    tmp_path,
+):
+    app = FastAPI()
+    register_governance_assessment_api(
+        app=app,
+        database_path=tmp_path / "assessment.sqlite3",
+        environment={},
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/governance-assessments/audit-checkpoints",
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["signed"] is False
+    assert (
+        app.state.governance_assessment_checkpoint_key_service
+        is None
+    )
+
+
+def test_configured_registration_signs_checkpoint(tmp_path):
+    app = FastAPI()
+    register_governance_assessment_api(
+        app=app,
+        database_path=tmp_path / "assessment.sqlite3",
+        environment=signing_environment(),
+    )
+
+    response = TestClient(app).post(
+        "/api/v1/governance-assessments/audit-checkpoints",
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["signed"] is True
+    assert payload["key_id"] == "key-001"
+    assert payload["checkpoint"]["tenant_id"] == (
+        "tenant-alpha"
+    )
+
+
+def test_registration_persists_key_metadata(tmp_path):
+    app = FastAPI()
+    database_path = tmp_path / "assessment.sqlite3"
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=database_path,
+        environment=signing_environment(),
+    )
+
+    metadata_path = (
+        tmp_path
+        / "governance_assessment_checkpoint_keys.sqlite3"
+    )
+
+    assert metadata_path.exists()
+
+    with sqlite3.connect(metadata_path) as connection:
+        row = connection.execute(
+            """
+            SELECT tenant_id, key_id, secret_reference, active
+            FROM assessment_checkpoint_signing_keys
+            """
+        ).fetchone()
+
+    assert row == (
+        "tenant-alpha",
+        "key-001",
+        "env://GAGF_ASSESSMENT_CHECKPOINT_SIGNING_SECRET",
+        1,
+    )
+
+
+def test_metadata_database_does_not_store_secret(tmp_path):
+    app = FastAPI()
+    database_path = tmp_path / "assessment.sqlite3"
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=database_path,
+        environment=signing_environment(),
+    )
+
+    metadata_path = (
+        tmp_path
+        / "governance_assessment_checkpoint_keys.sqlite3"
+    )
+    database_bytes = metadata_path.read_bytes()
+
+    assert b"private-signing-secret" not in database_bytes
+
+
+def test_partial_signing_configuration_rejects_registration(
+    tmp_path,
+):
+    environment = signing_environment()
+    del environment[
+        "GAGF_ASSESSMENT_CHECKPOINT_KEY_ID"
+    ]
+    app = FastAPI()
+
+    with pytest.raises(
+        AssessmentApiRegistrationError,
+        match="signing configuration is invalid",
+    ):
+        register_governance_assessment_api(
+            app=app,
+            database_path=tmp_path / "assessment.sqlite3",
+            environment=environment,
+        )
+
+
+def test_missing_secret_rejects_configured_registration(
+    tmp_path,
+):
+    environment = signing_environment()
+    del environment[
+        "GAGF_ASSESSMENT_CHECKPOINT_SIGNING_SECRET"
+    ]
+    app = FastAPI()
+
+    with pytest.raises(
+        AssessmentApiRegistrationError,
+        match="signing configuration is invalid",
+    ):
+        register_governance_assessment_api(
+            app=app,
+            database_path=tmp_path / "assessment.sqlite3",
+            environment=environment,
+        )
+
+
+def test_registration_exposes_checkpoint_stores_on_state(
+    tmp_path,
+):
+    app = FastAPI()
+    register_governance_assessment_api(
+        app=app,
+        database_path=tmp_path / "assessment.sqlite3",
+        environment={},
+    )
+
+    assert (
+        app.state.governance_assessment_checkpoint_store
+        is not None
+    )
+    assert (
+        app.state.governance_assessment_signed_checkpoint_store
+        is not None
+    )
+
+
+def test_configured_registration_is_idempotent(tmp_path):
+    app = FastAPI()
+    database_path = tmp_path / "assessment.sqlite3"
+    environment = signing_environment()
+
+    first = register_governance_assessment_api(
+        app=app,
+        database_path=database_path,
+        environment=environment,
+    )
+    second = register_governance_assessment_api(
+        app=app,
+        database_path=database_path,
+        environment=environment,
+    )
+
+    assert second is first
