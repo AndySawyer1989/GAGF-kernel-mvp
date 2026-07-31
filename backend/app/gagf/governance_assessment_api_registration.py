@@ -43,6 +43,12 @@ from backend.app.gagf.governance_assessment_checkpoint_key_audit import (
 from backend.app.gagf.governance_assessment_checkpoint_key_config import (
     load_assessment_checkpoint_production_key_config,
 )
+from backend.app.gagf.governance_assessment_dashboard import (
+    GovernanceAssessmentDashboardService,
+)
+from backend.app.gagf.governance_assessment_dashboard_api import (
+    create_governance_assessment_dashboard_router,
+)
 from backend.app.gagf.governance_assessment_repository import (
     GovernanceAssessmentRepository,
 )
@@ -224,6 +230,24 @@ def register_governance_assessment_api(
     )
     app.router.routes.extend(audit_router.routes)
 
+    dashboard_service = GovernanceAssessmentDashboardService(
+        audit_ledger=audit_ledger,
+        checkpoint_store=checkpoint_store,
+        signed_checkpoint_store=signed_checkpoint_store,
+        key_metadata_store=(
+            bootstrap_result.metadata_store
+            if bootstrap_result is not None
+            else None
+        ),
+        key_audit_store=checkpoint_key_audit_store,
+    )
+    dashboard_router = (
+        create_governance_assessment_dashboard_router(
+            dashboard_service=dashboard_service
+        )
+    )
+    app.router.routes.extend(dashboard_router.routes)
+
     if (
         durable_key_service is not None
         and bootstrap_result is not None
@@ -252,6 +276,9 @@ def register_governance_assessment_api(
     )
     app.state.governance_assessment_checkpoint_key_audit_store = (
         checkpoint_key_audit_store
+    )
+    app.state.governance_assessment_dashboard_service = (
+        dashboard_service
     )
     app.state.governance_assessment_checkpoint_key_service = (
         durable_key_service
