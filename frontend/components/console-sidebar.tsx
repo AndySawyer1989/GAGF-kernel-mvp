@@ -1,7 +1,10 @@
 import Link from "next/link";
 
 type ConsoleSidebarProps = {
-  activePage: "overview" | "assessments";
+  activePage:
+    | "overview"
+    | "assessments"
+    | "evidence";
   tenantId: string;
   actorId: string;
 };
@@ -46,9 +49,16 @@ export function ConsoleSidebar({
           Assessments
         </Link>
 
-        <span className="nav-item nav-item-disabled">
+        <Link
+          className={
+            activePage === "evidence"
+              ? "nav-item nav-item-active"
+              : "nav-item"
+          }
+          href="/evidence"
+        >
           Evidence
-        </span>
+        </Link>
 
         <span className="nav-item nav-item-disabled">
           Audit Integrity

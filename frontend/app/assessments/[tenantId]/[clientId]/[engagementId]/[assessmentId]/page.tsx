@@ -364,6 +364,22 @@ export default function AssessmentDetailPage() {
             <Link
               className="secondary-button button-link"
               href={
+                "/evidence/"
+                + encodeURIComponent(identity.tenantId)
+                + "/"
+                + encodeURIComponent(identity.clientId)
+                + "/"
+                + encodeURIComponent(identity.engagementId)
+                + "/"
+                + encodeURIComponent(identity.assessmentId)
+              }
+            >
+              Explore evidence
+            </Link>
+
+            <Link
+              className="secondary-button button-link"
+              href={
                 "/assessments/"
                 + encodeURIComponent(identity.tenantId)
                 + "/"
