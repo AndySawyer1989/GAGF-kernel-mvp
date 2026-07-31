@@ -1,8 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from backend.app.gagf.governance_assessment_auth import (
     ASSESSMENT_ADMIN_ROLE,
@@ -11,6 +11,10 @@ from backend.app.gagf.governance_assessment_auth import (
 )
 from backend.app.gagf.governance_assessment_checkpoint_durable_key_service import (
     AssessmentCheckpointDurableKeyService,
+)
+from backend.app.gagf.governance_assessment_checkpoint_key_audit import (
+    AssessmentCheckpointKeyAuditStore,
+    create_checkpoint_key_activation_audit_event,
 )
 from backend.app.gagf.governance_assessment_checkpoint_key_store import (
     AssessmentCheckpointSigningKeyMetadataStore,
@@ -68,6 +72,7 @@ def create_assessment_checkpoint_key_admin_router(
     *,
     metadata_store: AssessmentCheckpointSigningKeyMetadataStore,
     key_service: AssessmentCheckpointDurableKeyService,
+    audit_store: AssessmentCheckpointKeyAuditStore | None = None,
 ) -> APIRouter:
     router = APIRouter(
         prefix=(
@@ -148,6 +153,14 @@ def create_assessment_checkpoint_key_admin_router(
         )
 
         try:
+            try:
+                previous = metadata_store.get_active_key(
+                    tenant_id=context.tenant_id
+                )
+                previous_key_id = previous.key_id
+            except KeyError:
+                previous_key_id = None
+
             activated = key_service.activate_key(
                 tenant_id=context.tenant_id,
                 key_id=key_id,
@@ -168,11 +181,67 @@ def create_assessment_checkpoint_key_admin_router(
                 },
             ) from error
 
+        if audit_store is not None:
+            audit_store.append(
+                create_checkpoint_key_activation_audit_event(
+                    tenant_id=context.tenant_id,
+                    actor_id=context.actor_id,
+                    previous_key_id=previous_key_id,
+                    active_key_id=activated.key_id,
+                    metadata={
+                        "source": "checkpoint-key-admin-api",
+                        "result": "success",
+                    },
+                )
+            )
+
         return {
             "tenant_id": context.tenant_id,
             "key_id": activated.key_id,
             "active": activated.active,
             "retired_at": activated.retired_at,
+        }
+
+    @router.get("/audit-events")
+    def list_checkpoint_key_audit_events(
+        tenant_id: str,
+        limit: int = Query(default=100, ge=1, le=500),
+        context: AssessmentActorContext = Depends(
+            require_checkpoint_key_admin
+        ),
+    ) -> dict[str, Any]:
+        enforce_checkpoint_key_tenant_match(
+            requested_tenant_id=tenant_id,
+            context=context,
+        )
+
+        if audit_store is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": (
+                        "ASSESSMENT_CHECKPOINT_KEY_AUDIT_UNAVAILABLE"
+                    ),
+                    "message": (
+                        "checkpoint signing-key audit evidence "
+                        "is unavailable"
+                    ),
+                },
+            )
+
+        events = audit_store.list_events(
+            tenant_id=context.tenant_id,
+            limit=limit,
+        )
+
+        return {
+            "tenant_id": context.tenant_id,
+            "items": [
+                event.to_dict()
+                for event in events
+            ],
+            "count": len(events),
+            "limit": limit,
         }
 
     return router

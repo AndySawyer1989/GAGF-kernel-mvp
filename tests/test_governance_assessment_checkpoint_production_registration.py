@@ -291,3 +291,146 @@ def test_registered_admin_api_can_activate_second_key(tmp_path):
     assert response.status_code == 200
     assert response.json()["key_id"] == "key-002"
     assert response.json()["active"] is True
+
+
+def test_registration_exposes_key_audit_store_on_state(tmp_path):
+    app = FastAPI()
+    register_governance_assessment_api(
+        app=app,
+        database_path=tmp_path / "assessment.sqlite3",
+        environment=signing_environment(),
+    )
+
+    assert (
+        app.state.governance_assessment_checkpoint_key_audit_store
+        is not None
+    )
+
+
+def test_registered_activation_writes_production_audit_event(
+    tmp_path,
+):
+    app = FastAPI()
+    environment = signing_environment()
+    environment["GAGF_SECOND_CHECKPOINT_SECRET"] = (
+        "second-secret"
+    )
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=tmp_path / "assessment.sqlite3",
+        environment=environment,
+    )
+
+    service = (
+        app.state.governance_assessment_checkpoint_key_service
+    )
+    service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        secret_reference="env://GAGF_SECOND_CHECKPOINT_SECRET",
+        make_active=False,
+    )
+
+    client = TestClient(app)
+    activation = client.post(
+        (
+            "/api/v1/governance-assessments"
+            "/checkpoint-signing-keys/key-002/activate"
+        ),
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+    history = client.get(
+        (
+            "/api/v1/governance-assessments"
+            "/checkpoint-signing-keys/audit-events"
+        ),
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+
+    assert activation.status_code == 200
+    assert history.status_code == 200
+    assert history.json()["count"] == 1
+    event = history.json()["items"][0]
+    assert event["actor_id"] == "actor-admin"
+    assert event["previous_key_id"] == "key-001"
+    assert event["active_key_id"] == "key-002"
+
+
+def test_key_audit_database_survives_application_restart(tmp_path):
+    database_path = tmp_path / "assessment.sqlite3"
+    environment = signing_environment()
+    environment["GAGF_SECOND_CHECKPOINT_SECRET"] = (
+        "second-secret"
+    )
+
+    first_app = FastAPI()
+    register_governance_assessment_api(
+        app=first_app,
+        database_path=database_path,
+        environment=environment,
+    )
+
+    first_service = (
+        first_app.state
+        .governance_assessment_checkpoint_key_service
+    )
+    first_service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        secret_reference="env://GAGF_SECOND_CHECKPOINT_SECRET",
+        make_active=False,
+    )
+
+    activation = TestClient(first_app).post(
+        (
+            "/api/v1/governance-assessments"
+            "/checkpoint-signing-keys/key-002/activate"
+        ),
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+    assert activation.status_code == 200
+
+    second_app = FastAPI()
+    register_governance_assessment_api(
+        app=second_app,
+        database_path=database_path,
+        environment=environment,
+    )
+
+    history = TestClient(second_app).get(
+        (
+            "/api/v1/governance-assessments"
+            "/checkpoint-signing-keys/audit-events"
+        ),
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+
+    assert history.status_code == 200
+    assert history.json()["count"] == 1
+    assert history.json()["items"][0]["active_key_id"] == (
+        "key-002"
+    )
+
+
+def test_key_audit_database_contains_no_signing_secret(tmp_path):
+    app = FastAPI()
+    database_path = tmp_path / "assessment.sqlite3"
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=database_path,
+        environment=signing_environment(),
+    )
+
+    audit_path = (
+        tmp_path
+        / "governance_assessment_checkpoint_key_audit.sqlite3"
+    )
+
+    assert audit_path.exists()
+    assert b"private-signing-secret" not in audit_path.read_bytes()

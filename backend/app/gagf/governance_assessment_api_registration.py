@@ -37,6 +37,9 @@ from backend.app.gagf.governance_assessment_checkpoint_key_bootstrap import (
 from backend.app.gagf.governance_assessment_checkpoint_key_admin_api import (
     create_assessment_checkpoint_key_admin_router,
 )
+from backend.app.gagf.governance_assessment_checkpoint_key_audit import (
+    AssessmentCheckpointKeyAuditStore,
+)
 from backend.app.gagf.governance_assessment_checkpoint_key_config import (
     load_assessment_checkpoint_production_key_config,
 )
@@ -168,6 +171,17 @@ def register_governance_assessment_api(
         )
     )
 
+    checkpoint_key_audit_database_path = (
+        assessment_database_path.with_name(
+            "governance_assessment_checkpoint_key_audit.sqlite3"
+        )
+    )
+    checkpoint_key_audit_store = (
+        AssessmentCheckpointKeyAuditStore(
+            checkpoint_key_audit_database_path
+        )
+    )
+
     durable_key_service = None
     bootstrap_result = None
 
@@ -218,6 +232,7 @@ def register_governance_assessment_api(
             create_assessment_checkpoint_key_admin_router(
                 metadata_store=bootstrap_result.metadata_store,
                 key_service=durable_key_service,
+                audit_store=checkpoint_key_audit_store,
             )
         )
         app.router.routes.extend(
@@ -234,6 +249,9 @@ def register_governance_assessment_api(
     )
     app.state.governance_assessment_signed_checkpoint_store = (
         signed_checkpoint_store
+    )
+    app.state.governance_assessment_checkpoint_key_audit_store = (
+        checkpoint_key_audit_store
     )
     app.state.governance_assessment_checkpoint_key_service = (
         durable_key_service
