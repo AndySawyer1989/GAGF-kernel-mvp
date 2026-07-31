@@ -1,9 +1,10 @@
-﻿import shutil
+import shutil
 from pathlib import Path
 from typing import List
 from uuid import uuid4
 
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from backend.app.gagf.assessment_factory_lite_scope_call_agenda_message_service import AssessmentFactoryLiteScopeCallAgendaMessageService
 from backend.app.gagf.assessment_factory_lite_scope_call_agenda_message_event_record_service import AssessmentFactoryLiteScopeCallAgendaMessageEventRecordService
 from backend.app.gagf.assessment_factory_lite_scope_call_event_package_service import AssessmentFactoryLiteScopeCallEventPackageService
@@ -210,6 +211,24 @@ from backend.app.services.ingestion_service import IngestionService
 GPL_POLICY_PATH = "backend/app/gagf/policies/gpl_v0_1.yaml"
 
 app = FastAPI(title="GAGF Kernel MVP")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=[
+        "Accept",
+        "Content-Type",
+        "X-Tenant-ID",
+        "X-Actor-ID",
+        "X-Actor-Roles",
+    ],
+)
+
 
 app.mount(
     "/static",
