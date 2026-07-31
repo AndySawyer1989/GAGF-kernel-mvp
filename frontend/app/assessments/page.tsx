@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   useCallback,
   useEffect,
@@ -123,9 +125,30 @@ function AssessmentCard({
         <span>
           Evidence-governed assessment record
         </span>
-        <button type="button" disabled>
-          Detail view pending
-        </button>
+
+        <Link
+          className="secondary-button button-link"
+          href={
+            "/assessments/"
+            + encodeURIComponent(
+                String(assessment.tenant_id)
+              )
+            + "/"
+            + encodeURIComponent(
+                String(assessment.client_id)
+              )
+            + "/"
+            + encodeURIComponent(
+                String(assessment.engagement_id)
+              )
+            + "/"
+            + encodeURIComponent(
+                String(assessment.assessment_id)
+              )
+          }
+        >
+          Open assessment
+        </Link>
       </div>
     </article>
   );
@@ -353,13 +376,12 @@ export default function AssessmentsPage() {
                   Clear filters
                 </button>
               ) : (
-                <button
-                  className="refresh-button"
-                  type="button"
-                  disabled
+                <Link
+                  className="refresh-button button-link"
+                  href="/assessments/new"
                 >
-                  Assessment execution form next
-                </button>
+                  Execute first assessment
+                </Link>
               )}
             </section>
           )}

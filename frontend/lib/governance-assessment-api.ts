@@ -9,8 +9,21 @@ export type GovernanceAssessmentDashboardSummary = {
   key_activation_event_count: number;
 };
 
+export type GovernanceAssessmentRecord = {
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  assessment_name: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  record_hash: string;
+  schema_version: string;
+};
+
 export type GovernanceAssessmentListItem =
-  Record<string, unknown>;
+  GovernanceAssessmentRecord;
 
 export type GovernanceAssessmentListResponse = {
   items: GovernanceAssessmentListItem[];
@@ -20,6 +33,102 @@ export type GovernanceAssessmentListResponse = {
 export type GovernanceAssessmentListFilters = {
   clientId?: string;
   engagementId?: string;
+};
+
+export type GovernanceAssessmentIdentity = {
+  tenantId: string;
+  clientId: string;
+  engagementId: string;
+  assessmentId: string;
+};
+
+export type GovernanceAssessmentArtifactInventoryItem = {
+  artifact_type: string;
+  artifact_id: string;
+  artifact_hash: string;
+  sequence_number: number;
+};
+
+export type GovernanceAssessmentSummary = {
+  hierarchy_key: string;
+  assessment: GovernanceAssessmentRecord;
+  artifact_inventory:
+    GovernanceAssessmentArtifactInventoryItem[];
+  artifact_count: number;
+  repository_chain_valid: boolean;
+  summary_hash: string;
+  schema_version: string;
+};
+
+export type GovernanceAssessmentArtifact = {
+  artifact_id: string;
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  artifact_type: string;
+  artifact_hash: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  sequence_number: number;
+  previous_artifact_hash: string | null;
+  chain_hash: string;
+  schema_version: string;
+};
+
+export type GovernanceAssessmentArtifactList = {
+  hierarchy_key: string;
+  items: GovernanceAssessmentArtifact[];
+  count: number;
+};
+
+
+export type AssessmentEvidenceRequirement = {
+  requirement_id: string;
+  source_kind: "csv";
+  description: string;
+  required: boolean;
+  minimum_record_count: number;
+};
+
+export type AssessmentEvidenceInput = {
+  source: {
+    source_id: string;
+    kind: "csv";
+    display_name: string;
+    source_location?: string;
+  };
+  csv_text: string;
+};
+
+export type AssessmentExecutionRequest = {
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  assessment_name: string;
+  workflow_names: string[];
+  organizational_units: string[];
+  period_start: string;
+  period_end: string;
+  objectives: string[];
+  expected_outcomes: string[];
+  evidence_requirements: AssessmentEvidenceRequirement[];
+  evidence_inputs: AssessmentEvidenceInput[];
+  client_display_name: string;
+  prepared_by: string;
+  exclusions?: string[];
+  maximum_priorities?: number;
+};
+
+export type AssessmentExecutionResponse = {
+  completed: boolean;
+  hierarchy_key: string;
+  artifact_count: number;
+  repository_chain_valid?: boolean;
+  request_hash?: string;
+  application_hash: string;
+  persistence_hash?: string;
 };
 
 export type GovernanceAssessmentApiConfig = {
@@ -167,4 +276,182 @@ export async function fetchAssessments(
   }
 
   return payload as GovernanceAssessmentListResponse;
+}
+
+export async function executeAssessment(
+  config: GovernanceAssessmentApiConfig,
+  request: AssessmentExecutionRequest,
+  signal?: AbortSignal
+): Promise<AssessmentExecutionResponse> {
+  const url = new URL(
+    "/api/v1/governance-assessments/execute",
+    config.baseUrl
+  );
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Tenant-ID": config.tenantId,
+      "X-Actor-ID": config.actorId,
+      "X-Actor-Roles": config.actorRoles
+    },
+    body: JSON.stringify(request),
+    cache: "no-store",
+    signal
+  });
+
+  const payload: unknown = await response.json().catch(
+    () => null
+  );
+
+  if (!response.ok) {
+    throw new GovernanceAssessmentApiError(
+      `Assessment execution failed with status ${response.status}`,
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    (payload as AssessmentExecutionResponse).completed !== true ||
+    typeof (
+      payload as AssessmentExecutionResponse
+    ).application_hash !== "string"
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Assessment execution response did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  return payload as AssessmentExecutionResponse;
+}
+
+function buildAssessmentPath(
+  config: GovernanceAssessmentApiConfig,
+  identity: GovernanceAssessmentIdentity
+): URL {
+  const segments = [
+    identity.tenantId,
+    identity.clientId,
+    identity.engagementId,
+    identity.assessmentId
+  ].map(encodeURIComponent);
+
+  return new URL(
+    `/api/v1/governance-assessments/${segments.join("/")}`,
+    config.baseUrl
+  );
+}
+
+function assessmentHeaders(
+  config: GovernanceAssessmentApiConfig
+): HeadersInit {
+  return {
+    "X-Tenant-ID": config.tenantId,
+    "X-Actor-ID": config.actorId,
+    "X-Actor-Roles": config.actorRoles
+  };
+}
+
+async function readAssessmentResponse<T>(
+  response: Response,
+  operation: string
+): Promise<T> {
+  const payload: unknown = await response.json().catch(
+    () => null
+  );
+
+  if (!response.ok) {
+    throw new GovernanceAssessmentApiError(
+      `${operation} failed with status ${response.status}`,
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    throw new GovernanceAssessmentApiError(
+      `${operation} returned an invalid response`,
+      response.status,
+      payload
+    );
+  }
+
+  return payload as T;
+}
+
+export async function fetchAssessment(
+  config: GovernanceAssessmentApiConfig,
+  identity: GovernanceAssessmentIdentity,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentRecord> {
+  const response = await fetch(
+    buildAssessmentPath(config, identity),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentRecord
+  >(response, "Assessment detail request");
+}
+
+export async function fetchAssessmentSummary(
+  config: GovernanceAssessmentApiConfig,
+  identity: GovernanceAssessmentIdentity,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentSummary> {
+  const url = buildAssessmentPath(
+    config,
+    identity
+  );
+
+  url.pathname += "/summary";
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: assessmentHeaders(config),
+    cache: "no-store",
+    signal
+  });
+
+  return readAssessmentResponse<
+    GovernanceAssessmentSummary
+  >(response, "Assessment summary request");
+}
+
+export async function fetchAssessmentArtifacts(
+  config: GovernanceAssessmentApiConfig,
+  identity: GovernanceAssessmentIdentity,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentArtifactList> {
+  const url = buildAssessmentPath(
+    config,
+    identity
+  );
+
+  url.pathname += "/artifacts";
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: assessmentHeaders(config),
+    cache: "no-store",
+    signal
+  });
+
+  return readAssessmentResponse<
+    GovernanceAssessmentArtifactList
+  >(response, "Assessment artifact request");
 }
