@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 from collections.abc import Mapping
@@ -33,6 +33,9 @@ from backend.app.gagf.governance_assessment_auth import (
 from backend.app.gagf.governance_assessment_checkpoint_key_bootstrap import (
     AssessmentCheckpointKeyBootstrapConfig,
     build_assessment_checkpoint_key_service,
+)
+from backend.app.gagf.governance_assessment_checkpoint_key_admin_api import (
+    create_assessment_checkpoint_key_admin_router,
 )
 from backend.app.gagf.governance_assessment_checkpoint_key_config import (
     load_assessment_checkpoint_production_key_config,
@@ -166,6 +169,7 @@ def register_governance_assessment_api(
     )
 
     durable_key_service = None
+    bootstrap_result = None
 
     try:
         production_key_config = (
@@ -205,6 +209,20 @@ def register_governance_assessment_api(
         durable_checkpoint_key_service=durable_key_service,
     )
     app.router.routes.extend(audit_router.routes)
+
+    if (
+        durable_key_service is not None
+        and bootstrap_result is not None
+    ):
+        checkpoint_key_admin_router = (
+            create_assessment_checkpoint_key_admin_router(
+                metadata_store=bootstrap_result.metadata_store,
+                key_service=durable_key_service,
+            )
+        )
+        app.router.routes.extend(
+            checkpoint_key_admin_router.routes
+        )
 
     app.state.governance_assessment_repository = (
         resolved_repository

@@ -209,3 +209,85 @@ def test_configured_registration_is_idempotent(tmp_path):
     )
 
     assert second is first
+
+
+def test_configured_registration_exposes_key_admin_api(tmp_path):
+    app = FastAPI()
+    register_governance_assessment_api(
+        app=app,
+        database_path=tmp_path / "assessment.sqlite3",
+        environment=signing_environment(),
+    )
+
+    response = TestClient(app).get(
+        (
+            "/api/v1/governance-assessments"
+            "/checkpoint-signing-keys"
+        ),
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    assert response.json()["items"][0]["key_id"] == "key-001"
+
+
+def test_unsigned_registration_does_not_expose_key_admin_api(
+    tmp_path,
+):
+    app = FastAPI()
+    register_governance_assessment_api(
+        app=app,
+        database_path=tmp_path / "assessment.sqlite3",
+        environment={},
+    )
+
+    response = TestClient(app).get(
+        (
+            "/api/v1/governance-assessments"
+            "/checkpoint-signing-keys"
+        ),
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+
+    assert response.status_code == 404
+
+
+def test_registered_admin_api_can_activate_second_key(tmp_path):
+    app = FastAPI()
+    database_path = tmp_path / "assessment.sqlite3"
+    environment = signing_environment()
+    environment["GAGF_SECOND_CHECKPOINT_SECRET"] = (
+        "second-secret"
+    )
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=database_path,
+        environment=environment,
+    )
+
+    service = (
+        app.state.governance_assessment_checkpoint_key_service
+    )
+    service.register_key(
+        tenant_id="tenant-alpha",
+        key_id="key-002",
+        secret_reference="env://GAGF_SECOND_CHECKPOINT_SECRET",
+        make_active=False,
+    )
+
+    response = TestClient(app).post(
+        (
+            "/api/v1/governance-assessments"
+            "/checkpoint-signing-keys/key-002/activate"
+        ),
+        params={"tenant_id": "tenant-alpha"},
+        headers=admin_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["key_id"] == "key-002"
+    assert response.json()["active"] is True
