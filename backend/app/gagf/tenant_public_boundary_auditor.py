@@ -47,6 +47,7 @@ _ALLOWED_PUBLIC_HASH_KEYS = frozenset(
         "previous_record_hash",
         "record_hash",
         "result_hash",
+        "page_hash",
     }
 )
 
@@ -367,6 +368,7 @@ class TenantPublicBoundaryAuditor:
             serialized = repr(value)
 
         return sha256_hex(serialized)
+
 
 
 

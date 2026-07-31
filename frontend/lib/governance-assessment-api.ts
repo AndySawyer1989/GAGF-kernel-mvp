@@ -9,6 +9,19 @@ export type GovernanceAssessmentDashboardSummary = {
   key_activation_event_count: number;
 };
 
+export type GovernanceAssessmentListItem =
+  Record<string, unknown>;
+
+export type GovernanceAssessmentListResponse = {
+  items: GovernanceAssessmentListItem[];
+  count: number;
+};
+
+export type GovernanceAssessmentListFilters = {
+  clientId?: string;
+  engagementId?: string;
+};
+
 export type GovernanceAssessmentApiConfig = {
   baseUrl: string;
   tenantId: string;
@@ -85,4 +98,73 @@ export async function fetchDashboardSummary(
   }
 
   return payload as GovernanceAssessmentDashboardSummary;
+}
+
+export async function fetchAssessments(
+  config: GovernanceAssessmentApiConfig,
+  filters: GovernanceAssessmentListFilters = {},
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentListResponse> {
+  const url = new URL(
+    "/api/v1/governance-assessments",
+    config.baseUrl
+  );
+
+  url.searchParams.set("tenant_id", config.tenantId);
+
+  if (filters.clientId?.trim()) {
+    url.searchParams.set(
+      "client_id",
+      filters.clientId.trim()
+    );
+  }
+
+  if (filters.engagementId?.trim()) {
+    url.searchParams.set(
+      "engagement_id",
+      filters.engagementId.trim()
+    );
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "X-Tenant-ID": config.tenantId,
+      "X-Actor-ID": config.actorId,
+      "X-Actor-Roles": config.actorRoles
+    },
+    cache: "no-store",
+    signal
+  });
+
+  const payload: unknown = await response.json().catch(
+    () => null
+  );
+
+  if (!response.ok) {
+    throw new GovernanceAssessmentApiError(
+      `Assessment list request failed with status ${response.status}`,
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !Array.isArray(
+      (payload as GovernanceAssessmentListResponse).items
+    ) ||
+    typeof (
+      payload as GovernanceAssessmentListResponse
+    ).count !== "number"
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Assessment list response did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  return payload as GovernanceAssessmentListResponse;
 }

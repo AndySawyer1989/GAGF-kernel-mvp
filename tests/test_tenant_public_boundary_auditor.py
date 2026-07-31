@@ -426,3 +426,27 @@ def test_public_query_result_hash_is_allowed():
 
     assert result.valid is True
     assert result.violation_count == 0
+
+
+def test_public_pagination_page_hash_is_allowed():
+    response = safe_response()
+    response["page"] = {
+        "service_id": (
+            "tenant-boundary-audit-pagination-service"
+        ),
+        "service_version": "0.1.0",
+        "tenant_id": "tenant-alpha",
+        "page_size": 25,
+        "returned_count": 0,
+        "records": [],
+        "next_cursor": None,
+        "has_more": False,
+        "page_hash": "a" * 64,
+    }
+
+    result = TenantPublicBoundaryAuditor().audit(
+        response=response
+    )
+
+    assert result.valid is True
+    assert result.violation_count == 0

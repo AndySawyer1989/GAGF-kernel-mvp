@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ConsoleSidebar } from "@/components/console-sidebar";
+
 import {
   fetchDashboardSummary,
   getGovernanceAssessmentApiConfig,
@@ -129,41 +131,11 @@ export default function GovernanceAssessmentConsole() {
 
   return (
     <main className="console-shell">
-      <aside className="sidebar">
-        <div>
-          <div className="brand-mark">G</div>
-          <div className="brand-copy">
-            <p className="brand-name">GAGF</p>
-            <p className="brand-subtitle">
-              Governance Console
-            </p>
-          </div>
-        </div>
-
-        <nav aria-label="Primary navigation">
-          <a className="nav-item nav-item-active" href="#">
-            <span>Overview</span>
-          </a>
-          <a className="nav-item" href="#">
-            <span>Assessments</span>
-          </a>
-          <a className="nav-item" href="#">
-            <span>Evidence</span>
-          </a>
-          <a className="nav-item" href="#">
-            <span>Audit Integrity</span>
-          </a>
-          <a className="nav-item" href="#">
-            <span>Signing Keys</span>
-          </a>
-        </nav>
-
-        <div className="sidebar-footer">
-          <p className="sidebar-label">Tenant</p>
-          <p className="tenant-name">{config.tenantId}</p>
-          <p className="actor-name">{config.actorId}</p>
-        </div>
-      </aside>
+      <ConsoleSidebar
+        activePage="overview"
+        tenantId={config.tenantId}
+        actorId={config.actorId}
+      />
 
       <section className="workspace">
         <header className="topbar">
