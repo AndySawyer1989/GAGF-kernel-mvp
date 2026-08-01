@@ -244,6 +244,57 @@ export type GovernanceAssessmentSignedVerification =
       message: string;
     };
 
+export type GovernanceAssessmentSigningKey = {
+  tenant_id: string;
+  key_id: string;
+  secret_reference: string;
+  active: boolean;
+  created_at: string;
+  retired_at: string | null;
+};
+
+export type GovernanceAssessmentSigningKeyList = {
+  tenant_id: string;
+  items: GovernanceAssessmentSigningKey[];
+  count: number;
+};
+
+export type GovernanceAssessmentSigningKeyAuditEvent = {
+  tenant_id: string;
+  event_id?: string;
+  actor_id?: string;
+  previous_key_id?: string | null;
+  active_key_id?: string;
+  event_type?: string;
+  occurred_at?: string;
+  created_at?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+export type GovernanceAssessmentSigningKeyAuditList = {
+  tenant_id: string;
+  items: GovernanceAssessmentSigningKeyAuditEvent[];
+  count: number;
+  limit: number;
+};
+
+export type GovernanceAssessmentSignedCheckpointVerification = {
+  tenant_id: string;
+  items: Array<Record<string, unknown>>;
+  count: number;
+  valid_count: number;
+  invalid_count: number;
+  limit: number;
+};
+
+export type GovernanceAssessmentSigningKeyActivation = {
+  tenant_id: string;
+  key_id: string;
+  active: boolean;
+  retired_at: string | null;
+};
+
 export type GovernanceAssessmentApiConfig = {
   baseUrl: string;
   tenantId: string;
@@ -764,3 +815,131 @@ export async function createAuditCheckpoint(
     Record<string, unknown>
   >(response, "Audit checkpoint creation");
 }
+
+function buildSigningKeyUrl(
+  config: GovernanceAssessmentApiConfig,
+  path: string
+): URL {
+  const url = new URL(path, config.baseUrl);
+
+  url.searchParams.set(
+    "tenant_id",
+    config.tenantId
+  );
+
+  return url;
+}
+
+export async function fetchSigningKeys(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentSigningKeyList> {
+  const response = await fetch(
+    buildSigningKeyUrl(
+      config,
+      "/api/v1/governance-assessments/checkpoint-signing-keys"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentSigningKeyList
+  >(response, "Signing key list request");
+}
+
+export async function fetchActiveSigningKey(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentSigningKey> {
+  const response = await fetch(
+    buildSigningKeyUrl(
+      config,
+      "/api/v1/governance-assessments/checkpoint-signing-keys/active"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentSigningKey
+  >(response, "Active signing key request");
+}
+
+export async function fetchSigningKeyAuditEvents(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentSigningKeyAuditList> {
+  const response = await fetch(
+    buildSigningKeyUrl(
+      config,
+      "/api/v1/governance-assessments/checkpoint-signing-keys/audit-events"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentSigningKeyAuditList
+  >(response, "Signing key audit request");
+}
+
+export async function fetchSignedCheckpointVerification(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentSignedCheckpointVerification> {
+  const response = await fetch(
+    buildSigningKeyUrl(
+      config,
+      "/api/v1/governance-assessments/audit-checkpoints/signed/verification"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentSignedCheckpointVerification
+  >(response, "Signed checkpoint verification request");
+}
+
+export async function activateSigningKey(
+  config: GovernanceAssessmentApiConfig,
+  keyId: string,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentSigningKeyActivation> {
+  const encodedKeyId = encodeURIComponent(keyId);
+
+  const response = await fetch(
+    buildSigningKeyUrl(
+      config,
+      `/api/v1/governance-assessments/checkpoint-signing-keys/${encodedKeyId}/activate`
+    ),
+    {
+      method: "POST",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentSigningKeyActivation
+  >(response, "Signing key activation request");
+}
+

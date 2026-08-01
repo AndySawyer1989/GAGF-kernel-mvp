@@ -5,7 +5,8 @@ type ConsoleSidebarProps = {
     | "overview"
     | "assessments"
     | "evidence"
-    | "audit-integrity";
+    | "audit-integrity"
+    | "signing-keys";
   tenantId: string;
   actorId: string;
 };
@@ -72,9 +73,16 @@ export function ConsoleSidebar({
           Audit Integrity
         </Link>
 
-        <span className="nav-item nav-item-disabled">
+        <Link
+          className={
+            activePage === "signing-keys"
+              ? "nav-item nav-item-active"
+              : "nav-item"
+          }
+          href="/signing-keys"
+        >
           Signing Keys
-        </span>
+        </Link>
       </nav>
 
       <div className="sidebar-footer">

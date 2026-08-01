@@ -2058,3 +2058,207 @@ h2 {
     flex-direction: column;
   }
 }
+
+.signing-status-strip {
+  margin-top: 28px;
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.signing-status-strip > div:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.signing-key-id {
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-date {
+  font-size: 0.88rem !important;
+  line-height: 1.35;
+}
+
+.signing-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.secret-safety-note {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid rgba(91, 47, 138, 0.2);
+  border-radius: 12px;
+  background: rgba(91, 47, 138, 0.06);
+}
+
+.secret-safety-note strong {
+  color: var(--purple);
+}
+
+.secret-safety-note p {
+  margin: 7px 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.key-registry-panel,
+.key-audit-panel {
+  margin-top: 20px;
+}
+
+.key-registry-table {
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.key-registry-header,
+.key-registry-row {
+  padding: 13px 15px;
+  display: grid;
+  grid-template-columns:
+    minmax(210px, 1.1fr)
+    minmax(260px, 1.35fr)
+    minmax(190px, 0.9fr)
+    minmax(100px, 0.55fr)
+    minmax(120px, 0.55fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.key-registry-header {
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.key-registry-row {
+  border-top: 1px solid var(--border);
+  font-size: 0.76rem;
+}
+
+.key-registry-row code {
+  overflow: hidden;
+  color: var(--purple);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-action-button {
+  padding: 8px 11px;
+  border: 1px solid var(--orange);
+  border-radius: 9px;
+  color: var(--orange-dark);
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.compact-action-button:hover:not(:disabled) {
+  color: white;
+  background: var(--orange);
+}
+
+.compact-action-button:disabled {
+  border-color: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.status-neutral {
+  color: var(--text-muted);
+  background: var(--surface-muted);
+}
+
+.key-audit-list {
+  margin-top: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.key-audit-event {
+  padding: 16px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.key-audit-event > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.key-audit-event span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.key-audit-meta {
+  display: grid;
+  gap: 5px;
+  text-align: right;
+}
+
+@media (max-width: 1050px) {
+  .signing-status-strip {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .signing-status-strip > div {
+    padding-bottom: 15px;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .signing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .key-registry-table {
+    overflow-x: auto;
+  }
+
+  .key-registry-header,
+  .key-registry-row {
+    min-width: 980px;
+  }
+}
+
+@media (max-width: 700px) {
+  .signing-status-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .key-audit-event {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .key-audit-meta {
+    text-align: left;
+  }
+}
