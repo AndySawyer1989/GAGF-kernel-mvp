@@ -248,6 +248,13 @@ export default function AuditIntegrityPage() {
           </div>
 
           <div className="topbar-actions">
+            <a
+              className="secondary-button"
+              href="/signed-checkpoints"
+            >
+              Signed checkpoints
+            </a>
+
             <button
               className="secondary-button"
               type="button"

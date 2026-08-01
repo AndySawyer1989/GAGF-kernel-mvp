@@ -275,8 +275,16 @@ export default function SigningKeysPage() {
             </p>
           </div>
 
-          <button
-            className="refresh-button"
+          <div className="topbar-actions">
+            <a
+              className="secondary-button"
+              href="/signed-checkpoints"
+            >
+              Signed checkpoints
+            </a>
+
+            <button
+              className="refresh-button"
             type="button"
             disabled={loading}
             onClick={() =>
@@ -285,6 +293,7 @@ export default function SigningKeysPage() {
           >
             {loading ? "Refreshing?" : "Refresh"}
           </button>
+          </div>
         </header>
 
         {error && (

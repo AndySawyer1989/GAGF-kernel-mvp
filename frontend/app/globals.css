@@ -2262,3 +2262,148 @@ h2 {
     text-align: left;
   }
 }
+
+.signed-status-strip {
+  margin-top: 28px;
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.signed-status-strip > div:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.latest-signature-panel,
+.signed-inventory-panel {
+  margin-top: 20px;
+}
+
+.signed-checkpoint-list {
+  margin-top: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.signed-checkpoint-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.signed-card-heading {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.signed-card-heading h3 {
+  margin-top: 5px;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.signed-proof-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.signed-proof-grid > div {
+  padding: 13px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.signed-proof-grid span,
+.signed-hash-lineage span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.signed-proof-grid strong {
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.signed-hash-lineage {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.signed-hash-lineage > div {
+  padding: 13px;
+  display: grid;
+  gap: 7px;
+  border-radius: 10px;
+  background: rgba(91, 47, 138, 0.07);
+}
+
+.signed-hash-lineage code {
+  color: var(--purple);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.signed-reason {
+  margin-top: 14px;
+  padding: 13px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  border: 1px solid rgba(194, 119, 25, 0.25);
+  border-radius: 10px;
+  background: rgba(194, 119, 25, 0.08);
+}
+
+.signed-reason code {
+  color: var(--orange-dark);
+}
+
+@media (max-width: 1000px) {
+  .signed-status-strip {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .signed-status-strip > div {
+    padding-bottom: 15px;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .signed-proof-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .signed-status-strip,
+  .signed-proof-grid,
+  .signed-hash-lineage {
+    grid-template-columns: 1fr;
+  }
+
+  .signed-card-heading {
+    flex-direction: column;
+  }
+}
