@@ -8,7 +8,9 @@ import {
   useState
 } from "react";
 
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ConsoleSidebar } from "@/components/console-sidebar";
+import { ConsoleToast } from "@/components/console-toast";
 import {
   createSignedAuditCheckpoint,
   fetchSignedAuditCheckpointRecords,
@@ -77,6 +79,11 @@ export default function SignedCheckpointsPage() {
 
   const [creating, setCreating] =
     useState(false);
+
+  const [
+    confirmCreateOpen,
+    setConfirmCreateOpen
+  ] = useState(false);
 
   const [error, setError] =
     useState<string | null>(null);
@@ -163,6 +170,8 @@ export default function SignedCheckpointsPage() {
           : `Checkpoint ${created.checkpoint.checkpoint_id} was created without a signature.`
       );
 
+      setConfirmCreateOpen(false);
+
       await loadSignedCheckpoints();
     } catch (caught) {
       if (
@@ -235,12 +244,10 @@ export default function SignedCheckpointsPage() {
               type="button"
               disabled={creating || loading}
               onClick={() =>
-                void createCheckpoint()
+                setConfirmCreateOpen(true)
               }
             >
-              {creating
-                ? "Signing checkpoint?"
-                : "Create signed checkpoint"}
+              Create signed checkpoint
             </button>
           </div>
         </header>
@@ -268,14 +275,13 @@ export default function SignedCheckpointsPage() {
           </section>
         )}
 
-        {notice && (
-          <section
-            className="audit-notice"
-            aria-live="polite"
-          >
-            {notice}
-          </section>
-        )}
+        <ConsoleToast
+          message={notice}
+          onDismiss={() =>
+            setNotice(null)
+          }
+          tone="success"
+        />
 
         {!error && loading && (
           <section className="detail-loading">
@@ -647,6 +653,22 @@ export default function SignedCheckpointsPage() {
             </>
           )}
       </section>
+
+      <ConfirmationDialog
+        busy={creating}
+        confirmLabel="Create and sign"
+        description={
+          "This creates a new immutable tenant audit checkpoint, signs it with the active durable key, and persists the resulting cryptographic proof."
+        }
+        onCancel={() =>
+          setConfirmCreateOpen(false)
+        }
+        onConfirm={() =>
+          void createCheckpoint()
+        }
+        open={confirmCreateOpen}
+        title="Create a signed checkpoint?"
+      />
     </main>
   );
 }

@@ -2407,3 +2407,197 @@ h2 {
     flex-direction: column;
   }
 }
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(25, 14, 31, 0.56);
+  backdrop-filter: blur(4px);
+}
+
+.confirmation-dialog {
+  width: min(100%, 520px);
+  padding: 26px;
+  display: grid;
+  gap: 20px;
+  border: 1px solid rgba(91, 47, 138, 0.2);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow:
+    0 24px 70px rgba(25, 14, 31, 0.28);
+}
+
+.dialog-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--purple);
+  background: rgba(91, 47, 138, 0.1);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.dialog-icon-warning {
+  color: var(--orange-dark);
+  background: rgba(194, 119, 25, 0.13);
+}
+
+.confirmation-dialog h2 {
+  margin-top: 5px;
+  font-size: 1.45rem;
+}
+
+.dialog-description {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.dialog-confirm-button {
+  padding: 10px 15px;
+  border: 1px solid var(--purple);
+  border-radius: 10px;
+  color: white;
+  background: var(--purple);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dialog-confirm-warning {
+  border-color: var(--orange);
+  background: var(--orange);
+}
+
+.dialog-confirm-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.console-toast {
+  position: fixed;
+  z-index: 1100;
+  right: 24px;
+  bottom: 24px;
+  width: min(420px, calc(100vw - 48px));
+  padding: 15px 16px;
+  display: grid;
+  grid-template-columns:
+    auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow:
+    0 16px 45px rgba(25, 14, 31, 0.2);
+  animation:
+    console-toast-enter 180ms ease-out;
+}
+
+.console-toast p {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.console-toast button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.console-toast button:hover {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.console-toast-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.console-toast-success {
+  border-color: rgba(38, 122, 82, 0.28);
+}
+
+.console-toast-success
+.console-toast-indicator {
+  background: var(--success);
+}
+
+.console-toast-error {
+  border-color: rgba(167, 55, 55, 0.3);
+}
+
+.console-toast-error
+.console-toast-indicator {
+  background: #a73737;
+}
+
+.console-toast-info
+.console-toast-indicator {
+  background: var(--purple);
+}
+
+@keyframes console-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 700px) {
+  .dialog-backdrop {
+    padding: 14px;
+  }
+
+  .confirmation-dialog {
+    padding: 21px;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-actions button {
+    width: 100%;
+  }
+
+  .console-toast {
+    right: 14px;
+    bottom: 14px;
+    width: calc(100vw - 28px);
+  }
+}
+
+@media (
+  prefers-reduced-motion: reduce
+) {
+  .console-toast {
+    animation: none;
+  }
+}

@@ -7,7 +7,9 @@ import {
   useState
 } from "react";
 
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ConsoleSidebar } from "@/components/console-sidebar";
+import { ConsoleToast } from "@/components/console-toast";
 import {
   createAuditCheckpoint,
   fetchAuditCheckpoints,
@@ -101,6 +103,11 @@ export default function AuditIntegrityPage() {
   const [creating, setCreating] =
     useState(false);
 
+  const [
+    confirmCheckpointOpen,
+    setConfirmCheckpointOpen
+  ] = useState(false);
+
   const [error, setError] =
     useState<string | null>(null);
 
@@ -190,6 +197,8 @@ export default function AuditIntegrityPage() {
         "A new tenant audit checkpoint was created."
       );
 
+      setConfirmCheckpointOpen(false);
+
       await loadAuditConsole();
     } catch (caught) {
       if (
@@ -260,12 +269,10 @@ export default function AuditIntegrityPage() {
               type="button"
               disabled={creating || loading}
               onClick={() =>
-                void createCheckpoint()
+                setConfirmCheckpointOpen(true)
               }
             >
-              {creating
-                ? "Creating checkpoint?"
-                : "Create checkpoint"}
+              Create checkpoint
             </button>
 
             <button
@@ -304,14 +311,13 @@ export default function AuditIntegrityPage() {
           </section>
         )}
 
-        {notice && (
-          <section
-            className="audit-notice"
-            aria-live="polite"
-          >
-            {notice}
-          </section>
-        )}
+        <ConsoleToast
+          message={notice}
+          onDismiss={() =>
+            setNotice(null)
+          }
+          tone="success"
+        />
 
         {!error && loading && (
           <section className="detail-loading">
@@ -650,6 +656,22 @@ export default function AuditIntegrityPage() {
             </>
           )}
       </section>
+
+      <ConfirmationDialog
+        busy={creating}
+        confirmLabel="Create checkpoint"
+        description={
+          "This creates a new immutable integrity anchor for the current tenant audit chain. The operation will also be recorded in the audit ledger."
+        }
+        onCancel={() =>
+          setConfirmCheckpointOpen(false)
+        }
+        onConfirm={() =>
+          void createCheckpoint()
+        }
+        open={confirmCheckpointOpen}
+        title="Create an audit checkpoint?"
+      />
     </main>
   );
 }

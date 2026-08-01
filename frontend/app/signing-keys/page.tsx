@@ -7,7 +7,9 @@ import {
   useState
 } from "react";
 
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ConsoleSidebar } from "@/components/console-sidebar";
+import { ConsoleToast } from "@/components/console-toast";
 import {
   activateSigningKey,
   fetchActiveSigningKey,
@@ -145,6 +147,11 @@ export default function SigningKeysPage() {
   const [activatingKeyId, setActivatingKeyId] =
     useState<string | null>(null);
 
+  const [
+    pendingActivationKeyId,
+    setPendingActivationKeyId
+  ] = useState<string | null>(null);
+
   const [error, setError] =
     useState<string | null>(null);
 
@@ -234,6 +241,8 @@ export default function SigningKeysPage() {
         `Signing key ${keyId} is now active.`
       );
 
+      setPendingActivationKeyId(null);
+
       await loadSigningKeys();
     } catch (caught) {
       if (
@@ -319,14 +328,13 @@ export default function SigningKeysPage() {
           </section>
         )}
 
-        {notice && (
-          <section
-            className="audit-notice"
-            aria-live="polite"
-          >
-            {notice}
-          </section>
-        )}
+        <ConsoleToast
+          message={notice}
+          onDismiss={() =>
+            setNotice(null)
+          }
+          tone="success"
+        />
 
         {!error && loading && (
           <section className="detail-loading">
@@ -613,7 +621,7 @@ export default function SigningKeysPage() {
                           activatingKeyId !== null
                         }
                         onClick={() =>
-                          void activateKey(
+                          setPendingActivationKeyId(
                             key.key_id
                           )
                         }
@@ -667,6 +675,31 @@ export default function SigningKeysPage() {
             </>
           )}
       </section>
+
+      <ConfirmationDialog
+        busy={activatingKeyId !== null}
+        confirmLabel="Activate key"
+        description={
+          pendingActivationKeyId
+            ? `Activating ${pendingActivationKeyId} will make it authoritative for future signed checkpoints and retire the currently active key.`
+            : ""
+        }
+        onCancel={() =>
+          setPendingActivationKeyId(null)
+        }
+        onConfirm={() => {
+          if (pendingActivationKeyId) {
+            void activateKey(
+              pendingActivationKeyId
+            );
+          }
+        }}
+        open={
+          pendingActivationKeyId !== null
+        }
+        title="Change the active signing key?"
+        tone="warning"
+      />
     </main>
   );
 }
