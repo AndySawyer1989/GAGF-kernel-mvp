@@ -192,6 +192,58 @@ export type AssessmentExecutionResponse = {
   persistence_hash?: string;
 };
 
+export type GovernanceAssessmentAuditEvent = {
+  event_id: string;
+  request_id: string;
+  tenant_id: string;
+  actor_id: string;
+  actor_roles: string[];
+  method: string;
+  route: string;
+  outcome: string;
+  status_code: number;
+  reason_code: string | null;
+  occurred_at: string;
+  previous_hash: string;
+  event_hash: string;
+  hash_version: string;
+};
+
+export type GovernanceAssessmentAuditEventList = {
+  tenant_id: string;
+  items: GovernanceAssessmentAuditEvent[];
+  count: number;
+  limit: number;
+};
+
+export type GovernanceAssessmentAuditIntegrity = {
+  tenant_id: string;
+  valid: boolean;
+  checked_count: number;
+  failure_index: number | null;
+  failure_event_id: string | null;
+  reason_code: string | null;
+};
+
+export type GovernanceAssessmentCheckpointList = {
+  tenant_id: string;
+  items: Array<Record<string, unknown>>;
+  count: number;
+  limit: number;
+};
+
+export type GovernanceAssessmentSignedVerification =
+  | {
+      available: true;
+      payload: Record<string, unknown>;
+    }
+  | {
+      available: false;
+      status: number;
+      code: string;
+      message: string;
+    };
+
 export type GovernanceAssessmentApiConfig = {
   baseUrl: string;
   tenantId: string;
@@ -515,4 +567,200 @@ export async function fetchAssessmentArtifacts(
   return readAssessmentResponse<
     GovernanceAssessmentArtifactList
   >(response, "Assessment artifact request");
+}
+
+function buildAuditUrl(
+  config: GovernanceAssessmentApiConfig,
+  path: string
+): URL {
+  const url = new URL(path, config.baseUrl);
+
+  url.searchParams.set(
+    "tenant_id",
+    config.tenantId
+  );
+
+  return url;
+}
+
+export async function fetchAuditEvents(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentAuditEventList> {
+  const response = await fetch(
+    buildAuditUrl(
+      config,
+      "/api/v1/governance-assessments/audit-events"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentAuditEventList
+  >(response, "Audit event request");
+}
+
+export async function fetchAuditIntegrity(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentAuditIntegrity> {
+  const response = await fetch(
+    buildAuditUrl(
+      config,
+      "/api/v1/governance-assessments/audit-integrity"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentAuditIntegrity
+  >(response, "Audit integrity request");
+}
+
+export async function fetchAuditCheckpoints(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentCheckpointList> {
+  const response = await fetch(
+    buildAuditUrl(
+      config,
+      "/api/v1/governance-assessments/audit-checkpoints"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentCheckpointList
+  >(response, "Audit checkpoint request");
+}
+
+export async function fetchSignedAuditCheckpoints(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentCheckpointList> {
+  const response = await fetch(
+    buildAuditUrl(
+      config,
+      "/api/v1/governance-assessments/audit-checkpoints/signed"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    GovernanceAssessmentCheckpointList
+  >(response, "Signed checkpoint request");
+}
+
+export async function verifySignedAuditCheckpoints(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<GovernanceAssessmentSignedVerification> {
+  const response = await fetch(
+    buildAuditUrl(
+      config,
+      "/api/v1/governance-assessments/audit-checkpoints/signed/verification"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  const payload: unknown =
+    await response.json().catch(() => null);
+
+  if (response.ok) {
+    return {
+      available: true,
+      payload:
+        typeof payload === "object" &&
+        payload !== null
+          ? payload as Record<string, unknown>
+          : {}
+    };
+  }
+
+  if (
+    response.status === 503 &&
+    typeof payload === "object" &&
+    payload !== null &&
+    "detail" in payload
+  ) {
+    const detail = (
+      payload as {
+        detail?: unknown;
+      }
+    ).detail;
+
+    if (
+      typeof detail === "object" &&
+      detail !== null
+    ) {
+      const record =
+        detail as Record<string, unknown>;
+
+      return {
+        available: false,
+        status: response.status,
+        code:
+          typeof record.code === "string"
+            ? record.code
+            : "VERIFIER_UNAVAILABLE",
+        message:
+          typeof record.message === "string"
+            ? record.message
+            : "Signed checkpoint verification is unavailable."
+      };
+    }
+  }
+
+  throw new GovernanceAssessmentApiError(
+    `Signed checkpoint verification failed with status ${response.status}`,
+    response.status,
+    payload
+  );
+}
+
+export async function createAuditCheckpoint(
+  config: GovernanceAssessmentApiConfig,
+  signal?: AbortSignal
+): Promise<Record<string, unknown>> {
+  const response = await fetch(
+    buildAuditUrl(
+      config,
+      "/api/v1/governance-assessments/audit-checkpoints"
+    ),
+    {
+      method: "POST",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return readAssessmentResponse<
+    Record<string, unknown>
+  >(response, "Audit checkpoint creation");
 }
