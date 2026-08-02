@@ -11,6 +11,7 @@ import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ConsolePagination } from "@/components/console-pagination";
 import { ConsoleSidebar } from "@/components/console-sidebar";
 import { ConsoleToast } from "@/components/console-toast";
+import { SigningCapabilityPanel } from "@/components/signing-capability-panel";
 import {
   createAuditCheckpoint,
   fetchAuditCheckpoints,
@@ -32,6 +33,14 @@ import {
   readStringParam,
   updateUrlParams
 } from "@/lib/url-table-state";
+import {
+  detectSigningCapability,
+  loadingSigningCapability,
+  type SigningCapability
+} from "@/lib/signing-capability";
+import {
+  buildOptionalServiceWarning
+} from "@/lib/optional-service-state";
 
 function formatTimestamp(
   value: string
@@ -127,6 +136,18 @@ export default function AuditIntegrityPage() {
   const [loading, setLoading] =
     useState(true);
 
+  const [
+    signingCapability,
+    setSigningCapability
+  ] = useState<SigningCapability>(
+    loadingSigningCapability
+  );
+
+  const [
+    optionalWarning,
+    setOptionalWarning
+  ] = useState<string | null>(null);
+
   const [creating, setCreating] =
     useState(false);
 
@@ -145,18 +166,31 @@ export default function AuditIntegrityPage() {
     async (signal?: AbortSignal) => {
       setLoading(true);
       setError(null);
+      setOptionalWarning(null);
+      setSigningCapability(
+        loadingSigningCapability()
+      );
 
       try {
         const [
           eventResult,
           integrityResult,
-          checkpointResult,
-          signedCheckpointResult,
-          signedVerificationResult
+          checkpointResult
         ] = await Promise.all([
           fetchAuditEvents(config, signal),
           fetchAuditIntegrity(config, signal),
-          fetchAuditCheckpoints(config, signal),
+          fetchAuditCheckpoints(config, signal)
+        ]);
+
+        setEvents(eventResult);
+        setIntegrity(integrityResult);
+        setCheckpoints(checkpointResult);
+
+        const [
+          signedCheckpointResult,
+          signedVerificationResult,
+          capabilityResult
+        ] = await Promise.allSettled([
           fetchSignedAuditCheckpoints(
             config,
             signal
@@ -164,17 +198,116 @@ export default function AuditIntegrityPage() {
           verifySignedAuditCheckpoints(
             config,
             signal
+          ),
+          detectSigningCapability(
+            config,
+            signal
           )
         ]);
 
-        setEvents(eventResult);
-        setIntegrity(integrityResult);
-        setCheckpoints(checkpointResult);
-        setSignedCheckpoints(
-          signedCheckpointResult
-        );
-        setSignedVerification(
-          signedVerificationResult
+        if (signal?.aborted) {
+          return;
+        }
+
+        const optionalFailures: string[] = [];
+
+        if (
+          signedCheckpointResult.status ===
+          "fulfilled"
+        ) {
+          setSignedCheckpoints(
+            signedCheckpointResult.value
+          );
+        } else {
+          setSignedCheckpoints({
+            tenant_id: config.tenantId,
+            items: [],
+            count: 0,
+            limit: 0
+          });
+
+          optionalFailures.push(
+            "signed checkpoint inventory"
+          );
+        }
+
+        if (
+          signedVerificationResult.status ===
+          "fulfilled"
+        ) {
+          setSignedVerification(
+            signedVerificationResult.value
+          );
+
+          if (
+            !signedVerificationResult.value
+              .available
+          ) {
+            optionalFailures.push(
+              "signed checkpoint verification"
+            );
+          }
+        } else {
+          setSignedVerification({
+            available: false,
+            status: 0,
+            code:
+              "SIGNED_VERIFICATION_UNAVAILABLE",
+            message:
+              "Signed checkpoint verification could not be loaded."
+          });
+
+          optionalFailures.push(
+            "signed checkpoint verification"
+          );
+        }
+
+        if (
+          capabilityResult.status ===
+          "fulfilled"
+        ) {
+          setSigningCapability(
+            capabilityResult.value
+          );
+
+          if (
+            !capabilityResult.value.available
+          ) {
+            optionalFailures.push(
+              "durable signing"
+            );
+          }
+        } else {
+          if (
+            capabilityResult.reason
+              instanceof DOMException &&
+            capabilityResult.reason.name ===
+              "AbortError"
+          ) {
+            return;
+          }
+
+          setSigningCapability({
+            status: "error",
+            available: false,
+            title:
+              "Signing capability is unknown",
+            message:
+              "The Console could not determine whether durable signing is available.",
+            activeKey: null,
+            statusCode: null,
+            reasonCode: null
+          });
+
+          optionalFailures.push(
+            "durable signing capability"
+          );
+        }
+
+        setOptionalWarning(
+          buildOptionalServiceWarning(
+            optionalFailures
+          )
         );
       } catch (caught) {
         if (
@@ -188,11 +321,11 @@ export default function AuditIntegrityPage() {
           caught instanceof GovernanceAssessmentApiError
         ) {
           setError(
-            `Backend returned ${caught.status} while loading audit integrity data.`
+            `Backend returned ${caught.status} while loading required audit integrity data.`
           );
         } else {
           setError(
-            "The Audit Integrity Console could not be loaded."
+            "The required Audit Integrity Console data could not be loaded."
           );
         }
       } finally {
@@ -418,6 +551,42 @@ export default function AuditIntegrityPage() {
           }
           tone="success"
         />
+
+        <SigningCapabilityPanel
+          capability={signingCapability}
+          compact
+        />
+
+        {optionalWarning && (
+          <section
+            className="optional-service-warning"
+            role="status"
+          >
+            <div>
+              <p className="error-title">
+                Optional cryptographic services degraded
+              </p>
+
+              <p>{optionalWarning}</p>
+
+              <p>
+                Audit events, integrity results, and
+                ordinary checkpoint history remain
+                available.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() =>
+                void loadAuditConsole()
+              }
+            >
+              Retry optional services
+            </button>
+          </section>
+        )}
 
         {!error && loading && (
           <section className="detail-loading">

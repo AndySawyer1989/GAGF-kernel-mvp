@@ -12,6 +12,8 @@ import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ConsolePagination } from "@/components/console-pagination";
 import { ConsoleSidebar } from "@/components/console-sidebar";
 import { ConsoleToast } from "@/components/console-toast";
+import { SigningCapabilityPanel } from "@/components/signing-capability-panel";
+import { SigningCapabilityAction } from "@/components/signing-capability-action";
 import {
   createSignedAuditCheckpoint,
   fetchSignedAuditCheckpointRecords,
@@ -27,6 +29,11 @@ import {
   readPositiveIntegerParam,
   updateUrlParams
 } from "@/lib/url-table-state";
+import {
+  detectSigningCapability,
+  loadingSigningCapability,
+  type SigningCapability
+} from "@/lib/signing-capability";
 
 const SIGNED_CHECKPOINT_PAGE_SIZE = 5;
 
@@ -85,6 +92,13 @@ export default function SignedCheckpointsPage() {
   const [loading, setLoading] =
     useState(true);
 
+  const [
+    signingCapability,
+    setSigningCapability
+  ] = useState<SigningCapability>(
+    loadingSigningCapability
+  );
+
   const [signedPage, setSignedPage] =
     useState(1);
 
@@ -109,11 +123,15 @@ export default function SignedCheckpointsPage() {
     async (signal?: AbortSignal) => {
       setLoading(true);
       setError(null);
+      setSigningCapability(
+        loadingSigningCapability()
+      );
 
       try {
         const [
           signedRecords,
-          verificationRecords
+          verificationRecords,
+          capability
         ] = await Promise.all([
           fetchSignedAuditCheckpointRecords(
             config,
@@ -122,11 +140,16 @@ export default function SignedCheckpointsPage() {
           fetchSignedAuditCheckpointVerificationRecords(
             config,
             signal
+          ),
+          detectSigningCapability(
+            config,
+            signal
           )
         ]);
 
         setRecords(signedRecords);
         setVerification(verificationRecords);
+        setSigningCapability(capability);
       } catch (caught) {
         if (
           caught instanceof DOMException &&
@@ -189,6 +212,14 @@ export default function SignedCheckpointsPage() {
   }, [loadSignedCheckpoints]);
 
   async function createCheckpoint() {
+    if (!signingCapability.available) {
+      setConfirmCreateOpen(false);
+      setError(
+        signingCapability.message
+      );
+      return;
+    }
+
     setCreating(true);
     setError(null);
     setNotice(null);
@@ -294,18 +325,23 @@ export default function SignedCheckpointsPage() {
               Signing keys
             </Link>
 
-            <button
-              className="refresh-button"
-              type="button"
-              disabled={creating || loading}
-              onClick={() =>
+            <SigningCapabilityAction
+              busy={creating}
+              capability={signingCapability}
+              loading={loading}
+              onActivate={() =>
                 setConfirmCreateOpen(true)
               }
-            >
-              Create signed checkpoint
-            </button>
+            />
           </div>
         </header>
+
+        <div id="signed-checkpoint-capability-help">
+          <SigningCapabilityPanel
+            capability={signingCapability}
+            compact
+          />
+        </div>
 
         {error && (
           <section
@@ -731,7 +767,10 @@ export default function SignedCheckpointsPage() {
         onConfirm={() =>
           void createCheckpoint()
         }
-        open={confirmCreateOpen}
+        open={
+          confirmCreateOpen &&
+          signingCapability.available
+        }
         title="Create a signed checkpoint?"
       />
     </main>
