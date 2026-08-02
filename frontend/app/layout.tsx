@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { SkipToContent } from "@/components/skip-to-content";
+
 export const metadata: Metadata = {
   title: "GAGF Governance Assessment Console",
   description: "Evidence-governed assessment and audit console"
@@ -13,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SkipToContent />
+        {children}
+      </body>
     </html>
   );
 }

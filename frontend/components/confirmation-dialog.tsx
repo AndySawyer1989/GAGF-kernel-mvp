@@ -17,6 +17,15 @@ export type ConfirmationDialogProps = {
   onCancel: () => void;
 };
 
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])"
+].join(",");
+
 export function ConfirmationDialog({
   open,
   title,
@@ -28,15 +37,34 @@ export function ConfirmationDialog({
   onConfirm,
   onCancel
 }: ConfirmationDialogProps) {
+  const dialogRef =
+    useRef<HTMLElement>(null);
+
   const cancelButtonRef =
     useRef<HTMLButtonElement>(null);
+
+  const previouslyFocusedRef =
+    useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    cancelButtonRef.current?.focus();
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    window.requestAnimationFrame(() => {
+      cancelButtonRef.current?.focus();
+    });
 
     function handleKeyDown(
       event: KeyboardEvent
@@ -45,7 +73,69 @@ export function ConfirmationDialog({
         event.key === "Escape" &&
         !busy
       ) {
+        event.preventDefault();
         onCancel();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const dialog =
+        dialogRef.current;
+
+      if (!dialog) {
+        return;
+      }
+
+      const focusableElements =
+        Array.from(
+          dialog.querySelectorAll<HTMLElement>(
+            FOCUSABLE_SELECTOR
+          )
+        ).filter(
+          (element) =>
+            !element.hasAttribute("disabled") &&
+            element.getAttribute(
+              "aria-hidden"
+            ) !== "true"
+        );
+
+      if (
+        focusableElements.length === 0
+      ) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first =
+        focusableElements[0];
+
+      const last =
+        focusableElements[
+          focusableElements.length - 1
+        ];
+
+      const active =
+        document.activeElement;
+
+      if (
+        event.shiftKey &&
+        active === first
+      ) {
+        event.preventDefault();
+        last.focus();
+        return;
+      }
+
+      if (
+        !event.shiftKey &&
+        active === last
+      ) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -53,12 +143,6 @@ export function ConfirmationDialog({
       "keydown",
       handleKeyDown
     );
-
-    const previousOverflow =
-      document.body.style.overflow;
-
-    document.body.style.overflow =
-      "hidden";
 
     return () => {
       document.removeEventListener(
@@ -68,8 +152,24 @@ export function ConfirmationDialog({
 
       document.body.style.overflow =
         previousOverflow;
+
+      const previous =
+        previouslyFocusedRef.current;
+
+      window.requestAnimationFrame(() => {
+        if (
+          previous &&
+          document.contains(previous)
+        ) {
+          previous.focus();
+        }
+      });
     };
-  }, [busy, onCancel, open]);
+  }, [
+    busy,
+    onCancel,
+    open
+  ]);
 
   if (!open) {
     return null;
@@ -94,7 +194,9 @@ export function ConfirmationDialog({
         aria-labelledby="confirmation-title"
         aria-modal="true"
         className="confirmation-dialog"
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
       >
         <div
           className={

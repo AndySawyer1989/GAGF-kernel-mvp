@@ -258,12 +258,12 @@ export default function SignedCheckpointsPage() {
   return (
     <main className="console-shell">
       <ConsoleSidebar
-        activePage="audit-integrity"
+        activePage="signed-checkpoints"
         tenantId={config.tenantId}
         actorId={config.actorId}
       />
 
-      <section className="workspace">
+      <section className="workspace" id="console-main-content" tabIndex={-1}>
         <header className="topbar">
           <div>
             <p className="eyebrow">

@@ -137,7 +137,7 @@ export default function GovernanceAssessmentConsole() {
         actorId={config.actorId}
       />
 
-      <section className="workspace">
+      <section className="workspace" id="console-main-content" tabIndex={-1}>
         <header className="topbar">
           <div>
             <p className="eyebrow">
