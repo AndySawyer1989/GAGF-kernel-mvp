@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
+import { ConsolePagination } from "@/components/console-pagination";
 import { ConsoleSidebar } from "@/components/console-sidebar";
 import { ConsoleToast } from "@/components/console-toast";
 import {
@@ -25,6 +26,12 @@ import {
   type GovernanceAssessmentCheckpointList,
   type GovernanceAssessmentSignedVerification
 } from "@/lib/governance-assessment-api";
+import {
+  clampPageToItems,
+  readPositiveIntegerParam,
+  readStringParam,
+  updateUrlParams
+} from "@/lib/url-table-state";
 
 function formatTimestamp(
   value: string
@@ -52,6 +59,15 @@ function shortHash(value: string): string {
 
   return `${value.slice(0, 10)}?${value.slice(-8)}`;
 }
+
+const AUDIT_EVENT_PAGE_SIZE = 15;
+const CHECKPOINT_PAGE_SIZE = 5;
+
+const AUDIT_OUTCOMES = [
+  "ALL",
+  "ALLOWED",
+  "DENIED"
+] as const;
 
 function eventMatches(
   event: GovernanceAssessmentAuditEvent,
@@ -96,6 +112,17 @@ export default function AuditIntegrityPage() {
 
   const [outcomeFilter, setOutcomeFilter] =
     useState("ALL");
+
+  const [auditPage, setAuditPage] =
+    useState(1);
+
+  const [
+    checkpointPage,
+    setCheckpointPage
+  ] = useState(1);
+
+  const [urlStateReady, setUrlStateReady] =
+    useState(false);
 
   const [loading, setLoading] =
     useState(true);
@@ -178,6 +205,47 @@ export default function AuditIntegrityPage() {
   );
 
   useEffect(() => {
+    setOutcomeFilter(
+      readStringParam(
+        "outcome",
+        AUDIT_OUTCOMES,
+        "ALL"
+      )
+    );
+
+    setAuditPage(
+      readPositiveIntegerParam(
+        "auditPage"
+      )
+    );
+
+    setCheckpointPage(
+      readPositiveIntegerParam(
+        "checkpointPage"
+      )
+    );
+
+    setUrlStateReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!urlStateReady) {
+      return;
+    }
+
+    updateUrlParams({
+      outcome: outcomeFilter,
+      auditPage,
+      checkpointPage
+    });
+  }, [
+    auditPage,
+    checkpointPage,
+    outcomeFilter,
+    urlStateReady
+  ]);
+
+  useEffect(() => {
     const controller = new AbortController();
 
     void loadAuditConsole(controller.signal);
@@ -221,6 +289,38 @@ export default function AuditIntegrityPage() {
     events?.items.filter((event) =>
       eventMatches(event, outcomeFilter)
     ) ?? [];
+
+  const safeAuditPage = clampPageToItems(
+    auditPage,
+    filteredEvents.length,
+    AUDIT_EVENT_PAGE_SIZE
+  );
+
+  const paginatedEvents =
+    filteredEvents.slice(
+      (safeAuditPage - 1) *
+        AUDIT_EVENT_PAGE_SIZE,
+      safeAuditPage *
+        AUDIT_EVENT_PAGE_SIZE
+    );
+
+  const checkpointItems =
+    checkpoints?.items ?? [];
+
+  const safeCheckpointPage =
+    clampPageToItems(
+      checkpointPage,
+      checkpointItems.length,
+      CHECKPOINT_PAGE_SIZE
+    );
+
+  const paginatedCheckpoints =
+    checkpointItems.slice(
+      (safeCheckpointPage - 1) *
+        CHECKPOINT_PAGE_SIZE,
+      safeCheckpointPage *
+        CHECKPOINT_PAGE_SIZE
+    );
 
   const allowedCount =
     events?.items.filter(
@@ -533,13 +633,31 @@ export default function AuditIntegrityPage() {
                       created for this tenant.
                     </div>
                   ) : (
-                    <pre className="checkpoint-json">
-                      {JSON.stringify(
-                        checkpoints.items,
-                        null,
-                        2
-                      )}
-                    </pre>
+                    <>
+                      <pre className="checkpoint-json">
+                        {JSON.stringify(
+                          paginatedCheckpoints,
+                          null,
+                          2
+                        )}
+                      </pre>
+
+                      <ConsolePagination
+                        currentPage={
+                          safeCheckpointPage
+                        }
+                        label="Checkpoints"
+                        onPageChange={
+                          setCheckpointPage
+                        }
+                        pageSize={
+                          CHECKPOINT_PAGE_SIZE
+                        }
+                        totalItems={
+                          checkpointItems.length
+                        }
+                      />
+                    </>
                   )}
 
                   <div className="signed-checkpoint-count">
@@ -565,11 +683,12 @@ export default function AuditIntegrityPage() {
 
                     <select
                       value={outcomeFilter}
-                      onChange={(event) =>
+                      onChange={(event) => {
                         setOutcomeFilter(
                           event.target.value
-                        )
-                      }
+                        );
+                        setAuditPage(1);
+                      }}
                     >
                       <option value="ALL">
                         All outcomes
@@ -593,7 +712,7 @@ export default function AuditIntegrityPage() {
                     <span>Event hash</span>
                   </div>
 
-                  {filteredEvents.map((event) => (
+                  {paginatedEvents.map((event) => (
                     <div
                       className="audit-event-row"
                       key={event.event_id}
@@ -652,6 +771,14 @@ export default function AuditIntegrityPage() {
                     </div>
                   ))}
                 </div>
+
+                <ConsolePagination
+                  currentPage={safeAuditPage}
+                  label="Audit events"
+                  onPageChange={setAuditPage}
+                  pageSize={AUDIT_EVENT_PAGE_SIZE}
+                  totalItems={filteredEvents.length}
+                />
               </section>
             </>
           )}

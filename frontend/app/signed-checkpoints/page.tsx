@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
+import { ConsolePagination } from "@/components/console-pagination";
 import { ConsoleSidebar } from "@/components/console-sidebar";
 import { ConsoleToast } from "@/components/console-toast";
 import {
@@ -21,6 +22,13 @@ import {
   type GovernanceAssessmentSignedCheckpointList,
   type GovernanceAssessmentSignedCheckpointVerificationList
 } from "@/lib/governance-assessment-api";
+import {
+  clampPageToItems,
+  readPositiveIntegerParam,
+  updateUrlParams
+} from "@/lib/url-table-state";
+
+const SIGNED_CHECKPOINT_PAGE_SIZE = 5;
 
 function formatTimestamp(
   value: string
@@ -76,6 +84,12 @@ export default function SignedCheckpointsPage() {
 
   const [loading, setLoading] =
     useState(true);
+
+  const [signedPage, setSignedPage] =
+    useState(1);
+
+  const [urlStateReady, setUrlStateReady] =
+    useState(false);
 
   const [creating, setCreating] =
     useState(false);
@@ -142,6 +156,29 @@ export default function SignedCheckpointsPage() {
   );
 
   useEffect(() => {
+    setSignedPage(
+      readPositiveIntegerParam(
+        "signedPage"
+      )
+    );
+
+    setUrlStateReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!urlStateReady) {
+      return;
+    }
+
+    updateUrlParams({
+      signedPage
+    });
+  }, [
+    signedPage,
+    urlStateReady
+  ]);
+
+  useEffect(() => {
     const controller = new AbortController();
 
     void loadSignedCheckpoints(
@@ -189,6 +226,24 @@ export default function SignedCheckpointsPage() {
       setCreating(false);
     }
   }
+
+  const signedItems =
+    records?.items ?? [];
+
+  const safeSignedPage =
+    clampPageToItems(
+      signedPage,
+      signedItems.length,
+      SIGNED_CHECKPOINT_PAGE_SIZE
+    );
+
+  const paginatedSignedItems =
+    signedItems.slice(
+      (safeSignedPage - 1) *
+        SIGNED_CHECKPOINT_PAGE_SIZE,
+      safeSignedPage *
+        SIGNED_CHECKPOINT_PAGE_SIZE
+    );
 
   const verificationByCheckpoint =
     useMemo(() => {
@@ -499,7 +554,7 @@ export default function SignedCheckpointsPage() {
                   </div>
                 ) : (
                   <div className="signed-checkpoint-list">
-                    {records.items.map((record) => {
+                    {paginatedSignedItems.map((record) => {
                       const result =
                         verificationByCheckpoint.get(
                           record.checkpoint
@@ -649,6 +704,16 @@ export default function SignedCheckpointsPage() {
                     })}
                   </div>
                 )}
+
+                <ConsolePagination
+                  currentPage={safeSignedPage}
+                  label="Signed checkpoints"
+                  onPageChange={setSignedPage}
+                  pageSize={
+                    SIGNED_CHECKPOINT_PAGE_SIZE
+                  }
+                  totalItems={signedItems.length}
+                />
               </section>
             </>
           )}
