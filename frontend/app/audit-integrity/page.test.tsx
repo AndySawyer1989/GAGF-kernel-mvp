@@ -17,17 +17,21 @@ import {
 import AuditIntegrityPage from "./page";
 
 import {
-  createAuditCheckpoint,
-  fetchAuditCheckpoints,
-  fetchAuditEvents,
-  fetchAuditIntegrity,
-  fetchSignedAuditCheckpoints,
-  verifySignedAuditCheckpoints
-} from "@/lib/governance-assessment-api";
+  TEST_SIGNING_KEY_ID,
+  createAuditCheckpoint as createAuditCheckpointFixture,
+  createAuditCheckpointList,
+  createAuditEvent,
+  createAuditEventList,
+  createAuditIntegrity,
+  createAvailableSigningCapability,
+  createSignedCheckpointList,
+  createTestApiConfig,
+  createUnconfiguredSigningCapability
+} from "@/test/governance-assessment-fixtures";
 
 import {
-  detectSigningCapability
-} from "@/lib/signing-capability";
+  createGovernanceAssessmentMockHarness
+} from "@/test/governance-assessment-mock-harness";
 
 vi.mock(
   "@/lib/governance-assessment-api",
@@ -42,13 +46,9 @@ vi.mock(
     return {
       ...actual,
       getGovernanceAssessmentApiConfig:
-        vi.fn(() => ({
-          baseUrl:
-            "http://127.0.0.1:8000",
-          tenantId: "tenant-alpha",
-          actorId: "console-admin",
-          actorRoles: "assessment:admin"
-        })),
+        vi.fn(() =>
+          createTestApiConfig()
+        ),
       fetchAuditEvents: vi.fn(),
       fetchAuditIntegrity: vi.fn(),
       fetchAuditCheckpoints: vi.fn(),
@@ -79,26 +79,29 @@ vi.mock(
   }
 );
 
+const harness =
+  createGovernanceAssessmentMockHarness();
+
 const mockedFetchEvents =
-  vi.mocked(fetchAuditEvents);
+  harness.fetchAuditEvents;
 
 const mockedFetchIntegrity =
-  vi.mocked(fetchAuditIntegrity);
+  harness.fetchAuditIntegrity;
 
 const mockedFetchCheckpoints =
-  vi.mocked(fetchAuditCheckpoints);
+  harness.fetchAuditCheckpoints;
 
 const mockedFetchSignedCheckpoints =
-  vi.mocked(fetchSignedAuditCheckpoints);
+  harness.fetchSignedAuditCheckpoints;
 
 const mockedVerifySignedCheckpoints =
-  vi.mocked(verifySignedAuditCheckpoints);
+  harness.verifySignedAuditCheckpoints;
 
 const mockedDetectCapability =
-  vi.mocked(detectSigningCapability);
+  harness.detectSigningCapability;
 
 const mockedCreateCheckpoint =
-  vi.mocked(createAuditCheckpoint);
+  harness.createAuditCheckpoint;
 
 const CORE_CHECKPOINT_ID =
   "checkpoint-core-001";
@@ -106,79 +109,40 @@ const CORE_CHECKPOINT_ID =
 const CORE_EVENT_ID =
   "audit-event-core-001";
 
-const ACTIVE_KEY = {
-  tenant_id: "tenant-alpha",
-  key_id: "assessment-local-2026-01",
-  secret_reference:
-    "env://GAGF_ASSESSMENT_CHECKPOINT_SECRET",
-  active: true,
-  created_at:
-    "2026-08-02T12:00:00Z",
-  retired_at: null
-};
-
 function configureCoreAuditData() {
-  mockedFetchEvents.mockResolvedValue({
-    tenant_id: "tenant-alpha",
-    items: [
-      {
-        event_id: CORE_EVENT_ID,
-        request_id:
-          "request-core-001",
-        tenant_id: "tenant-alpha",
-        actor_id:
-          "integration-operator",
-        actor_roles: [
-          "assessment:admin"
-        ],
-        method: "POST",
-        route:
-          "/api/v1/governance-assessments/execute",
-        outcome: "allowed",
-        status_code: 200,
-        reason_code: null,
-        occurred_at:
-          "2026-08-03T00:00:00Z",
-        previous_hash:
-          "previous-audit-hash",
-        event_hash:
-          "current-audit-event-hash",
-        hash_version: "1.0.0"
-      }
-    ],
-    count: 1,
-    limit: 100
-  });
+  mockedFetchEvents.mockResolvedValue(
+    createAuditEventList({
+      items: [
+        createAuditEvent({
+          event_id: CORE_EVENT_ID,
+          request_id:
+            "request-core-001",
+          actor_id:
+            "integration-operator"
+        })
+      ]
+    })
+  );
 
-  mockedFetchIntegrity.mockResolvedValue({
-    tenant_id: "tenant-alpha",
-    valid: true,
-    checked_count: 461,
-    failure_index: null,
-    failure_event_id: null,
-    reason_code: null
-  });
+  mockedFetchIntegrity.mockResolvedValue(
+    createAuditIntegrity({
+      checked_count: 461
+    })
+  );
 
-  mockedFetchCheckpoints.mockResolvedValue({
-    tenant_id: "tenant-alpha",
-    items: [
-      {
-        checkpoint_id:
-          CORE_CHECKPOINT_ID,
-        tenant_id: "tenant-alpha",
-        chain_head_hash:
-          "core-chain-head-hash",
-        checked_count: 461,
-        valid: true,
-        reason_code: null,
-        created_at:
-          "2026-08-03T00:01:00Z",
-        checkpoint_version: "1.0.0"
-      }
-    ],
-    count: 1,
-    limit: 100
-  });
+  mockedFetchCheckpoints.mockResolvedValue(
+    createAuditCheckpointList({
+      items: [
+        createAuditCheckpointFixture({
+          checkpoint_id:
+            CORE_CHECKPOINT_ID,
+          chain_head_hash:
+            "core-chain-head-hash",
+          checked_count: 461
+        })
+      ]
+    })
+  );
 }
 
 function configureDegradedOptionalServices() {
@@ -199,36 +163,25 @@ function configureDegradedOptionalServices() {
         "The signature verifier is temporarily unavailable."
     });
 
-  mockedDetectCapability
-    .mockResolvedValue({
-      status: "unconfigured",
-      available: false,
-      title:
-        "Durable signing is not configured",
-      message:
-        "No active durable signing key is available for this tenant.",
-      activeKey: null,
-      statusCode: 503,
-      reasonCode:
-        "CHECKPOINT_SIGNING_UNAVAILABLE"
-    });
+  mockedDetectCapability.mockResolvedValue(
+    createUnconfiguredSigningCapability()
+  );
 }
 
 function configureHealthyOptionalServices() {
   mockedFetchSignedCheckpoints
-    .mockResolvedValue({
-      tenant_id: "tenant-alpha",
-      items: [
-        {
-          checkpoint_id:
-            "signed-checkpoint-001",
-          key_id:
-            "assessment-local-2026-01"
-        }
-      ],
-      count: 1,
-      limit: 100
-    });
+    .mockResolvedValue(
+      createSignedCheckpointList({
+        items: [
+          {
+            checkpoint_id:
+              "signed-checkpoint-001",
+            key_id:
+              TEST_SIGNING_KEY_ID
+          }
+        ]
+      })
+    );
 
   mockedVerifySignedCheckpoints
     .mockResolvedValue({
@@ -241,25 +194,16 @@ function configureHealthyOptionalServices() {
       }
     });
 
-  mockedDetectCapability
-    .mockResolvedValue({
-      status: "available",
-      available: true,
-      title:
-        "Durable signing available",
-      message:
-        "Checkpoint signing is available through active key assessment-local-2026-01.",
-      activeKey: ACTIVE_KEY,
-      statusCode: 200,
-      reasonCode: null
-    });
+  mockedDetectCapability.mockResolvedValue(
+    createAvailableSigningCapability()
+  );
 }
 
 describe(
   "AuditIntegrityPage integration",
   () => {
     beforeEach(() => {
-      vi.clearAllMocks();
+      harness.clear();
 
       window.history.replaceState(
         {},
@@ -365,19 +309,18 @@ describe(
               "Signed inventory unavailable"
             )
           )
-          .mockResolvedValue({
-            tenant_id: "tenant-alpha",
-            items: [
-              {
-                checkpoint_id:
-                  "signed-checkpoint-001",
-                key_id:
-                  "assessment-local-2026-01"
-              }
-            ],
-            count: 1,
-            limit: 100
-          });
+          .mockResolvedValue(
+            createSignedCheckpointList({
+              items: [
+                {
+                  checkpoint_id:
+                    "signed-checkpoint-001",
+                  key_id:
+                    TEST_SIGNING_KEY_ID
+                }
+              ]
+            })
+          );
 
         mockedVerifySignedCheckpoints
           .mockResolvedValueOnce({
@@ -399,29 +342,12 @@ describe(
           });
 
         mockedDetectCapability
-          .mockResolvedValueOnce({
-            status: "unconfigured",
-            available: false,
-            title:
-              "Durable signing is not configured",
-            message:
-              "No active durable signing key is available for this tenant.",
-            activeKey: null,
-            statusCode: 503,
-            reasonCode:
-              "CHECKPOINT_SIGNING_UNAVAILABLE"
-          })
-          .mockResolvedValue({
-            status: "available",
-            available: true,
-            title:
-              "Durable signing available",
-            message:
-              "Checkpoint signing is available through active key assessment-local-2026-01.",
-            activeKey: ACTIVE_KEY,
-            statusCode: 200,
-            reasonCode: null
-          });
+          .mockResolvedValueOnce(
+            createUnconfiguredSigningCapability()
+          )
+          .mockResolvedValue(
+            createAvailableSigningCapability()
+          );
 
         render(<AuditIntegrityPage />);
 
