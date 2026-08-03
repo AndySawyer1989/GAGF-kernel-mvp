@@ -33,6 +33,17 @@ import {
   createGovernanceAssessmentMockHarness
 } from "@/test/governance-assessment-mock-harness";
 
+import {
+  expectNoAccessibilityViolations
+} from "@/test/accessibility-harness";
+
+import {
+  expectDescribedControl,
+  expectNavigationLandmark,
+  expectSinglePrimaryHeading,
+  expectSkipLinkTarget
+} from "@/test/page-accessibility-assertions";
+
 vi.mock(
   "@/lib/governance-assessment-api",
   async (importOriginal) => {
@@ -170,7 +181,11 @@ describe(
 
         configureHealthyBackend();
 
-        render(<SignedCheckpointsPage />);
+        const {
+          container: healthyContainer
+        } = render(
+          <SignedCheckpointsPage />
+        );
 
         expect(
           await screen.findByRole(
@@ -199,6 +214,10 @@ describe(
             "Signature valid"
           )
         ).toBeInTheDocument();
+
+        await expectNoAccessibilityViolations(
+          healthyContainer
+        );
 
         const createButton =
           screen.getByRole(
@@ -300,7 +319,11 @@ describe(
           createUnconfiguredSigningCapability()
         );
 
-        render(<SignedCheckpointsPage />);
+        const {
+          container: degradedContainer
+        } = render(
+          <SignedCheckpointsPage />
+        );
 
         expect(
           await screen.findByRole(
@@ -362,6 +385,10 @@ describe(
             "Signed checkpoint inventory"
           )
         ).toBeInTheDocument();
+
+        await expectNoAccessibilityViolations(
+          degradedContainer
+        );
 
         expect(
           mockedCreateCheckpoint
@@ -545,6 +572,218 @@ describe(
             mockedFetchVerification
           ).toHaveBeenCalledTimes(2);
         });
+      }
+    );
+
+
+    it(
+      "supports an accessible keyboard-only confirmation workflow",
+      async () => {
+        const user = userEvent.setup();
+
+        configureHealthyBackend();
+
+        const {
+          container
+        } = render(
+          <SignedCheckpointsPage />
+        );
+
+        await screen.findByRole(
+          "heading",
+          {
+            name:
+              "Durable signing available"
+          }
+        );
+
+        const createButton =
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Create signed checkpoint"
+            }
+          );
+
+        createButton.focus();
+
+        expect(createButton).toHaveFocus();
+
+        await user.keyboard("{Enter}");
+
+        const dialog =
+          await screen.findByRole(
+            "dialog",
+            {
+              name:
+                "Create a signed checkpoint?"
+            }
+          );
+
+        expect(dialog).toBeInTheDocument();
+
+        expect(
+          dialog.contains(
+            document.activeElement
+          )
+        ).toBe(true);
+
+        await expectNoAccessibilityViolations(
+          container
+        );
+
+        await user.keyboard("{Escape}");
+
+        await waitFor(() => {
+          expect(
+            screen.queryByRole(
+              "dialog",
+              {
+                name:
+                  "Create a signed checkpoint?"
+              }
+            )
+          ).not.toBeInTheDocument();
+        });
+
+        expect(createButton).toHaveFocus();
+
+        await user.keyboard("{Enter}");
+
+        const reopenedDialog =
+          await screen.findByRole(
+            "dialog",
+            {
+              name:
+                "Create a signed checkpoint?"
+            }
+          );
+
+        expect(
+          reopenedDialog.contains(
+            document.activeElement
+          )
+        ).toBe(true);
+
+        const confirmButton =
+          screen.getByRole(
+            "button",
+            {
+              name: "Create and sign"
+            }
+          );
+
+        confirmButton.focus();
+
+        expect(confirmButton).toHaveFocus();
+
+        await user.keyboard("{Enter}");
+
+        await waitFor(() => {
+          expect(
+            mockedCreateCheckpoint
+          ).toHaveBeenCalledTimes(1);
+        });
+
+        expect(
+          await screen.findByText(
+            "Signed checkpoint created"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "checkpoint-integration-002"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.queryByRole(
+            "dialog",
+            {
+              name:
+                "Create a signed checkpoint?"
+            }
+          )
+        ).not.toBeInTheDocument();
+      }
+    );
+
+
+    it(
+      "exposes page semantics and explains disabled signing actions",
+      async () => {
+        mockedFetchRecords.mockResolvedValue(
+          createSignedCheckpointList({
+            items: [SIGNED_RECORD]
+          })
+        );
+
+        mockedFetchVerification.mockResolvedValue(
+          createSignedVerificationList({
+            items: [
+              {
+                checkpoint_id:
+                  CHECKPOINT_ID,
+                key_id:
+                  TEST_SIGNING_KEY_ID,
+                valid: true,
+                reason_code: null
+              }
+            ]
+          })
+        );
+
+        mockedDetectCapability.mockResolvedValue(
+          createUnconfiguredSigningCapability()
+        );
+
+        const {
+          container
+        } = render(
+          <SignedCheckpointsPage />
+        );
+
+        await screen.findByRole(
+          "heading",
+          {
+            name:
+              "Durable signing is not configured"
+          }
+        );
+
+        expectSinglePrimaryHeading(
+          container
+        );
+
+        expectNavigationLandmark(
+          container
+        );
+
+        expectSkipLinkTarget(
+          container
+        );
+
+        const createButton =
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Create signed checkpoint"
+            }
+          );
+
+        expect(createButton).toBeDisabled();
+
+        expectDescribedControl(
+          createButton,
+          container
+        );
+
+        await expectNoAccessibilityViolations(
+          container
+        );
       }
     );
 

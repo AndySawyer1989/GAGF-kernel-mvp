@@ -1,5 +1,7 @@
 "use client";
 
+
+import { ConsoleSkipLink } from "@/components/console-skip-link";
 import {
   useCallback,
   useEffect,
@@ -469,6 +471,7 @@ export default function AuditIntegrityPage() {
 
   return (
     <main className="console-shell">
+      <ConsoleSkipLink />
       <ConsoleSidebar
         activePage="audit-integrity"
         tenantId={config.tenantId}

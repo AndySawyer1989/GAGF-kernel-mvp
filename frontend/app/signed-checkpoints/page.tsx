@@ -1,5 +1,7 @@
 "use client";
 
+
+import { ConsoleSkipLink } from "@/components/console-skip-link";
 import Link from "next/link";
 import {
   useCallback,
@@ -288,6 +290,7 @@ export default function SignedCheckpointsPage() {
 
   return (
     <main className="console-shell">
+      <ConsoleSkipLink />
       <ConsoleSidebar
         activePage="signed-checkpoints"
         tenantId={config.tenantId}

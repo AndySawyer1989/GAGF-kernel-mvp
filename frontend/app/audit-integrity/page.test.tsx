@@ -33,6 +33,16 @@ import {
   createGovernanceAssessmentMockHarness
 } from "@/test/governance-assessment-mock-harness";
 
+import {
+  expectNoAccessibilityViolations
+} from "@/test/accessibility-harness";
+
+import {
+  expectNavigationLandmark,
+  expectSinglePrimaryHeading,
+  expectSkipLinkTarget
+} from "@/test/page-accessibility-assertions";
+
 vi.mock(
   "@/lib/governance-assessment-api",
   async (importOriginal) => {
@@ -219,7 +229,11 @@ describe(
       async () => {
         configureDegradedOptionalServices();
 
-        render(<AuditIntegrityPage />);
+        const {
+          container: degradedContainer
+        } = render(
+          <AuditIntegrityPage />
+        );
 
         expect(
           await screen.findByText(
@@ -292,6 +306,10 @@ describe(
           )
         ).not.toBeInTheDocument();
 
+        await expectNoAccessibilityViolations(
+          degradedContainer
+        );
+
         expect(
           mockedCreateCheckpoint
         ).not.toHaveBeenCalled();
@@ -349,7 +367,11 @@ describe(
             createAvailableSigningCapability()
           );
 
-        render(<AuditIntegrityPage />);
+        const {
+          container: recoveredContainer
+        } = render(
+          <AuditIntegrityPage />
+        );
 
         const retryButton =
           await screen.findByRole(
@@ -400,6 +422,10 @@ describe(
           )
         ).toBeInTheDocument();
 
+        await expectNoAccessibilityViolations(
+          recoveredContainer
+        );
+
         await waitFor(() => {
           expect(
             mockedFetchEvents
@@ -427,5 +453,62 @@ describe(
         });
       }
     );
+
+    it(
+      "exposes page semantics and announces optional-service degradation",
+      async () => {
+        configureDegradedOptionalServices();
+
+        const {
+          container
+        } = render(
+          <AuditIntegrityPage />
+        );
+
+        const degradationMessage =
+          await screen.findByText(
+            "Optional cryptographic services degraded"
+          );
+
+        expectSinglePrimaryHeading(
+          container
+        );
+
+        expectNavigationLandmark(
+          container
+        );
+
+        expectSkipLinkTarget(
+          container
+        );
+
+        const statusRegion =
+          degradationMessage.closest(
+            '[role="status"]'
+          );
+
+        expect(statusRegion).not.toBeNull();
+
+        expect(
+          screen.getByRole(
+            "heading",
+            {
+              name: "Chain verification"
+            }
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "integration-operator"
+          )
+        ).toBeInTheDocument();
+
+        await expectNoAccessibilityViolations(
+          container
+        );
+      }
+    );
+
   }
 );
