@@ -15,7 +15,18 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report test-evidence/playwright/html",
+    "test:e2e:evidence": "playwright test --reporter=list,html,json,junit",
+    "test:e2e:clean": "node -e \"require('fs').rmSync('test-evidence/playwright/html',{recursive:true,force:true});require('fs').rmSync('test-evidence/playwright/results',{recursive:true,force:true});require('fs').rmSync('test-evidence/playwright/traces',{recursive:true,force:true})\"",
+    "test:e2e:summary": "node scripts/generate-browser-evidence.mjs",
+    "test:e2e:release": "npm run test:e2e:policy && npm run test:e2e:integrity && npm run test:e2e:retention && npm run test:e2e && npm run test:e2e:summary && npm run test:e2e:manifest && npm run test:e2e:verify && npm run test:e2e:bundle && npm run test:e2e:verify-bundle",
+    "test:e2e:policy": "node --test e2e/browser-diagnostic-policy.test.mjs",
+    "test:e2e:integrity": "node --test scripts/browser-evidence-integrity.test.mjs",
+    "test:e2e:manifest": "node scripts/generate-browser-evidence-manifest.mjs",
+    "test:e2e:verify": "node scripts/verify-browser-evidence-manifest.mjs",
+    "test:e2e:retention": "node --test scripts/browser-evidence-retention.test.mjs",
+    "test:e2e:bundle": "node scripts/package-browser-evidence.mjs",
+    "test:e2e:verify-bundle": "node scripts/verify-browser-evidence-bundle.mjs"
   },
   "dependencies": {
     "next": "15.4.6",

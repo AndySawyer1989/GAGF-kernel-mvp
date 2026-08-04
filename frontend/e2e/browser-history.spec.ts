@@ -2,7 +2,7 @@ import {
   expect,
   test,
   type Page
-} from "@playwright/test";
+} from "./browser-test";
 
 import {
   installAuditIntegrityApiHarness

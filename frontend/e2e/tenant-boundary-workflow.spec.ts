@@ -2,7 +2,7 @@ import {
   expect,
   test,
   type Request
-} from "@playwright/test";
+} from "./browser-test";
 
 import {
   TEST_ACTOR_ID,

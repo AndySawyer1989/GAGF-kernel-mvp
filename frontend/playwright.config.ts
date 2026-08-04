@@ -3,48 +3,86 @@ import {
   devices
 } from "@playwright/test";
 
-const baseURL =
-  process.env.PLAYWRIGHT_BASE_URL
-  ?? "http://127.0.0.1:3000";
+const evidenceRoot =
+  "test-evidence/playwright";
 
 export default defineConfig({
   testDir: "./e2e",
 
-  outputDir:
-    "./test-results/playwright",
+  fullyParallel: true,
 
-  fullyParallel: false,
+  /*
+   * Two workers is the validated stable concurrency
+   * for the local Next.js test server.
+   */
+  workers: 2,
 
   forbidOnly:
     Boolean(process.env.CI),
 
   retries:
-    process.env.CI ? 2 : 0,
+    process.env.CI
+      ? 1
+      : 0,
 
-  workers: 2,
-
+  /*
+   * Reporter outputs provide human-readable,
+   * machine-readable, and CI-compatible evidence.
+   */
   reporter: [
-    ["list"],
+    [
+      "list"
+    ],
     [
       "html",
       {
-        open: "never",
         outputFolder:
-          "playwright-report"
+          `${evidenceRoot}/html`,
+        open: "never"
+      }
+    ],
+    [
+      "json",
+      {
+        outputFile:
+          `${evidenceRoot}/results/results.json`
+      }
+    ],
+    [
+      "junit",
+      {
+        outputFile:
+          `${evidenceRoot}/results/junit.xml`
       }
     ]
   ],
 
+  outputDir:
+    `${evidenceRoot}/traces`,
+
   use: {
-    baseURL,
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
-    video: "off"
+    baseURL:
+      "http://127.0.0.1:3000",
+
+    /*
+     * Capture enough evidence to diagnose failures
+     * without recording every successful browser run.
+     */
+    trace:
+      "retain-on-failure",
+
+    screenshot:
+      "only-on-failure",
+
+    video:
+      "retain-on-failure"
   },
 
   projects: [
     {
-      name: "desktop-chromium",
+      name:
+        "desktop-chromium",
+
       use: {
         ...devices[
           "Desktop Chrome"
@@ -52,7 +90,9 @@ export default defineConfig({
       }
     },
     {
-      name: "mobile-chromium",
+      name:
+        "mobile-chromium",
+
       use: {
         ...devices[
           "Pixel 5"
@@ -63,10 +103,15 @@ export default defineConfig({
 
   webServer: {
     command:
-      "npm run dev -- --hostname 127.0.0.1",
-    url: baseURL,
+      "npm run dev",
+
+    url:
+      "http://127.0.0.1:3000",
+
     reuseExistingServer:
       !process.env.CI,
-    timeout: 120_000
+
+    timeout:
+      120_000
   }
 });

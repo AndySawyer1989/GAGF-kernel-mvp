@@ -1,7 +1,7 @@
 import {
   expect,
   test
-} from "@playwright/test";
+} from "./browser-test";
 
 test.describe(
   "Governance Console shell",

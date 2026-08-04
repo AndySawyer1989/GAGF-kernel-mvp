@@ -3,3 +3,8 @@ node_modules
 out
 .env.local
 *.log
+# Playwright browser evidence
+/test-evidence/playwright/html/
+/test-evidence/playwright/results/
+/test-evidence/playwright/traces/
+/test-evidence/playwright/bundles/

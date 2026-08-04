@@ -1,7 +1,7 @@
 import {
   expect,
   test
-} from "@playwright/test";
+} from "./browser-test";
 
 import {
   CREATED_CHECKPOINT_ID,
