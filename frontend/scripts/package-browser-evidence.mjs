@@ -6,6 +6,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  rmSync,
   writeFileSync
 } from "node:fs";
 
@@ -15,6 +16,7 @@ import {
 
 import {
   basename,
+  relative,
   resolve
 } from "node:path";
 
@@ -59,13 +61,19 @@ function sha256File(
   filePath
 ) {
   const hash =
-    createHash("sha256");
+    createHash(
+      "sha256"
+    );
 
   hash.update(
-    readFileSync(filePath)
+    readFileSync(
+      filePath
+    )
   );
 
-  return hash.digest("hex");
+  return hash.digest(
+    "hex"
+  );
 }
 
 function gitValue(
@@ -97,7 +105,9 @@ function gitValue(
 }
 
 if (
-  !existsSync(manifestPath)
+  !existsSync(
+    manifestPath
+  )
 ) {
   throw new Error(
     "Evidence manifest is missing. "
@@ -125,9 +135,6 @@ const verification =
       ],
       ignoredUnexpectedPrefixes: [
         "test-evidence/playwright/bundles"
-      ],
-      ignoredUnexpectedPrefixes: [
-        "test-evidence/playwright/bundles"
       ]
     }
   );
@@ -151,7 +158,7 @@ mkdirSync(
 const story =
   String(
     manifest.story
-    ?? "GRA-UI-010J"
+    ?? "GRA-UI-010K"
   ).replace(
     /[^A-Za-z0-9._-]/g,
     "-"
@@ -162,10 +169,12 @@ const shortCommit =
     "rev-parse",
     "--short",
     "HEAD"
-  ]).replace(
-    /[^a-f0-9]/gi,
-    ""
-  ) || "unknown";
+  ])
+    .replace(
+      /[^a-f0-9]/gi,
+      ""
+    )
+  || "unknown";
 
 const bundleName =
   `gagf-browser-evidence-${story}-${shortCommit}.zip`;
@@ -183,41 +192,96 @@ const archiveItems = [
   "html",
   "results",
   "traces"
-];
-
-const powershellCommand = [
-  "$ErrorActionPreference = 'Stop'",
-  `$source = '${evidenceRoot.replaceAll("'", "''")}'`,
-  `$destination = '${bundlePath.replaceAll("'", "''")}'`,
-  "if (Test-Path $destination) { Remove-Item $destination -Force }",
-  "$items = @(",
-  ...archiveItems.map(
-    (item) =>
-      `  (Join-Path $source '${item}')`
-  ),
-  ")",
-  "$existing = $items | Where-Object { Test-Path $_ }",
-  "Compress-Archive -Path $existing -DestinationPath $destination -CompressionLevel Optimal"
-].join("\n");
-
-execFileSync(
-  "powershell.exe",
-  [
-    "-NoProfile",
-    "-NonInteractive",
-    "-Command",
-    powershellCommand
-  ],
-  {
-    cwd:
-      root,
-    stdio:
-      "inherit"
-  }
+].filter(
+  (item) =>
+    existsSync(
+      resolve(
+        evidenceRoot,
+        item
+      )
+    )
 );
 
 if (
-  !existsSync(bundlePath)
+  archiveItems.length === 0
+) {
+  throw new Error(
+    "No evidence directories were available for packaging."
+  );
+}
+
+if (
+  existsSync(
+    bundlePath
+  )
+) {
+  rmSync(
+    bundlePath,
+    {
+      force: true
+    }
+  );
+}
+
+if (
+  process.platform
+  === "win32"
+) {
+  const powershellCommand = [
+    "$ErrorActionPreference = 'Stop'",
+    `$source = '${evidenceRoot.replaceAll("'", "''")}'`,
+    `$destination = '${bundlePath.replaceAll("'", "''")}'`,
+    "$items = @(",
+    ...archiveItems.map(
+      (item) =>
+        `  (Join-Path $source '${item}')`
+    ),
+    ")",
+    "Compress-Archive "
+      + "-Path $items "
+      + "-DestinationPath $destination "
+      + "-CompressionLevel Optimal"
+  ].join(
+    "\n"
+  );
+
+  execFileSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      powershellCommand
+    ],
+    {
+      cwd:
+        root,
+      stdio:
+        "inherit"
+    }
+  );
+} else {
+  execFileSync(
+    "zip",
+    [
+      "-q",
+      "-r",
+      bundlePath,
+      ...archiveItems
+    ],
+    {
+      cwd:
+        evidenceRoot,
+      stdio:
+        "inherit"
+    }
+  );
+}
+
+if (
+  !existsSync(
+    bundlePath
+  )
 ) {
   throw new Error(
     "Evidence bundle was not created."
@@ -227,7 +291,9 @@ if (
 const retentionDays =
   Number.parseInt(
     process.env.GAGF_EVIDENCE_RETENTION_DAYS
-    ?? String(DEFAULT_RETENTION_DAYS),
+    ?? String(
+      DEFAULT_RETENTION_DAYS
+    ),
     10
   );
 
@@ -243,9 +309,13 @@ const digestRecord = {
   retention_days:
     retentionDays,
   bundle:
-    basename(bundlePath),
+    basename(
+      bundlePath
+    ),
   sha256:
-    sha256File(bundlePath),
+    sha256File(
+      bundlePath
+    ),
   git: {
     commit:
       gitValue([
@@ -286,6 +356,24 @@ const removedBundles =
       retentionDays
     }
   );
+
+console.log(
+  "Bundle source directories: "
+  + archiveItems.join(
+      ", "
+    )
+);
+
+console.log(
+  "Bundle relative path: "
+  + relative(
+      root,
+      bundlePath
+    ).replaceAll(
+      "\\",
+      "/"
+    )
+);
 
 console.log(
   `Evidence bundle: ${basename(bundlePath)}`

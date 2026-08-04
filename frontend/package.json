@@ -26,7 +26,8 @@
     "test:e2e:verify": "node scripts/verify-browser-evidence-manifest.mjs",
     "test:e2e:retention": "node --test scripts/browser-evidence-retention.test.mjs",
     "test:e2e:bundle": "node scripts/package-browser-evidence.mjs",
-    "test:e2e:verify-bundle": "node scripts/verify-browser-evidence-bundle.mjs"
+    "test:e2e:verify-bundle": "node scripts/verify-browser-evidence-bundle.mjs",
+    "ci:browser-release": "npm run typecheck && npm run build && npm run test:e2e:release"
   },
   "dependencies": {
     "next": "15.4.6",

@@ -69,3 +69,20 @@ Each bundle has a JSON digest record containing:
 The default bundle retention period is 30 days.
 
 Run `npm run test:e2e:verify-bundle` to verify the newest bundle.
+
+## Continuous integration
+
+The GitHub Actions browser release gate runs:
+
+- dependency installation with `npm ci`
+- TypeScript validation
+- production frontend build
+- diagnostic-policy tests
+- evidence-integrity tests
+- retention-policy tests
+- the full Playwright browser matrix
+- release-summary generation
+- evidence-manifest generation and verification
+- evidence-bundle generation and verification
+
+The workflow uploads the generated browser evidence even when a gate fails.

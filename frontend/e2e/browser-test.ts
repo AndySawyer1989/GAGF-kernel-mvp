@@ -95,7 +95,11 @@ function policyFailureMessage(
     firstError
   ) {
     messages.push(
-      `First error: ${redactSensitiveText(firstError.message)}`
+      `First error: ${
+        redactSensitiveText(
+          firstError.message
+        )
+      }`
     );
   }
 
@@ -208,7 +212,7 @@ export const test =
           schema_version:
             "gagf.browser-diagnostics.v2",
           story:
-            "GRA-UI-010J",
+            "GRA-UI-010K",
           test_id:
             testInfo.testId,
           title:
@@ -281,12 +285,6 @@ export const test =
           }
         );
 
-        /*
-         * Do not replace an existing assertion failure
-         * with a secondary policy failure. A test that
-         * otherwise passed must fail when the browser
-         * emitted an unexpected runtime error.
-         */
         const testOtherwisePassed =
           testInfo.status
           === testInfo.expectedStatus;
