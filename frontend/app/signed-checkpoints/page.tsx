@@ -1,12 +1,12 @@
 "use client";
 
 
-import { ConsoleSkipLink } from "@/components/console-skip-link";
 import Link from "next/link";
 import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from "react";
 
@@ -107,6 +107,11 @@ export default function SignedCheckpointsPage() {
   const [urlStateReady, setUrlStateReady] =
     useState(false);
 
+  const nextHistoryMode =
+    useRef<"replace" | "push">(
+      "replace"
+    );
+
   const [creating, setCreating] =
     useState(false);
 
@@ -195,13 +200,51 @@ export default function SignedCheckpointsPage() {
       return;
     }
 
-    updateUrlParams({
-      signedPage
-    });
+    updateUrlParams(
+      {
+        signedPage
+      },
+      nextHistoryMode.current
+    );
+
+    nextHistoryMode.current =
+      "replace";
   }, [
     signedPage,
     urlStateReady
   ]);
+
+  useEffect(() => {
+    function restoreUrlState() {
+      nextHistoryMode.current =
+        "replace";
+
+      setSignedPage(
+        readPositiveIntegerParam(
+          "signedPage"
+        )
+      );
+    }
+
+    window.addEventListener(
+      "popstate",
+      restoreUrlState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "popstate",
+        restoreUrlState
+      );
+    };
+  }, []);
+
+  function handleSignedPageChange(
+    page: number
+  ) {
+    nextHistoryMode.current = "push";
+    setSignedPage(page);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -290,8 +333,7 @@ export default function SignedCheckpointsPage() {
 
   return (
     <main className="console-shell">
-      <ConsoleSkipLink />
-      <ConsoleSidebar
+<ConsoleSidebar
         activePage="signed-checkpoints"
         tenantId={config.tenantId}
         actorId={config.actorId}
@@ -747,7 +789,7 @@ export default function SignedCheckpointsPage() {
                 <ConsolePagination
                   currentPage={safeSignedPage}
                   label="Signed checkpoints"
-                  onPageChange={setSignedPage}
+                  onPageChange={handleSignedPageChange}
                   pageSize={
                     SIGNED_CHECKPOINT_PAGE_SIZE
                   }

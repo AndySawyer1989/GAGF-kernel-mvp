@@ -1,11 +1,11 @@
 "use client";
 
 
-import { ConsoleSkipLink } from "@/components/console-skip-link";
 import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from "react";
 
@@ -134,6 +134,11 @@ export default function AuditIntegrityPage() {
 
   const [urlStateReady, setUrlStateReady] =
     useState(false);
+
+  const nextHistoryMode =
+    useRef<"replace" | "push">(
+      "replace"
+    );
 
   const [loading, setLoading] =
     useState(true);
@@ -368,17 +373,84 @@ export default function AuditIntegrityPage() {
       return;
     }
 
-    updateUrlParams({
-      outcome: outcomeFilter,
-      auditPage,
-      checkpointPage
-    });
+    updateUrlParams(
+      {
+        outcome: outcomeFilter,
+        auditPage,
+        checkpointPage
+      },
+      nextHistoryMode.current
+    );
+
+    nextHistoryMode.current =
+      "replace";
   }, [
     auditPage,
     checkpointPage,
     outcomeFilter,
     urlStateReady
   ]);
+
+  useEffect(() => {
+    function restoreUrlState() {
+      nextHistoryMode.current =
+        "replace";
+
+      setOutcomeFilter(
+        readStringParam(
+          "outcome",
+          AUDIT_OUTCOMES,
+          "ALL"
+        )
+      );
+
+      setAuditPage(
+        readPositiveIntegerParam(
+          "auditPage"
+        )
+      );
+
+      setCheckpointPage(
+        readPositiveIntegerParam(
+          "checkpointPage"
+        )
+      );
+    }
+
+    window.addEventListener(
+      "popstate",
+      restoreUrlState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "popstate",
+        restoreUrlState
+      );
+    };
+  }, []);
+
+  function handleOutcomeChange(
+    outcome: string
+  ) {
+    nextHistoryMode.current = "push";
+    setOutcomeFilter(outcome);
+    setAuditPage(1);
+  }
+
+  function handleAuditPageChange(
+    page: number
+  ) {
+    nextHistoryMode.current = "push";
+    setAuditPage(page);
+  }
+
+  function handleCheckpointPageChange(
+    page: number
+  ) {
+    nextHistoryMode.current = "push";
+    setCheckpointPage(page);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -471,8 +543,7 @@ export default function AuditIntegrityPage() {
 
   return (
     <main className="console-shell">
-      <ConsoleSkipLink />
-      <ConsoleSidebar
+<ConsoleSidebar
         activePage="audit-integrity"
         tenantId={config.tenantId}
         actorId={config.actorId}
@@ -820,7 +891,7 @@ export default function AuditIntegrityPage() {
                         }
                         label="Checkpoints"
                         onPageChange={
-                          setCheckpointPage
+                          handleCheckpointPageChange
                         }
                         pageSize={
                           CHECKPOINT_PAGE_SIZE
@@ -856,10 +927,9 @@ export default function AuditIntegrityPage() {
                     <select
                       value={outcomeFilter}
                       onChange={(event) => {
-                        setOutcomeFilter(
+                        handleOutcomeChange(
                           event.target.value
                         );
-                        setAuditPage(1);
                       }}
                     >
                       <option value="ALL">
@@ -947,7 +1017,7 @@ export default function AuditIntegrityPage() {
                 <ConsolePagination
                   currentPage={safeAuditPage}
                   label="Audit events"
-                  onPageChange={setAuditPage}
+                  onPageChange={handleAuditPageChange}
                   pageSize={AUDIT_EVENT_PAGE_SIZE}
                   totalItems={filteredEvents.length}
                 />

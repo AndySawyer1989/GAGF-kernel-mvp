@@ -44,11 +44,17 @@ export function readStringParam(
     : fallback;
 }
 
+export type UrlHistoryMode =
+  | "replace"
+  | "push";
+
 export function updateUrlParams(
   values: Record<
     string,
     string | number | null
-  >
+  >,
+  historyMode: UrlHistoryMode =
+    "replace"
 ): void {
   if (typeof window === "undefined") {
     return;
@@ -76,10 +82,32 @@ export function updateUrlParams(
     }
   }
 
+  const nextLocation =
+    `${url.pathname}${url.search}${url.hash}`;
+
+  const currentLocation =
+    `${window.location.pathname}`
+    + `${window.location.search}`
+    + `${window.location.hash}`;
+
+  if (nextLocation === currentLocation) {
+    return;
+  }
+
+  if (historyMode === "push") {
+    window.history.pushState(
+      window.history.state,
+      "",
+      nextLocation
+    );
+
+    return;
+  }
+
   window.history.replaceState(
     window.history.state,
     "",
-    `${url.pathname}${url.search}${url.hash}`
+    nextLocation
   );
 }
 
