@@ -1,4 +1,4 @@
-name: Browser Release Gate
+﻿name: Browser Release Gate
 
 on:
   pull_request:
@@ -37,7 +37,7 @@ jobs:
 
     env:
       CI: "true"
-      GAGF_STORY_ID: "GRA-UI-010L"
+      GAGF_STORY_ID: "GRA-UI-010M"
       GAGF_EXPECTED_BROWSER_TESTS: "58"
       GAGF_EVIDENCE_RETENTION_DAYS: "30"
 
@@ -145,3 +145,4 @@ jobs:
           fi
 
           echo "::notice title=Browser Release Required::Governed Browser Evidence passed."
+
