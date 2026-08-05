@@ -5,7 +5,8 @@ import {
 } from "./browser-test";
 
 import {
-  installAuditIntegrityApiHarness
+  installAuditIntegrityApiHarness,
+  installGovernanceApiHarness
 } from "./governance-api-harness";
 
 async function waitForSearch(
@@ -22,6 +23,19 @@ async function waitForSearch(
 test.describe(
   "Governance Console browser history",
   () => {
+
+    test.beforeEach(
+      async ({ page }) => {
+        await installAuditIntegrityApiHarness(
+          page,
+          {
+            eventCount: 32,
+            checkpointCount: 12
+          }
+        );
+      }
+    );
+
     test(
       "restores Audit Integrity filters with Back and Forward",
       async ({ page }) => {
@@ -93,6 +107,10 @@ test.describe(
     test(
       "restores Signed Checkpoints pagination state",
       async ({ page }) => {
+        await installGovernanceApiHarness(
+          page,
+          12
+        );
         await page.goto(
           "/signed-checkpoints"
           + "?source=history"
