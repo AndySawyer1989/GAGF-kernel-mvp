@@ -102,3 +102,23 @@ CI triage produces:
 - `results/ci-triage.json`
 - `results/ci-triage.md`
 - GitHub error, warning, or notice annotations
+
+## Required-check failure simulation
+
+The Browser Release Gate workflow supports a manual-only
+`simulate_failure` input.
+
+Use the simulation to verify that:
+
+1. `Governed Browser Evidence` fails.
+2. `Browser Release Required` still runs because it uses `always()`.
+3. `Browser Release Required` reports failure.
+4. A protected branch would reject the run.
+
+The simulation input has no effect on push, pull-request, or merge-group
+events.
+
+Required-check contract evidence is written to:
+
+- `results/required-check-contract.json`
+- `results/required-check-contract.md`

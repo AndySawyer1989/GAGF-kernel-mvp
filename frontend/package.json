@@ -29,7 +29,9 @@
     "test:e2e:verify-bundle": "node scripts/verify-browser-evidence-bundle.mjs",
     "ci:browser-release": "npm run typecheck && npm run build && npm run test:e2e:release",
     "test:e2e:triage": "node --test scripts/browser-ci-triage.test.mjs",
-    "test:e2e:write-triage": "node scripts/write-browser-ci-triage.mjs"
+    "test:e2e:write-triage": "node scripts/write-browser-ci-triage.mjs",
+    "test:e2e:required-check": "node --test scripts/browser-required-check-contract.test.mjs",
+    "test:e2e:verify-required-check": "node scripts/verify-browser-required-check.mjs"
   },
   "dependencies": {
     "next": "15.4.6",

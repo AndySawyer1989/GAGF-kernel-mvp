@@ -7,6 +7,14 @@ on:
       - main
   merge_group:
   workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: >-
+          Intentionally fail the upstream browser job to verify
+          required-check enforcement.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -37,6 +45,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      - name: Simulate governed browser failure
+        if: >-
+          github.event_name == 'workflow_dispatch'
+          && inputs.simulate_failure == true
+        shell: bash
+        run: |
+          echo "::error title=Simulated Browser Failure::Manual required-check failure simulation was requested."
+          exit 1
+
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
@@ -46,6 +64,11 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Verify required-check contract
+        run: |
+          npm run test:e2e:required-check
+          npm run test:e2e:verify-required-check
 
       - name: Install Chromium and system dependencies
         run: npx playwright install --with-deps chromium
@@ -70,6 +93,11 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Ref: \`${GITHUB_REF}\`"
             echo
+            if [[ -f test-evidence/playwright/results/required-check-contract.md ]]; then
+              cat test-evidence/playwright/results/required-check-contract.md
+              echo
+            fi
+
             if [[ -f test-evidence/playwright/results/ci-triage.md ]]; then
               cat test-evidence/playwright/results/ci-triage.md
             elif [[ -f test-evidence/playwright/results/release-summary.md ]]; then
