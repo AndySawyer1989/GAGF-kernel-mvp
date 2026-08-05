@@ -86,3 +86,19 @@ The GitHub Actions browser release gate runs:
 - evidence-bundle generation and verification
 
 The workflow uploads the generated browser evidence even when a gate fails.
+
+## Required status check
+
+The stable branch-protection check is:
+
+- `Browser Release Required`
+
+This final job runs with `always()` and fails unless the governed browser-evidence job succeeds.
+
+The workflow includes `pull_request`, `push`, `merge_group`, and manual triggers without path filters so the required check is consistently created.
+
+CI triage produces:
+
+- `results/ci-triage.json`
+- `results/ci-triage.md`
+- GitHub error, warning, or notice annotations

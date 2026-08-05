@@ -2,17 +2,10 @@ name: Browser Release Gate
 
 on:
   pull_request:
-    paths:
-      - "frontend/**"
-      - ".github/workflows/browser-release-gate.yml"
-
   push:
     branches:
       - main
-    paths:
-      - "frontend/**"
-      - ".github/workflows/browser-release-gate.yml"
-
+  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -25,7 +18,7 @@ concurrency:
 
 jobs:
   browser-release:
-    name: Governed browser release
+    name: Governed Browser Evidence
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -36,7 +29,7 @@ jobs:
 
     env:
       CI: "true"
-      GAGF_STORY_ID: "GRA-UI-010K"
+      GAGF_STORY_ID: "GRA-UI-010L"
       GAGF_EXPECTED_BROWSER_TESTS: "58"
       GAGF_EVIDENCE_RETENTION_DAYS: "30"
 
@@ -58,7 +51,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run governed browser release gate
+        id: governed-release
         run: npm run ci:browser-release
+
+      - name: Generate CI triage
+        if: always()
+        continue-on-error: true
+        run: npm run test:e2e:write-triage
 
       - name: Write job summary
         if: always()
@@ -71,10 +70,12 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Ref: \`${GITHUB_REF}\`"
             echo
-            if [[ -f test-evidence/playwright/results/release-summary.md ]]; then
+            if [[ -f test-evidence/playwright/results/ci-triage.md ]]; then
+              cat test-evidence/playwright/results/ci-triage.md
+            elif [[ -f test-evidence/playwright/results/release-summary.md ]]; then
               cat test-evidence/playwright/results/release-summary.md
             else
-              echo "Release summary was not generated."
+              echo "Browser release evidence was not generated."
             fi
           } >> "${GITHUB_STEP_SUMMARY}"
 
@@ -92,3 +93,27 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
           compression-level: 6
+
+  browser-release-required:
+    name: Browser Release Required
+    if: always()
+    needs:
+      - browser-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Enforce browser release result
+        shell: bash
+        env:
+          BROWSER_RELEASE_RESULT: >-
+            ${{ needs.browser-release.result }}
+        run: |
+          echo "Governed Browser Evidence result: ${BROWSER_RELEASE_RESULT}"
+
+          if [[ "${BROWSER_RELEASE_RESULT}" != "success" ]]; then
+            echo "::error title=Browser Release Required::Governed Browser Evidence finished with status ${BROWSER_RELEASE_RESULT}."
+            exit 1
+          fi
+
+          echo "::notice title=Browser Release Required::Governed Browser Evidence passed."

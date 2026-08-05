@@ -4,8 +4,12 @@ import {
   type ConsoleMessage
 } from "@playwright/test";
 
-import * as diagnosticPolicy
-  from "./browser-diagnostic-policy.mjs";
+import {
+  evaluateDiagnosticPolicy,
+  partitionExpectedHttpDiagnostics,
+  redactSensitiveText,
+  sanitizeDiagnostic
+} from "./browser-diagnostic-policy";
 
 type DiagnosticLocation = {
   url?: string;
@@ -41,13 +45,6 @@ type DiagnosticPolicyResult = {
   page_error_events:
     PolicyDiagnostic[];
 };
-
-const {
-  evaluateDiagnosticPolicy,
-  redactSensitiveText,
-  sanitizeDiagnostic
-} = diagnosticPolicy;
-
 type BrowserDiagnosticFixture = {
   browserDiagnostics:
     PolicyDiagnostic[];
@@ -203,16 +200,28 @@ export const test =
               )
           );
 
+        const {
+          enforced_diagnostics:
+            enforcedDiagnostics,
+          expected_http_error_events:
+            expectedHttpErrorEvents
+        } =
+          partitionExpectedHttpDiagnostics(
+            diagnostics,
+            testInfo.title
+          );
+
         const policy =
           evaluateDiagnosticPolicy(
-            diagnostics
+            enforcedDiagnostics
           );
 
         const summary = {
           schema_version:
             "gagf.browser-diagnostics.v2",
           story:
-            "GRA-UI-010K",
+            process.env.GAGF_STORY_ID
+            ?? "GRA-UI-010L",
           test_id:
             testInfo.testId,
           title:
@@ -248,6 +257,8 @@ export const test =
               ).length,
             expected_warnings:
               policy.expected_warnings,
+            expected_http_errors:
+              expectedHttpErrorEvents.length,
             unexpected_warnings:
               policy.unexpected_warnings,
             unexpected_errors:
@@ -258,6 +269,8 @@ export const test =
               policy.release_blocking,
             expected_warnings:
               policy.expected_warnings,
+            expected_http_errors:
+              expectedHttpErrorEvents.length,
             unexpected_warnings:
               policy.unexpected_warnings,
             unexpected_errors:

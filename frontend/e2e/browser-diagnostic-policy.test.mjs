@@ -3,10 +3,11 @@ import test from "node:test";
 
 import {
   evaluateDiagnosticPolicy,
+  extractHttpStatus,
+  partitionExpectedHttpDiagnostics,
   redactSensitiveText,
   sanitizeDiagnostic
-} from "./browser-diagnostic-policy.mjs";
-
+} from "./browser-diagnostic-policy.ts";
 test(
   "redacts authorization credentials and tokens",
   () => {
@@ -244,3 +245,96 @@ test(
     );
   }
 );
+
+test(
+  "extracts HTTP status from a browser resource error",
+  () => {
+    assert.equal(
+      extractHttpStatus(
+        "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      ),
+      503
+    );
+  }
+);
+
+test(
+  "allows an expected 503 only for its recovery test",
+  () => {
+    const diagnostic = {
+      source:
+        "console",
+      level:
+        "error",
+      message:
+        "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    };
+
+    const expected =
+      partitionExpectedHttpDiagnostics(
+        [
+          diagnostic
+        ],
+        "shows a safe failure when required audit data is unavailable"
+      );
+
+    assert.equal(
+      expected.expected_http_error_events.length,
+      1
+    );
+
+    assert.equal(
+      expected.enforced_diagnostics.length,
+      0
+    );
+
+    const unexpected =
+      partitionExpectedHttpDiagnostics(
+        [
+          diagnostic
+        ],
+        "creates a normal governance assessment"
+      );
+
+    assert.equal(
+      unexpected.expected_http_error_events.length,
+      0
+    );
+
+    assert.equal(
+      unexpected.enforced_diagnostics.length,
+      1
+    );
+  }
+);
+
+test(
+  "allows an expected 403 only for its authorization test",
+  () => {
+    const result =
+      partitionExpectedHttpDiagnostics(
+        [
+          {
+            source:
+              "console",
+            level:
+              "error",
+            message:
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+          }
+        ],
+        "does not expose protected checkpoint data after authorization failure"
+      );
+
+    assert.equal(
+      result.expected_http_error_events.length,
+      1
+    );
+
+    assert.equal(
+      result.enforced_diagnostics.length,
+      0
+    );
+  }
+);
+

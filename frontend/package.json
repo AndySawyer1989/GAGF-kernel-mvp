@@ -27,7 +27,9 @@
     "test:e2e:retention": "node --test scripts/browser-evidence-retention.test.mjs",
     "test:e2e:bundle": "node scripts/package-browser-evidence.mjs",
     "test:e2e:verify-bundle": "node scripts/verify-browser-evidence-bundle.mjs",
-    "ci:browser-release": "npm run typecheck && npm run build && npm run test:e2e:release"
+    "ci:browser-release": "npm run typecheck && npm run build && npm run test:e2e:release",
+    "test:e2e:triage": "node --test scripts/browser-ci-triage.test.mjs",
+    "test:e2e:write-triage": "node scripts/write-browser-ci-triage.mjs"
   },
   "dependencies": {
     "next": "15.4.6",
