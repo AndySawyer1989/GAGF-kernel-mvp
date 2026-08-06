@@ -3,9 +3,34 @@ import {
   test
 } from "./browser-test";
 
+import {
+  installAuditIntegrityApiHarness,
+  installGovernanceApiHarness
+} from "./governance-api-harness";
+
 test.describe(
   "Governance Console shell",
   () => {
+    test.beforeEach(
+      async ({ page }) => {
+        await installAuditIntegrityApiHarness(
+          page,
+          {
+            eventCount: 32,
+            checkpointCount: 12,
+            fallbackUnhandled: true
+          }
+        );
+
+        await installGovernanceApiHarness(
+          page,
+          12,
+          true
+        );
+      }
+    );
+
+
     test(
       "renders Signed Checkpoints with accessible page structure",
       async ({ page }) => {

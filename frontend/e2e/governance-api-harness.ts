@@ -128,7 +128,8 @@ async function fulfillJson(
 
 export async function installGovernanceApiHarness(
   page: Page,
-  recordCount = 12
+  recordCount = 12,
+  fallbackUnhandled = false
 ): Promise<GovernanceApiHarness> {
   const requests: Request[] = [];
 
@@ -272,6 +273,11 @@ export async function installGovernanceApiHarness(
         return;
       }
 
+      if (fallbackUnhandled) {
+        await route.fallback();
+        return;
+      }
+
       await fulfillJson(
         route,
         {
@@ -405,6 +411,7 @@ export async function installAuditIntegrityApiHarness(
   options: {
     eventCount?: number;
     checkpointCount?: number;
+    fallbackUnhandled?: boolean;
   } = {}
 ): Promise<AuditIntegrityApiHarness> {
   const eventCount =
@@ -586,6 +593,11 @@ export async function installAuditIntegrityApiHarness(
           201
         );
 
+        return;
+      }
+
+      if (options.fallbackUnhandled === true) {
+        await route.fallback();
         return;
       }
 

@@ -3,6 +3,11 @@ import {
   test
 } from "./browser-test";
 
+import {
+  installAuditIntegrityApiHarness,
+  installGovernanceApiHarness
+} from "./governance-api-harness";
+
 const consolePages = [
   {
     path: "/signed-checkpoints",
@@ -17,6 +22,26 @@ const consolePages = [
 test.describe(
   "Governance Console responsive layout",
   () => {
+    test.beforeEach(
+      async ({ page }) => {
+        await installAuditIntegrityApiHarness(
+          page,
+          {
+            eventCount: 32,
+            checkpointCount: 12,
+            fallbackUnhandled: true
+          }
+        );
+
+        await installGovernanceApiHarness(
+          page,
+          12,
+          true
+        );
+      }
+    );
+
+
     for (const consolePage of consolePages) {
       test(
         `${consolePage.heading} fits the active viewport`,

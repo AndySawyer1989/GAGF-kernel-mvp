@@ -5,7 +5,8 @@ import {
 } from "./browser-test";
 
 import {
-  installAuditIntegrityApiHarness
+  installAuditIntegrityApiHarness,
+  installGovernanceApiHarness
 } from "./governance-api-harness";
 
 async function waitForSearch(
@@ -26,18 +27,30 @@ async function waitForSearch(
 test.describe(
   "Governance Console URL state",
   () => {
-    test(
-      "preserves a valid Audit Integrity bookmark across reload",
+    test.beforeEach(
       async ({ page }) => {
         await installAuditIntegrityApiHarness(
           page,
           {
             eventCount: 32,
-            checkpointCount: 7
+            checkpointCount: 12,
+            fallbackUnhandled: true
           }
         );
 
-        await page.goto(
+        await installGovernanceApiHarness(
+          page,
+          12,
+          true
+        );
+      }
+    );
+
+
+    test(
+      "preserves a valid Audit Integrity bookmark across reload",
+      async ({ page }) => {
+await page.goto(
           "/audit-integrity"
           + "?outcome=DENIED"
           + "&auditPage=2"
