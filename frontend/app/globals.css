@@ -3179,3 +3179,192 @@ button:focus-visible {
   );
   outline-offset: 3px;
 }
+
+/* GRA-UI-011B: Assessment readiness and delivery status */
+
+.assessment-readiness-panel {
+  margin-top: 1.5rem;
+  overflow: hidden;
+}
+
+.readiness-panel-header {
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.readiness-panel-description {
+  max-width: 48rem;
+  margin-top: 0.5rem;
+  color: var(--text-muted, #6f6a78);
+  line-height: 1.6;
+}
+
+.readiness-progress {
+  display: grid;
+  grid-template-columns: minmax(11rem, auto) 1fr;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0 1.25rem;
+  border-bottom: 1px solid
+    var(
+      --border-subtle,
+      rgba(74, 48, 91, 0.12)
+    );
+}
+
+.readiness-progress > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.readiness-progress strong {
+  font-size: 1.15rem;
+  color: var(--text-primary, #251d2b);
+}
+
+.readiness-progress span {
+  color: var(--text-muted, #6f6a78);
+  font-size: 0.85rem;
+}
+
+.readiness-progress progress {
+  width: 100%;
+  height: 0.7rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(74, 48, 91, 0.1);
+}
+
+.readiness-progress progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: rgba(74, 48, 91, 0.1);
+}
+
+.readiness-progress progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #e67e22,
+    #d4a017,
+    #6f3b8f
+  );
+}
+
+.readiness-progress progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #e67e22,
+    #d4a017,
+    #6f3b8f
+  );
+}
+
+.readiness-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding-top: 1.25rem;
+}
+
+.readiness-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 10.5rem;
+  padding: 1rem;
+  border: 1px solid
+    var(
+      --border-subtle,
+      rgba(74, 48, 91, 0.12)
+    );
+  border-radius: 0.85rem;
+  background: var(--surface-raised, #ffffff);
+}
+
+.readiness-item-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.readiness-item-heading h3 {
+  margin: 0;
+  color: var(--text-primary, #251d2b);
+  font-size: 1rem;
+}
+
+.readiness-item-heading p {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted, #6f6a78);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.readiness-icon {
+  display: inline-grid;
+  flex: 0 0 1.75rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.readiness-icon-ready {
+  color: #23613f;
+  background: rgba(47, 143, 86, 0.14);
+}
+
+.readiness-icon-review {
+  color: #8a4b08;
+  background: rgba(230, 126, 34, 0.16);
+}
+
+.readiness-status {
+  align-self: flex-start;
+  margin-top: 1rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.readiness-status-ready {
+  color: #23613f;
+  background: rgba(47, 143, 86, 0.12);
+}
+
+.readiness-status-review {
+  color: #8a4b08;
+  background: rgba(230, 126, 34, 0.14);
+}
+
+.readiness-panel-footer {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-left: 0.25rem solid #6f3b8f;
+  border-radius: 0.3rem;
+  background: rgba(111, 59, 143, 0.06);
+}
+
+.readiness-panel-footer p {
+  margin: 0;
+  color: var(--text-secondary, #4e4655);
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .readiness-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .readiness-progress {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+}

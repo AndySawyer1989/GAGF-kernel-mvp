@@ -11,6 +11,10 @@ import {
 
 import { ConsoleSidebar } from "@/components/console-sidebar";
 import {
+  AssessmentReadinessPanel,
+  type AssessmentReadinessItem
+} from "@/components/assessment-readiness-panel";
+import {
   fetchAssessment,
   fetchAssessmentArtifacts,
   fetchAssessmentSummary,
@@ -114,6 +118,9 @@ function findArtifact(
       artifact.artifact_type === artifactType
   );
 }
+
+const CLIENT_REPORT_ARTIFACT_TYPE =
+  "client-report-package";
 
 function ResultMetric({
   label,
@@ -327,6 +334,84 @@ export default function AssessmentDetailPage() {
       qualityArtifact?.payload,
       "ready_for_analysis"
     ) ?? false;
+const diagnosticArtifactsReady =
+  Boolean(qualityArtifact) &&
+  Boolean(frictionArtifact) &&
+  Boolean(debtArtifact) &&
+  Boolean(projectionArtifact);
+
+const interventionPrioritiesReady =
+  Boolean(interventionArtifact) &&
+  priorities.length > 0;
+
+const repositoryIntegrityReady =
+  summary?.repository_chain_valid === true &&
+  summary.artifact_count === artifacts?.count;
+
+const clientReportReady = Boolean(
+  findArtifact(
+    artifacts,
+    CLIENT_REPORT_ARTIFACT_TYPE
+  )
+);
+
+const readinessItems: AssessmentReadinessItem[] = [
+  {
+    id: "evidence",
+    label: "Evidence",
+    description:
+      "Evidence passed the governed quality gate and is available for analysis.",
+    state: readyForAnalysis
+      ? "ready"
+      : "review",
+    readyLabel: "Evidence ready",
+    reviewLabel: "Evidence review required"
+  },
+  {
+    id: "diagnostics",
+    label: "Diagnostic artifacts",
+    description:
+      "Evidence quality, friction, governance debt, and executive projection artifacts are present.",
+    state: diagnosticArtifactsReady
+      ? "ready"
+      : "review",
+    readyLabel: "Diagnostics complete",
+    reviewLabel: "Diagnostics incomplete"
+  },
+  {
+    id: "interventions",
+    label: "Intervention priorities",
+    description:
+      "A governed intervention plan and ranked priorities are available.",
+    state: interventionPrioritiesReady
+      ? "ready"
+      : "review",
+    readyLabel: "Priorities ready",
+    reviewLabel: "Priorities unavailable"
+  },
+  {
+    id: "repository",
+    label: "Repository integrity",
+    description:
+      "The artifact chain is valid and the summary inventory matches the loaded repository inventory.",
+    state: repositoryIntegrityReady
+      ? "ready"
+      : "review",
+    readyLabel: "Repository verified",
+    reviewLabel: "Integrity review required"
+  },
+  {
+    id: "report",
+    label: "Client report",
+    description:
+      "The governed client-report package is present in the assessment artifact chain.",
+    state: clientReportReady
+      ? "ready"
+      : "review",
+    readyLabel: "Report ready",
+    reviewLabel: "Report unavailable"
+  }
+];
 
   return (
     <main className="console-shell">
@@ -507,6 +592,10 @@ export default function AssessmentDetailPage() {
                   detail="Verified result records"
                 />
               </section>
+
+              <AssessmentReadinessPanel
+                items={readinessItems}
+              />
 
               <section className="detail-content-grid">
                 <article className="panel executive-results-panel">
