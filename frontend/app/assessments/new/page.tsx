@@ -133,6 +133,14 @@ export default function NewAssessmentPage() {
       null
     );
 
+  const [completedIdentity, setCompletedIdentity] =
+    useState<{
+      tenantId: string;
+      clientId: string;
+      engagementId: string;
+      assessmentId: string;
+    } | null>(null);
+
   async function submitAssessment(
     event: React.FormEvent<HTMLFormElement>
   ) {
@@ -141,6 +149,7 @@ export default function NewAssessmentPage() {
     setSubmitting(true);
     setError(null);
     setResult(null);
+    setCompletedIdentity(null);
 
     const request: AssessmentExecutionRequest = {
       tenant_id: config.tenantId,
@@ -192,6 +201,13 @@ export default function NewAssessmentPage() {
         );
 
       setResult(executionResult);
+
+      setCompletedIdentity({
+        tenantId: request.tenant_id,
+        clientId: request.client_id,
+        engagementId: request.engagement_id,
+        assessmentId: request.assessment_id
+      });
     } catch (caught) {
       if (
         caught instanceof GovernanceAssessmentApiError
@@ -208,6 +224,31 @@ export default function NewAssessmentPage() {
       setSubmitting(false);
     }
   }
+
+  const completedAssessmentUrl =
+    completedIdentity
+      ? "/assessments/"
+        + encodeURIComponent(
+            completedIdentity.tenantId
+          )
+        + "/"
+        + encodeURIComponent(
+            completedIdentity.clientId
+          )
+        + "/"
+        + encodeURIComponent(
+            completedIdentity.engagementId
+          )
+        + "/"
+        + encodeURIComponent(
+            completedIdentity.assessmentId
+          )
+      : null;
+
+  const completedReportUrl =
+    completedAssessmentUrl
+      ? `${completedAssessmentUrl}/report`
+      : null;
 
   return (
     <main className="console-shell">
@@ -278,11 +319,29 @@ export default function NewAssessmentPage() {
                 Execution verified
               </span>
 
+              {completedAssessmentUrl && (
+                <Link
+                  className="refresh-button button-link"
+                  href={completedAssessmentUrl}
+                >
+                  Open assessment
+                </Link>
+              )}
+
+              {completedReportUrl && (
+                <Link
+                  className="secondary-button button-link"
+                  href={completedReportUrl}
+                >
+                  View client report
+                </Link>
+              )}
+
               <Link
-                className="refresh-button button-link"
+                className="secondary-button button-link"
                 href="/assessments"
               >
-                View assessments
+                View all assessments
               </Link>
             </div>
           </section>
