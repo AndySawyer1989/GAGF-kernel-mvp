@@ -22,7 +22,7 @@ permissions:
 concurrency:
   group: >-
     browser-release-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   browser-release:
@@ -196,10 +196,25 @@ jobs:
         run: |
           echo "Governed Browser Evidence result: ${BROWSER_RELEASE_RESULT}"
 
-          if [[ "${BROWSER_RELEASE_RESULT}" != "success" ]]; then
-            echo "::error title=Browser Release Required::Governed Browser Evidence finished with status ${BROWSER_RELEASE_RESULT}."
-            exit 1
-          fi
-
-          echo "::notice title=Browser Release Required::Governed Browser Evidence passed."
+          case "${BROWSER_RELEASE_RESULT}" in
+            success)
+              echo "::notice title=Browser Release Required::Governed Browser Evidence passed."
+              ;;
+            failure)
+              echo "::error title=Browser Release Required::Governed Browser Evidence failed."
+              exit 1
+              ;;
+            cancelled)
+              echo "::error title=Browser Release Required::Governed Browser Evidence was cancelled before completion."
+              exit 1
+              ;;
+            skipped)
+              echo "::error title=Browser Release Required::Governed Browser Evidence was skipped and produced no release evidence."
+              exit 1
+              ;;
+            *)
+              echo "::error title=Browser Release Required::Governed Browser Evidence returned unsupported status ${BROWSER_RELEASE_RESULT}."
+              exit 1
+              ;;
+          esac
 
