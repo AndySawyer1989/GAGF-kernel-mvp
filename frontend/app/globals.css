@@ -4015,3 +4015,294 @@ button:focus-visible {
     text-align: left;
   }
 }
+
+/* GRA-UI-012C: Governance roadmap */
+
+.governance-roadmap-panel {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.governance-roadmap-header {
+  align-items: flex-start;
+}
+
+.governance-roadmap-intro {
+  max-width: 50rem;
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.governance-roadmap-total {
+  display: grid;
+  min-width: 8rem;
+  gap: 0.2rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--panel-soft);
+  text-align: right;
+}
+
+.governance-roadmap-total span,
+.governance-roadmap-value span,
+.governance-roadmap-outcome span,
+.governance-roadmap-item-meta span,
+.governance-roadmap-dependencies > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.governance-roadmap-total strong {
+  font-size: 1.55rem;
+}
+
+.governance-roadmap-phases {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.governance-roadmap-phase {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--panel-soft);
+}
+
+.governance-roadmap-phase-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.governance-roadmap-phase-header h3 {
+  margin: 0.35rem 0 0;
+  font-size: 1.05rem;
+}
+
+.governance-roadmap-horizon {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.governance-roadmap-phase-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.governance-roadmap-items {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.governance-roadmap-item {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+}
+
+.governance-roadmap-item-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.governance-roadmap-sequence {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  min-height: 3.6rem;
+  border-radius: 0.85rem;
+  background: rgba(128, 72, 188, 0.12);
+}
+
+.governance-roadmap-sequence span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.governance-roadmap-sequence strong {
+  font-size: 1.25rem;
+}
+
+.governance-roadmap-title {
+  min-width: 0;
+}
+
+.governance-roadmap-title h4 {
+  margin: 0.4rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.governance-roadmap-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.governance-roadmap-title p strong {
+  color: var(--foreground);
+}
+
+.governance-roadmap-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.governance-roadmap-status,
+.governance-roadmap-type {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.65rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.governance-roadmap-status {
+  background: rgba(244, 165, 38, 0.12);
+}
+
+.governance-roadmap-type {
+  background: rgba(128, 72, 188, 0.1);
+  color: var(--muted);
+}
+
+.governance-roadmap-value {
+  display: grid;
+  text-align: right;
+}
+
+.governance-roadmap-value strong {
+  font-size: 1.25rem;
+}
+
+.governance-roadmap-outcome {
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.governance-roadmap-outcome p {
+  margin: 0.4rem 0 0;
+  line-height: 1.5;
+}
+
+.governance-roadmap-item-meta {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.governance-roadmap-item-meta > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.governance-roadmap-dependencies {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.governance-roadmap-dependencies ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.governance-roadmap-dependencies code {
+  overflow-wrap: anywhere;
+}
+
+.governance-roadmap-empty {
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 0.85rem;
+}
+
+.governance-roadmap-empty p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.governance-roadmap-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.governance-roadmap-footer p {
+  max-width: 48rem;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.governance-roadmap-provenance {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.governance-roadmap-provenance code {
+  color: var(--foreground);
+}
+
+@media (max-width: 760px) {
+  .governance-roadmap-phase-header,
+  .governance-roadmap-footer {
+    flex-direction: column;
+  }
+
+  .governance-roadmap-item-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .governance-roadmap-value {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .governance-roadmap-total,
+  .governance-roadmap-provenance {
+    text-align: left;
+  }
+
+  .governance-roadmap-total {
+    min-width: 0;
+  }
+}

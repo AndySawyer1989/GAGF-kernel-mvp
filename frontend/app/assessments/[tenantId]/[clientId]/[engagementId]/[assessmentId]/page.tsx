@@ -23,6 +23,10 @@ import {
   type GovernanceInterventionPlanItem
 } from "@/components/governance-intervention-plan";
 import {
+  GovernanceRoadmap,
+  type GovernanceRoadmapPhase
+} from "@/components/governance-roadmap";
+import {
   fetchAssessment,
   fetchAssessmentArtifacts,
   fetchAssessmentSummary,
@@ -279,6 +283,10 @@ export default function AssessmentDetailPage() {
   const interventionArtifact = findArtifact(
     artifacts,
     "intervention-plan"
+  );
+  const roadmapArtifact = findArtifact(
+    artifacts,
+    "assessment-roadmap"
   );
   const projectionArtifact = findArtifact(
     artifacts,
@@ -561,6 +569,169 @@ export default function AssessmentDetailPage() {
             isTopIntervention:
               interventionId ===
               topInterventionId
+          }
+        ];
+      }
+    );
+  const roadmapPhases = objectArray(
+    roadmapArtifact?.payload,
+    "phases"
+  );
+
+  const roadmapTotalItems =
+    numberValue(
+      roadmapArtifact?.payload,
+      "total_items"
+    ) ?? 0;
+
+  const roadmapInterventionPlanHash =
+    textValue(
+      roadmapArtifact?.payload,
+      "intervention_plan_hash"
+    );
+
+  const roadmapHash = textValue(
+    roadmapArtifact?.payload,
+    "roadmap_hash"
+  );
+
+  const roadmapSchemaVersion = textValue(
+    roadmapArtifact?.payload,
+    "schema_version"
+  );
+
+  const governanceRoadmapPhases:
+    GovernanceRoadmapPhase[] =
+    roadmapPhases.flatMap(
+      (phase) => {
+        const horizon = textValue(
+          phase,
+          "horizon"
+        );
+
+        const objective = textValue(
+          phase,
+          "objective"
+        );
+
+        const itemCount = numberValue(
+          phase,
+          "item_count"
+        );
+
+        if (
+          horizon === null ||
+          objective === null ||
+          itemCount === null
+        ) {
+          return [];
+        }
+
+        const items = objectArray(
+          phase,
+          "items"
+        ).flatMap(
+          (item) => {
+            const roadmapItemId = textValue(
+              item,
+              "roadmap_item_id"
+            );
+
+            const interventionId = textValue(
+              item,
+              "intervention_id"
+            );
+
+            const interventionType = textValue(
+              item,
+              "intervention_type"
+            );
+
+            const title = textValue(
+              item,
+              "title"
+            );
+
+            const itemHorizon = textValue(
+              item,
+              "horizon"
+            );
+
+            const sequence = numberValue(
+              item,
+              "sequence"
+            );
+
+            const ownerRole = textValue(
+              item,
+              "owner_role"
+            );
+
+            const measurableOutcome = textValue(
+              item,
+              "measurable_outcome"
+            );
+
+            const valueScore = numberValue(
+              item,
+              "value_score"
+            );
+
+            const implementationBurden =
+              numberValue(
+                item,
+                "implementation_burden"
+              );
+
+            const status = textValue(
+              item,
+              "status"
+            );
+
+            if (
+              roadmapItemId === null ||
+              interventionId === null ||
+              interventionType === null ||
+              title === null ||
+              itemHorizon === null ||
+              sequence === null ||
+              ownerRole === null ||
+              measurableOutcome === null ||
+              valueScore === null ||
+              implementationBurden === null ||
+              status === null
+            ) {
+              return [];
+            }
+
+            return [
+              {
+                roadmapItemId,
+                interventionId,
+                interventionType,
+                title,
+                horizon: itemHorizon,
+                sequence,
+                ownerRole,
+                measurableOutcome,
+                valueScore,
+                implementationBurden,
+                dependencyIds: stringArray(
+                  item,
+                  "dependency_ids"
+                ),
+                status
+              }
+            ];
+          }
+        );
+
+        return [
+          {
+            horizon,
+            objective,
+            itemCount,
+            items
           }
         ];
       }
@@ -860,6 +1031,17 @@ const readinessItems: AssessmentReadinessItem[] = [
                 planHash={interventionPlanHash}
                 schemaVersion={
                   interventionSchemaVersion
+                }
+              />
+              <GovernanceRoadmap
+                phases={governanceRoadmapPhases}
+                totalItems={roadmapTotalItems}
+                interventionPlanHash={
+                  roadmapInterventionPlanHash
+                }
+                roadmapHash={roadmapHash}
+                schemaVersion={
+                  roadmapSchemaVersion
                 }
               />
 
