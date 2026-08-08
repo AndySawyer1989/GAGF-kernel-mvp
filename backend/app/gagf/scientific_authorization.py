@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
 from typing import Mapping
@@ -29,6 +29,9 @@ class ScientificAuthorityAction(str, Enum):
     READ_CHECKPOINT = "READ_CHECKPOINT"
     VERIFY_CHECKPOINT = "VERIFY_CHECKPOINT"
     READ_EXECUTION = "READ_EXECUTION"
+    AUTHORIZE_INTERVENTION_EXECUTION = (
+        "AUTHORIZE_INTERVENTION_EXECUTION"
+    )
     SUBMIT_CONSTITUTIONAL_APPROVAL = (
         "SUBMIT_CONSTITUTIONAL_APPROVAL"
     )
@@ -73,6 +76,7 @@ ROLE_PERMISSIONS: Mapping[
                 ScientificAuthorityAction.READ_CHECKPOINT,
                 ScientificAuthorityAction.VERIFY_CHECKPOINT,
                 ScientificAuthorityAction.READ_EXECUTION,
+                ScientificAuthorityAction.AUTHORIZE_INTERVENTION_EXECUTION,
                 ScientificAuthorityAction.SUBMIT_CONSTITUTIONAL_APPROVAL,
             }
         ),
@@ -292,8 +296,12 @@ class ScientificAuthorityAuthorizationPolicy:
 
         approval_required = (
             request.action
-            == ScientificAuthorityAction
-            .SUBMIT_CONSTITUTIONAL_APPROVAL
+            in {
+                ScientificAuthorityAction
+                .SUBMIT_CONSTITUTIONAL_APPROVAL,
+                ScientificAuthorityAction
+                .AUTHORIZE_INTERVENTION_EXECUTION,
+            }
             or request.requested_authority
             == CalculationAuthority.AUTHORITATIVE
         )
@@ -463,6 +471,8 @@ class ScientificAuthorityAuthorizationPolicy:
             in {
                 ScientificAuthorityAction
                 .SUBMIT_CONSTITUTIONAL_APPROVAL,
+                ScientificAuthorityAction
+                .AUTHORIZE_INTERVENTION_EXECUTION,
                 ScientificAuthorityAction
                 .ADMINISTER_CONTRACTS,
             }
