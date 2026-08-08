@@ -3368,3 +3368,321 @@ button:focus-visible {
     gap: 0.8rem;
   }
 }
+
+/* GRA-UI-012A: Governance friction map */
+
+.governance-friction-map-panel {
+  margin-top: 1.5rem;
+  overflow: hidden;
+}
+
+.friction-map-header {
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.friction-map-description {
+  max-width: 52rem;
+  margin-top: 0.5rem;
+  color: var(--text-muted, #6f6a78);
+  line-height: 1.6;
+}
+
+.friction-map-summary-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.friction-map-summary-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid
+    var(
+      --border-subtle,
+      rgba(74, 48, 91, 0.12)
+    );
+  border-radius: 0.8rem;
+  background: rgba(111, 59, 143, 0.035);
+}
+
+.friction-map-summary-grid span {
+  color: var(--text-muted, #6f6a78);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.friction-map-summary-grid strong {
+  color: var(--text-primary, #251d2b);
+  font-size: 1.35rem;
+}
+
+.friction-map-visual-shell {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  overflow-x: auto;
+  border: 1px solid
+    var(
+      --border-subtle,
+      rgba(74, 48, 91, 0.12)
+    );
+  border-radius: 1rem;
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(111, 59, 143, 0.08),
+      rgba(255, 255, 255, 0) 58%
+    ),
+    var(--surface-raised, #ffffff);
+}
+
+.friction-map-svg {
+  display: block;
+  width: 100%;
+  min-width: 720px;
+  height: auto;
+}
+
+.friction-map-edge {
+  stroke: rgba(111, 59, 143, 0.3);
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+}
+
+.friction-map-edge-dominant {
+  stroke: #e67e22;
+  stroke-width: 4;
+  stroke-dasharray: none;
+}
+
+.friction-map-core-node circle {
+  fill: #6f3b8f;
+  stroke: #d4a017;
+  stroke-width: 5;
+}
+
+.friction-map-core-label {
+  fill: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.friction-map-core-score {
+  fill: #f7d77c;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.friction-map-node circle {
+  stroke-width: 4;
+}
+
+.friction-map-node-label {
+  fill: #251d2b;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.friction-map-node-score {
+  fill: #251d2b;
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.friction-map-node-dominant circle {
+  stroke: #e67e22;
+  stroke-width: 7;
+  filter: drop-shadow(
+    0 5px 8px rgba(230, 126, 34, 0.28)
+  );
+}
+
+.friction-band-low circle,
+.friction-band-badge.friction-band-low {
+  fill: rgba(47, 143, 86, 0.18);
+  color: #23613f;
+  background: rgba(47, 143, 86, 0.14);
+  stroke: #2f8f56;
+}
+
+.friction-band-moderate circle,
+.friction-band-badge.friction-band-moderate {
+  fill: rgba(212, 160, 23, 0.2);
+  color: #735600;
+  background: rgba(212, 160, 23, 0.16);
+  stroke: #d4a017;
+}
+
+.friction-band-high circle,
+.friction-band-badge.friction-band-high {
+  fill: rgba(230, 126, 34, 0.2);
+  color: #8a4b08;
+  background: rgba(230, 126, 34, 0.16);
+  stroke: #e67e22;
+}
+
+.friction-band-severe circle,
+.friction-band-badge.friction-band-severe {
+  fill: rgba(143, 43, 58, 0.2);
+  color: #7a2634;
+  background: rgba(143, 43, 58, 0.15);
+  stroke: #8f2b3a;
+}
+
+.friction-band-unknown circle,
+.friction-band-badge.friction-band-unknown {
+  fill: rgba(111, 106, 120, 0.16);
+  color: #4e4655;
+  background: rgba(111, 106, 120, 0.12);
+  stroke: #6f6a78;
+}
+
+.friction-map-detail-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1.25rem;
+}
+
+.friction-map-detail-card {
+  padding: 1rem;
+  border: 1px solid
+    var(
+      --border-subtle,
+      rgba(74, 48, 91, 0.12)
+    );
+  border-radius: 0.9rem;
+  background: var(--surface-raised, #ffffff);
+}
+
+.friction-map-detail-card-dominant {
+  border-color: rgba(230, 126, 34, 0.55);
+  box-shadow:
+    inset 4px 0 0 #e67e22;
+}
+
+.friction-map-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.friction-map-category {
+  margin: 0;
+  color: var(--text-primary, #251d2b);
+  font-weight: 800;
+}
+
+.friction-map-dominant-label {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: #8a4b08;
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.friction-band-badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.friction-map-detail-metrics {
+  display: grid;
+  grid-template-columns:
+    repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1rem 0 0;
+}
+
+.friction-map-detail-metrics div {
+  min-width: 0;
+}
+
+.friction-map-detail-metrics dt {
+  color: var(--text-muted, #6f6a78);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.friction-map-detail-metrics dd {
+  margin: 0.25rem 0 0;
+  color: var(--text-primary, #251d2b);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.friction-map-time-range {
+  margin: 1rem 0 0;
+  color: var(--text-muted, #6f6a78);
+  font-size: 0.8rem;
+}
+
+.friction-map-footer {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-left: 0.25rem solid #6f3b8f;
+  border-radius: 0.3rem;
+  background: rgba(111, 59, 143, 0.06);
+}
+
+.friction-map-footer p {
+  margin: 0;
+  color: var(--text-secondary, #4e4655);
+  line-height: 1.55;
+}
+
+.friction-map-empty {
+  margin-top: 1.25rem;
+  padding: 1.5rem;
+  border: 1px dashed
+    rgba(111, 59, 143, 0.35);
+  border-radius: 0.9rem;
+  text-align: center;
+  background: rgba(111, 59, 143, 0.04);
+}
+
+.friction-map-empty h3,
+.friction-map-empty p {
+  margin: 0;
+}
+
+.friction-map-empty p {
+  margin-top: 0.5rem;
+  color: var(--text-muted, #6f6a78);
+}
+
+@media (max-width: 1050px) {
+  .friction-map-summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .friction-map-detail-metrics {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .friction-map-summary-grid,
+  .friction-map-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .friction-map-detail-metrics {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}

@@ -15,6 +15,10 @@ import {
   type AssessmentReadinessItem
 } from "@/components/assessment-readiness-panel";
 import {
+  GovernanceFrictionMap,
+  type GovernanceFrictionMapItem
+} from "@/components/governance-friction-map";
+import {
   fetchAssessment,
   fetchAssessmentArtifacts,
   fetchAssessmentSummary,
@@ -312,6 +316,102 @@ export default function AssessmentDetailPage() {
       frictionArtifact?.payload,
       "total_friction_score"
     ) ?? 0;
+  const constraintAggregations = objectArray(
+    frictionArtifact?.payload,
+    "constraint_aggregations"
+  );
+
+  const recognizedConstraintEvents =
+    numberValue(
+      frictionArtifact?.payload,
+      "recognized_constraint_events"
+    ) ?? 0;
+
+  const frictionUniqueWorkItemCount =
+    numberValue(
+      frictionArtifact?.payload,
+      "unique_work_item_count"
+    ) ?? 0;
+
+  const frictionMapItems: GovernanceFrictionMapItem[] =
+    constraintAggregations.flatMap(
+      (aggregation) => {
+        const category = textValue(
+          aggregation,
+          "category"
+        );
+
+        const eventCount = numberValue(
+          aggregation,
+          "event_count"
+        );
+
+        const uniqueWorkItemCount = numberValue(
+          aggregation,
+          "unique_work_item_count"
+        );
+
+        const firstOccurredAt = textValue(
+          aggregation,
+          "first_occurred_at"
+        );
+
+        const lastOccurredAt = textValue(
+          aggregation,
+          "last_occurred_at"
+        );
+
+        const weight = numberValue(
+          aggregation,
+          "weight"
+        );
+
+        const frictionScore = numberValue(
+          aggregation,
+          "friction_score"
+        );
+
+        const eventShare = numberValue(
+          aggregation,
+          "event_share"
+        );
+
+        const band = textValue(
+          aggregation,
+          "band"
+        );
+
+        if (
+          category === null ||
+          eventCount === null ||
+          uniqueWorkItemCount === null ||
+          firstOccurredAt === null ||
+          lastOccurredAt === null ||
+          weight === null ||
+          frictionScore === null ||
+          eventShare === null ||
+          band === null
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            category,
+            eventCount,
+            uniqueWorkItemCount,
+            firstOccurredAt,
+            lastOccurredAt,
+            weight,
+            frictionScore,
+            eventShare,
+            band,
+            isDominant:
+              category === dominantConstraint
+          }
+        ];
+      }
+    );
 
   const executiveSummary =
     textValue(
@@ -595,6 +695,20 @@ const readinessItems: AssessmentReadinessItem[] = [
 
               <AssessmentReadinessPanel
                 items={readinessItems}
+              />
+
+              <GovernanceFrictionMap
+                items={frictionMapItems}
+                totalFrictionScore={totalFriction}
+                recognizedEventCount={
+                  recognizedConstraintEvents
+                }
+                uniqueWorkItemCount={
+                  frictionUniqueWorkItemCount
+                }
+                dominantConstraint={
+                  dominantConstraint
+                }
               />
 
               <section className="detail-content-grid">
