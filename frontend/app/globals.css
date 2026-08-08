@@ -3686,3 +3686,332 @@ button:focus-visible {
       repeat(2, minmax(0, 1fr));
   }
 }
+
+/* GRA-UI-012B: Governance intervention plan */
+
+.governance-intervention-panel {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.governance-intervention-header {
+  align-items: flex-start;
+}
+
+.governance-intervention-intro {
+  max-width: 48rem;
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.governance-intervention-debt {
+  display: grid;
+  min-width: 8.5rem;
+  gap: 0.2rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--panel-soft);
+  text-align: right;
+}
+
+.governance-intervention-debt span,
+.governance-intervention-top-score span,
+.governance-intervention-value span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.governance-intervention-debt strong {
+  font-size: 1.55rem;
+}
+
+.governance-intervention-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid rgba(244, 165, 38, 0.42);
+  border-radius: 1rem;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(244, 165, 38, 0.12),
+      rgba(128, 72, 188, 0.08)
+    );
+}
+
+.governance-intervention-top-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.governance-intervention-top-copy strong {
+  font-size: 1.05rem;
+}
+
+.governance-intervention-eyebrow {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.governance-intervention-top-score {
+  display: grid;
+  align-content: center;
+  text-align: right;
+}
+
+.governance-intervention-top-score strong {
+  font-size: 1.35rem;
+}
+
+.governance-intervention-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.governance-intervention-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--panel-soft);
+}
+
+.governance-intervention-card-top {
+  border-color: rgba(244, 165, 38, 0.5);
+}
+
+.governance-intervention-card-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.governance-intervention-rank {
+  display: grid;
+  place-items: center;
+  width: 3.3rem;
+  min-height: 3.3rem;
+  border-radius: 0.9rem;
+  background: rgba(128, 72, 188, 0.12);
+}
+
+.governance-intervention-rank span {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.governance-intervention-rank strong {
+  font-size: 1.25rem;
+}
+
+.governance-intervention-title-group {
+  min-width: 0;
+}
+
+.governance-intervention-title-group h3 {
+  margin: 0.45rem 0 0.2rem;
+  font-size: 1.05rem;
+}
+
+.governance-intervention-title-group p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.governance-intervention-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.governance-intervention-priority,
+.governance-intervention-type {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.65rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.governance-intervention-priority {
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+}
+
+.governance-intervention-priority-low {
+  background: rgba(80, 160, 120, 0.12);
+}
+
+.governance-intervention-priority-medium {
+  background: rgba(220, 172, 60, 0.14);
+}
+
+.governance-intervention-priority-high {
+  background: rgba(236, 126, 40, 0.14);
+}
+
+.governance-intervention-priority-urgent {
+  background: rgba(210, 64, 64, 0.14);
+}
+
+.governance-intervention-type {
+  background: rgba(128, 72, 188, 0.1);
+  color: var(--muted);
+}
+
+.governance-intervention-value {
+  display: grid;
+  text-align: right;
+}
+
+.governance-intervention-value strong {
+  font-size: 1.35rem;
+}
+
+.governance-intervention-metrics {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.governance-intervention-metric {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.governance-intervention-metric-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.governance-intervention-metric-heading strong {
+  color: var(--foreground);
+}
+
+.governance-intervention-meter {
+  height: 0.42rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.16);
+}
+
+.governance-intervention-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      var(--accent),
+      var(--accent-secondary, var(--accent))
+    );
+}
+
+.governance-intervention-rationale {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.governance-intervention-rationale > strong {
+  font-size: 0.8rem;
+}
+
+.governance-intervention-rationale ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.65rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.governance-intervention-rationale p {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+}
+
+.governance-intervention-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.governance-intervention-footer p {
+  max-width: 48rem;
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.governance-intervention-provenance {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.governance-intervention-provenance code {
+  color: var(--foreground);
+}
+
+.governance-intervention-empty {
+  padding: 1.25rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+}
+
+.governance-intervention-empty p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .governance-intervention-top,
+  .governance-intervention-footer {
+    flex-direction: column;
+  }
+
+  .governance-intervention-card-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .governance-intervention-value {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .governance-intervention-provenance {
+    text-align: left;
+  }
+
+  .governance-intervention-debt {
+    min-width: 0;
+    text-align: left;
+  }
+}

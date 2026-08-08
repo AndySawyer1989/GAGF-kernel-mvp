@@ -19,6 +19,10 @@ import {
   type GovernanceFrictionMapItem
 } from "@/components/governance-friction-map";
 import {
+  GovernanceInterventionPlan,
+  type GovernanceInterventionPlanItem
+} from "@/components/governance-intervention-plan";
+import {
   fetchAssessment,
   fetchAssessmentArtifacts,
   fetchAssessmentSummary,
@@ -424,6 +428,143 @@ export default function AssessmentDetailPage() {
     "key_findings"
   );
 
+  const interventionCandidates = objectArray(
+    interventionArtifact?.payload,
+    "interventions"
+  );
+
+  const interventionGovernanceDebtScore =
+    numberValue(
+      interventionArtifact?.payload,
+      "governance_debt_score"
+    ) ?? 0;
+
+  const topInterventionId = textValue(
+    interventionArtifact?.payload,
+    "top_intervention_id"
+  );
+
+  const interventionPlanHash = textValue(
+    interventionArtifact?.payload,
+    "plan_hash"
+  );
+
+  const interventionSchemaVersion = textValue(
+    interventionArtifact?.payload,
+    "schema_version"
+  );
+
+  const interventionPlanItems:
+    GovernanceInterventionPlanItem[] =
+    interventionCandidates.flatMap(
+      (candidate) => {
+        const interventionId = textValue(
+          candidate,
+          "intervention_id"
+        );
+
+        const interventionType = textValue(
+          candidate,
+          "intervention_type"
+        );
+
+        const title = textValue(
+          candidate,
+          "title"
+        );
+
+        const constraintCategory = textValue(
+          candidate,
+          "constraint_category"
+        );
+
+        const priority = textValue(
+          candidate,
+          "priority"
+        );
+
+        const rank = numberValue(
+          candidate,
+          "rank"
+        );
+
+        const valueScore = numberValue(
+          candidate,
+          "value_score"
+        );
+
+        const expectedFrictionReduction =
+          numberValue(
+            candidate,
+            "expected_friction_reduction"
+          );
+
+        const evidenceConfidence =
+          numberValue(
+            candidate,
+            "evidence_confidence"
+          );
+
+        const affectedWorkReach =
+          numberValue(
+            candidate,
+            "affected_work_reach"
+          );
+
+        const implementationBurden =
+          numberValue(
+            candidate,
+            "implementation_burden"
+          );
+
+        const reversibility =
+          numberValue(
+            candidate,
+            "reversibility"
+          );
+
+        if (
+          interventionId === null ||
+          interventionType === null ||
+          title === null ||
+          constraintCategory === null ||
+          priority === null ||
+          rank === null ||
+          valueScore === null ||
+          expectedFrictionReduction === null ||
+          evidenceConfidence === null ||
+          affectedWorkReach === null ||
+          implementationBurden === null ||
+          reversibility === null
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            interventionId,
+            interventionType,
+            title,
+            constraintCategory,
+            priority,
+            rank,
+            valueScore,
+            expectedFrictionReduction,
+            evidenceConfidence,
+            affectedWorkReach,
+            implementationBurden,
+            reversibility,
+            rationale: stringArray(
+              candidate,
+              "rationale"
+            ),
+            isTopIntervention:
+              interventionId ===
+              topInterventionId
+          }
+        ];
+      }
+    );
   const priorities = objectArray(
     projectionArtifact?.payload,
     "priorities"
@@ -708,6 +849,17 @@ const readinessItems: AssessmentReadinessItem[] = [
                 }
                 dominantConstraint={
                   dominantConstraint
+                }
+              />
+
+              <GovernanceInterventionPlan
+                items={interventionPlanItems}
+                governanceDebtScore={
+                  interventionGovernanceDebtScore
+                }
+                planHash={interventionPlanHash}
+                schemaVersion={
+                  interventionSchemaVersion
                 }
               />
 
