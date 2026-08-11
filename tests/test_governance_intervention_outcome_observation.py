@@ -94,6 +94,35 @@ def verified_contract() -> GovernanceInterventionActuationContract:
     )
 
 
+def make_verification_commitment(
+    contract: GovernanceInterventionActuationContract,
+):
+    legacy_requirement = contract.verification_requirements[0]
+
+    requirement = (
+        GovernanceInterventionVerificationRequirementBuilder.build(
+            actuation_contract=contract,
+            legacy_requirement=legacy_requirement,
+            requirement_id="execution-fixture-verification",
+            description=(
+                "Structured verification requirement for the governed "
+                "execution test fixture."
+            ),
+            metric_id="execution_fixture_metric",
+            operator=GovernanceInterventionVerificationOperator.EQ,
+            target_value=1,
+            unit="fixture-unit",
+            measurement_window_seconds=1,
+            minimum_record_count=1,
+        )
+    )
+
+    return GovernanceInterventionVerificationCommitmentBuilder.build(
+        actuation_contract=contract,
+        requirement=requirement,
+    )
+
+
 def make_verification_commitment_hash(
     contract: GovernanceInterventionActuationContract,
 ) -> str:
@@ -193,6 +222,7 @@ def governed_execution(tmp_path):
     coordinated = coordinator.execute(
         contract=contract,
         request=request,
+        verification_commitment=make_verification_commitment(contract),
         acceptance=acceptance,
         adapter=StubExecutionAdapter(),
         attempt_number=1,
