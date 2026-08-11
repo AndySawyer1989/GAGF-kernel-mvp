@@ -35,6 +35,7 @@ from backend.app.gagf.governance_intervention_execution_coordinator import (
     GOVERNANCE_INTERVENTION_EXECUTION_COORDINATOR_VERSION,
     GovernanceInterventionExecutionAdapterError,
     GovernanceInterventionExecutionCoordinator,
+    GovernanceInterventionExecutionCommitmentError,
     GovernanceInterventionExecutionCoordinatorError,
     GovernanceInterventionExecutionPreconditionError,
 )
@@ -86,9 +87,9 @@ def verified_contract() -> GovernanceInterventionActuationContract:
     )
 
 
-def make_verification_commitment_hash(
+def make_verification_commitment(
     contract: GovernanceInterventionActuationContract,
-) -> str:
+):
     legacy_requirement = contract.verification_requirements[0]
 
     requirement = (
@@ -109,14 +110,16 @@ def make_verification_commitment_hash(
         )
     )
 
-    commitment = (
-        GovernanceInterventionVerificationCommitmentBuilder.build(
-            actuation_contract=contract,
-            requirement=requirement,
-        )
+    return GovernanceInterventionVerificationCommitmentBuilder.build(
+        actuation_contract=contract,
+        requirement=requirement,
     )
 
-    return commitment.commitment_hash
+
+def make_verification_commitment_hash(
+    contract: GovernanceInterventionActuationContract,
+) -> str:
+    return make_verification_commitment(contract).commitment_hash
 
 
 def make_request(
@@ -236,6 +239,7 @@ def execute_completed(tmp_path):
     result = coordinator.execute(
         contract=contract,
         request=request,
+        verification_commitment=make_verification_commitment(contract),
         acceptance=acceptance,
         adapter=adapter,
         attempt_number=1,
@@ -359,6 +363,7 @@ def test_result_disposition_controls_terminal_journal_state(
     coordinated = coordinator.execute(
         contract=contract,
         request=request,
+        verification_commitment=make_verification_commitment(contract),
         acceptance=acceptance,
         adapter=adapter,
         attempt_number=1,
@@ -445,6 +450,7 @@ def test_rejects_tampered_contract_before_adapter_call(tmp_path):
         coordinator.execute(
             contract=tampered,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=1,
@@ -474,6 +480,7 @@ def test_rejects_request_tenant_mismatch_before_adapter_call(
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=1,
@@ -507,6 +514,7 @@ def test_rejects_unaccepted_request_before_adapter_call(tmp_path):
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=1,
@@ -534,6 +542,7 @@ def test_rejects_acceptance_idempotency_mismatch(tmp_path):
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=1,
@@ -558,6 +567,7 @@ def test_rejects_adapter_identity_mismatch(tmp_path):
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=1,
@@ -586,6 +596,7 @@ def test_rejects_attempt_below_one(
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=attempt_number,
@@ -607,6 +618,7 @@ def test_rejects_attempt_above_contract_limit(tmp_path):
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=contract.max_attempts + 1,
@@ -691,6 +703,7 @@ def test_unexpected_adapter_exception_marks_journal_failed(
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=1,
@@ -745,6 +758,7 @@ def test_unexpected_adapter_exception_creates_no_result(
         coordinator.execute(
             contract=contract,
             request=request,
+            verification_commitment=make_verification_commitment(contract),
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=1,
@@ -785,3 +799,232 @@ def test_error_hierarchy_is_stable():
         GovernanceInterventionExecutionAdapterError,
         GovernanceInterventionExecutionCoordinatorError,
     )
+
+
+class RejectIfCommitmentValidationTouchesJournal:
+    def __init__(self):
+        self.begin_call_count = 0
+        self.transition_call_count = 0
+
+    def begin(self, **kwargs):
+        self.begin_call_count += 1
+        raise AssertionError(
+            "journal.begin must not run before commitment validation"
+        )
+
+    def transition(self, **kwargs):
+        self.transition_call_count += 1
+        raise AssertionError(
+            "journal.transition must not run before commitment validation"
+        )
+
+
+def rehash_verification_commitment(commitment, **changes):
+    candidate = replace(
+        commitment,
+        **changes,
+    )
+
+    return replace(
+        candidate,
+        commitment_hash=sha256_hex(
+            canonical_json(candidate.payload())
+        ),
+    )
+
+
+def make_b2c_execution_inputs():
+    contract = verified_contract()
+    request = make_request(contract)
+    commitment = make_verification_commitment(contract)
+    acceptance = make_acceptance(request)
+    adapter = StubExecutionAdapter()
+    journal = RejectIfCommitmentValidationTouchesJournal()
+    coordinator = GovernanceInterventionExecutionCoordinator(
+        journal=journal
+    )
+
+    return (
+        contract,
+        request,
+        commitment,
+        acceptance,
+        adapter,
+        journal,
+        coordinator,
+    )
+
+
+def test_rejects_tampered_commitment_before_journal_or_adapter():
+    (
+        contract,
+        request,
+        commitment,
+        acceptance,
+        adapter,
+        journal,
+        coordinator,
+    ) = make_b2c_execution_inputs()
+
+    tampered = replace(
+        commitment,
+        requirement_hash="tampered-requirement-hash",
+    )
+
+    assert tampered.verify() is False
+
+    with pytest.raises(
+        GovernanceInterventionExecutionCommitmentError
+    ):
+        coordinator.execute(
+            contract=contract,
+            request=request,
+            verification_commitment=tampered,
+            acceptance=acceptance,
+            adapter=adapter,
+            attempt_number=1,
+        )
+
+    assert journal.begin_call_count == 0
+    assert journal.transition_call_count == 0
+    assert adapter.call_count == 0
+
+
+def test_rejects_commitment_not_bound_to_request_before_journal_or_adapter():
+    (
+        contract,
+        request,
+        commitment,
+        acceptance,
+        adapter,
+        journal,
+        coordinator,
+    ) = make_b2c_execution_inputs()
+
+    request = replace(
+        request,
+        verification_commitment_hash="different-commitment-hash",
+    )
+
+    with pytest.raises(
+        GovernanceInterventionExecutionCommitmentError
+    ):
+        coordinator.execute(
+            contract=contract,
+            request=request,
+            verification_commitment=commitment,
+            acceptance=acceptance,
+            adapter=adapter,
+            attempt_number=1,
+        )
+
+    assert journal.begin_call_count == 0
+    assert journal.transition_call_count == 0
+    assert adapter.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("field_name", "replacement_value"),
+    (
+        ("tenant_id", "tenant-b"),
+        ("actuation_contract_hash", "different-contract"),
+        ("intervention_id", "different-intervention"),
+        ("intervention_type", "DIFFERENT_TYPE"),
+    ),
+)
+def test_rejects_rehashed_commitment_lineage_mismatch_before_execution(
+    field_name,
+    replacement_value,
+):
+    (
+        contract,
+        request,
+        commitment,
+        acceptance,
+        adapter,
+        journal,
+        coordinator,
+    ) = make_b2c_execution_inputs()
+
+    mismatched = rehash_verification_commitment(
+        commitment,
+        **{
+            field_name: replacement_value,
+        },
+    )
+
+    assert mismatched.verify() is True
+
+    request = replace(
+        request,
+        verification_commitment_hash=mismatched.commitment_hash,
+    )
+
+    with pytest.raises(
+        GovernanceInterventionExecutionCommitmentError
+    ):
+        coordinator.execute(
+            contract=contract,
+            request=request,
+            verification_commitment=mismatched,
+            acceptance=acceptance,
+            adapter=adapter,
+            attempt_number=1,
+        )
+
+    assert journal.begin_call_count == 0
+    assert journal.transition_call_count == 0
+    assert adapter.call_count == 0
+
+
+def test_rejects_rehashed_commitment_outside_contract_requirement_set():
+    (
+        contract,
+        request,
+        commitment,
+        acceptance,
+        adapter,
+        journal,
+        coordinator,
+    ) = make_b2c_execution_inputs()
+
+    mismatched = rehash_verification_commitment(
+        commitment,
+        legacy_requirement="requirement absent from contract",
+    )
+
+    assert mismatched.verify() is True
+
+    request = replace(
+        request,
+        verification_commitment_hash=mismatched.commitment_hash,
+    )
+
+    with pytest.raises(
+        GovernanceInterventionExecutionCommitmentError
+    ):
+        coordinator.execute(
+            contract=contract,
+            request=request,
+            verification_commitment=mismatched,
+            acceptance=acceptance,
+            adapter=adapter,
+            attempt_number=1,
+        )
+
+    assert journal.begin_call_count == 0
+    assert journal.transition_call_count == 0
+    assert adapter.call_count == 0
+
+
+def test_commitment_revalidation_does_not_claim_outcome_verification():
+    commitment = make_verification_commitment(
+        verified_contract()
+    )
+
+    serialized = commitment.to_dict()
+
+    assert "executed" not in serialized
+    assert "success" not in serialized
+    assert "outcome_verified" not in serialized
+    assert "verification_result" not in serialized

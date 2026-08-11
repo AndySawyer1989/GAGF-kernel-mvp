@@ -15,6 +15,9 @@ from backend.app.gagf.governance_intervention_actuation_port import (
     GovernanceInterventionActuationDisposition,
     GovernanceInterventionActuationRequest,
 )
+from backend.app.gagf.governance_intervention_verification_commitment import (
+    GovernanceInterventionVerificationCommitment,
+)
 from backend.app.gagf.governance_intervention_execution_adapter import (
     GovernanceInterventionExecutionAdapter,
 )
@@ -39,6 +42,12 @@ class GovernanceInterventionExecutionPreconditionError(
     GovernanceInterventionExecutionCoordinatorError
 ):
     """Raised when execution cannot safely begin."""
+
+
+class GovernanceInterventionExecutionCommitmentError(
+    GovernanceInterventionExecutionPreconditionError
+):
+    """Raised when pre-execution verification commitment is invalid."""
 
 
 class GovernanceInterventionExecutionAdapterError(
@@ -102,6 +111,7 @@ class GovernanceInterventionExecutionCoordinator:
         *,
         contract: GovernanceInterventionActuationContract,
         request: GovernanceInterventionActuationRequest,
+        verification_commitment: GovernanceInterventionVerificationCommitment,
         acceptance: GovernanceInterventionActuationAcceptance,
         adapter: GovernanceInterventionExecutionAdapter,
         attempt_number: int,
@@ -109,6 +119,7 @@ class GovernanceInterventionExecutionCoordinator:
         self._validate_preconditions(
             contract=contract,
             request=request,
+            verification_commitment=verification_commitment,
             acceptance=acceptance,
             adapter=adapter,
             attempt_number=attempt_number,
@@ -209,6 +220,7 @@ class GovernanceInterventionExecutionCoordinator:
         *,
         contract: GovernanceInterventionActuationContract,
         request: GovernanceInterventionActuationRequest,
+        verification_commitment: GovernanceInterventionVerificationCommitment,
         acceptance: GovernanceInterventionActuationAcceptance,
         adapter: GovernanceInterventionExecutionAdapter,
         attempt_number: int,
@@ -236,6 +248,57 @@ class GovernanceInterventionExecutionCoordinator:
         if request.intervention_type != contract.intervention_type:
             raise GovernanceInterventionExecutionPreconditionError(
                 "request intervention_type does not match contract"
+            )
+
+        if not verification_commitment.verify():
+            raise GovernanceInterventionExecutionCommitmentError(
+                "verification commitment failed deterministic verification"
+            )
+
+        if (
+            verification_commitment.commitment_hash
+            != request.verification_commitment_hash
+        ):
+            raise GovernanceInterventionExecutionCommitmentError(
+                "verification commitment hash does not match request"
+            )
+
+        if verification_commitment.tenant_id != contract.tenant_id:
+            raise GovernanceInterventionExecutionCommitmentError(
+                "verification commitment tenant does not match contract"
+            )
+
+        if (
+            verification_commitment.actuation_contract_hash
+            != contract.contract_hash
+        ):
+            raise GovernanceInterventionExecutionCommitmentError(
+                "verification commitment contract hash does not match contract"
+            )
+
+        if (
+            verification_commitment.intervention_id
+            != contract.intervention_id
+        ):
+            raise GovernanceInterventionExecutionCommitmentError(
+                "verification commitment intervention_id does not match contract"
+            )
+
+        if (
+            verification_commitment.intervention_type
+            != contract.intervention_type
+        ):
+            raise GovernanceInterventionExecutionCommitmentError(
+                "verification commitment intervention_type does not match contract"
+            )
+
+        if (
+            verification_commitment.legacy_requirement
+            not in contract.verification_requirements
+        ):
+            raise GovernanceInterventionExecutionCommitmentError(
+                "verification commitment does not refine a requirement "
+                "present in the actuation contract"
             )
 
         if not acceptance.accepted:
