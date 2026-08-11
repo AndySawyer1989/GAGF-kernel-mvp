@@ -10,6 +10,14 @@ from backend.app.gagf.governance_intervention_actuation_contract import (
 from backend.app.gagf.governance_intervention_actuation_journal import (
     GovernanceInterventionActuationJournal,
 )
+from backend.app.gagf.governance_intervention_verification_commitment import (
+    GovernanceInterventionVerificationCommitmentBuilder,
+)
+from backend.app.gagf.governance_intervention_verification_requirement import (
+    GovernanceInterventionVerificationOperator,
+    GovernanceInterventionVerificationRequirementBuilder,
+)
+
 from backend.app.gagf.governance_intervention_actuation_port import (
     GovernanceInterventionActuationAcceptance,
     GovernanceInterventionActuationDisposition,
@@ -86,6 +94,39 @@ def verified_contract() -> GovernanceInterventionActuationContract:
     )
 
 
+def make_verification_commitment_hash(
+    contract: GovernanceInterventionActuationContract,
+) -> str:
+    legacy_requirement = contract.verification_requirements[0]
+
+    requirement = (
+        GovernanceInterventionVerificationRequirementBuilder.build(
+            actuation_contract=contract,
+            legacy_requirement=legacy_requirement,
+            requirement_id="execution-fixture-verification",
+            description=(
+                "Structured verification requirement for the governed "
+                "execution test fixture."
+            ),
+            metric_id="execution_fixture_metric",
+            operator=GovernanceInterventionVerificationOperator.EQ,
+            target_value=1,
+            unit="fixture-unit",
+            measurement_window_seconds=1,
+            minimum_record_count=1,
+        )
+    )
+
+    commitment = (
+        GovernanceInterventionVerificationCommitmentBuilder.build(
+            actuation_contract=contract,
+            requirement=requirement,
+        )
+    )
+
+    return commitment.commitment_hash
+
+
 def make_request(
     contract: GovernanceInterventionActuationContract,
 ) -> GovernanceInterventionActuationRequest:
@@ -96,6 +137,9 @@ def make_request(
         contract_hash=contract.contract_hash,
         intervention_id=contract.intervention_id,
         intervention_type=contract.intervention_type,
+        verification_commitment_hash=(
+            make_verification_commitment_hash(contract)
+        ),
         idempotency_key="execution-key-1",
     )
 

@@ -7,6 +7,9 @@ from typing import Protocol, runtime_checkable
 from backend.app.gagf.governance_intervention_actuation_contract import (
     GovernanceInterventionActuationContract,
 )
+from backend.app.gagf.governance_intervention_verification_commitment import (
+    GovernanceInterventionVerificationCommitment,
+)
 
 
 GOVERNANCE_INTERVENTION_ACTUATION_PORT_ID = (
@@ -25,6 +28,12 @@ class InvalidGovernanceInterventionActuationContractError(
     """Raised when an actuator receives an invalid contract."""
 
 
+class InvalidGovernanceInterventionVerificationCommitmentError(
+    GovernanceInterventionActuationPortError
+):
+    """Raised when actuation lacks a valid verification commitment."""
+
+
 class GovernanceInterventionActuationDisposition(str, Enum):
     ACCEPTED = "ACCEPTED"
     REJECTED = "REJECTED"
@@ -41,6 +50,7 @@ class GovernanceInterventionActuationRequest:
     intervention_id: str
     intervention_type: str
 
+    verification_commitment_hash: str
     idempotency_key: str
 
     def to_dict(self) -> dict[str, str]:
@@ -51,6 +61,9 @@ class GovernanceInterventionActuationRequest:
             "contract_hash": self.contract_hash,
             "intervention_id": self.intervention_id,
             "intervention_type": self.intervention_type,
+            "verification_commitment_hash": (
+                self.verification_commitment_hash
+            ),
             "idempotency_key": self.idempotency_key,
         }
 
@@ -85,11 +98,46 @@ class GovernanceInterventionActuationRequestBuilder:
         self,
         *,
         contract: GovernanceInterventionActuationContract,
+        verification_commitment: GovernanceInterventionVerificationCommitment,
         idempotency_key: str,
     ) -> GovernanceInterventionActuationRequest:
         if not contract.verify():
             raise InvalidGovernanceInterventionActuationContractError(
                 "actuation contract failed hash verification"
+            )
+
+        if not verification_commitment.verify():
+            raise InvalidGovernanceInterventionVerificationCommitmentError(
+                "verification commitment failed deterministic verification"
+            )
+
+        if verification_commitment.tenant_id != contract.tenant_id:
+            raise InvalidGovernanceInterventionVerificationCommitmentError(
+                "verification commitment tenant does not match contract"
+            )
+
+        if (
+            verification_commitment.actuation_contract_hash
+            != contract.contract_hash
+        ):
+            raise InvalidGovernanceInterventionVerificationCommitmentError(
+                "verification commitment contract hash does not match contract"
+            )
+
+        if (
+            verification_commitment.intervention_id
+            != contract.intervention_id
+        ):
+            raise InvalidGovernanceInterventionVerificationCommitmentError(
+                "verification commitment intervention_id does not match contract"
+            )
+
+        if (
+            verification_commitment.intervention_type
+            != contract.intervention_type
+        ):
+            raise InvalidGovernanceInterventionVerificationCommitmentError(
+                "verification commitment intervention_type does not match contract"
             )
 
         normalized_key = idempotency_key.strip()
@@ -106,6 +154,9 @@ class GovernanceInterventionActuationRequestBuilder:
             contract_hash=contract.contract_hash,
             intervention_id=contract.intervention_id,
             intervention_type=contract.intervention_type,
+            verification_commitment_hash=(
+                verification_commitment.commitment_hash
+            ),
             idempotency_key=normalized_key,
         )
 
