@@ -15,6 +15,14 @@ from backend.app.gagf.governance_assessment_roadmap import (
 from backend.app.gagf.governance_intervention_actuation_contract import (
     GovernanceInterventionActuationContractBuilder,
 )
+from backend.app.gagf.governance_intervention_verification_commitment import (
+    GovernanceInterventionVerificationCommitmentBuilder,
+)
+from backend.app.gagf.governance_intervention_verification_requirement import (
+    GovernanceInterventionVerificationOperator,
+    GovernanceInterventionVerificationRequirementBuilder,
+)
+
 from backend.app.gagf.governance_intervention_actuation_port import (
     GOVERNANCE_INTERVENTION_ACTUATION_PORT_ID,
     GOVERNANCE_INTERVENTION_ACTUATION_PORT_VERSION,
@@ -101,6 +109,30 @@ def _trust() -> ScientificTrustSignals:
     )
 
 
+def _verification_commitment(contract):
+    requirement = (
+        GovernanceInterventionVerificationRequirementBuilder.build(
+            actuation_contract=contract,
+            legacy_requirement="Verify approval latency.",
+            requirement_id="approval-latency-lte-120",
+            description=(
+                "Approval latency must remain at or below 120 seconds."
+            ),
+            metric_id="approval_latency_seconds",
+            operator=GovernanceInterventionVerificationOperator.LTE,
+            target_value=120,
+            unit="seconds",
+            measurement_window_seconds=86400,
+            minimum_record_count=10,
+        )
+    )
+
+    return GovernanceInterventionVerificationCommitmentBuilder.build(
+        actuation_contract=contract,
+        requirement=requirement,
+    )
+
+
 def _contract():
     context = _context()
 
@@ -149,6 +181,7 @@ def test_builds_actuation_request_from_valid_contract():
         GovernanceInterventionActuationRequestBuilder()
         .build(
             contract=contract,
+            verification_commitment=_verification_commitment(contract),
             idempotency_key="actuation-001",
         )
     )
@@ -185,6 +218,7 @@ def test_request_builder_rejects_tampered_contract():
             GovernanceInterventionActuationRequestBuilder()
             .build(
                 contract=tampered,
+                verification_commitment=_verification_commitment(contract),
                 idempotency_key="actuation-001",
             )
         )
@@ -200,23 +234,29 @@ def test_request_builder_rejects_tampered_contract():
 def test_request_requires_idempotency_key(
     idempotency_key,
 ):
+    contract = _contract()
+
     with pytest.raises(
         InvalidGovernanceInterventionActuationContractError
     ):
         (
             GovernanceInterventionActuationRequestBuilder()
             .build(
-                contract=_contract(),
+                contract=contract,
+                verification_commitment=_verification_commitment(contract),
                 idempotency_key=idempotency_key,
             )
         )
 
 
 def test_idempotency_key_is_normalized():
+    contract = _contract()
+
     request = (
         GovernanceInterventionActuationRequestBuilder()
         .build(
-            contract=_contract(),
+            contract=contract,
+            verification_commitment=_verification_commitment(contract),
             idempotency_key="  actuation-001  ",
         )
     )
@@ -230,11 +270,13 @@ def test_identical_contract_and_key_produce_identical_request():
 
     first = builder.build(
         contract=contract,
+        verification_commitment=_verification_commitment(contract),
         idempotency_key="actuation-001",
     )
 
     second = builder.build(
         contract=contract,
+        verification_commitment=_verification_commitment(contract),
         idempotency_key="actuation-001",
     )
 
@@ -243,10 +285,13 @@ def test_identical_contract_and_key_produce_identical_request():
 
 
 def test_request_is_immutable():
+    contract = _contract()
+
     request = (
         GovernanceInterventionActuationRequestBuilder()
         .build(
-            contract=_contract(),
+            contract=contract,
+            verification_commitment=_verification_commitment(contract),
             idempotency_key="actuation-001",
         )
     )
@@ -262,6 +307,7 @@ def test_request_serialization_preserves_contract_lineage():
         GovernanceInterventionActuationRequestBuilder()
         .build(
             contract=contract,
+            verification_commitment=_verification_commitment(contract),
             idempotency_key="actuation-001",
         )
     )
@@ -277,6 +323,9 @@ def test_request_serialization_preserves_contract_lineage():
         "contract_hash": contract.contract_hash,
         "intervention_id": contract.intervention_id,
         "intervention_type": contract.intervention_type,
+        "verification_commitment_hash": (
+            _verification_commitment(contract).commitment_hash
+        ),
         "idempotency_key": "actuation-001",
     }
 
@@ -366,6 +415,7 @@ def test_port_acceptance_does_not_claim_execution_success():
         GovernanceInterventionActuationRequestBuilder()
         .build(
             contract=contract,
+            verification_commitment=_verification_commitment(contract),
             idempotency_key="actuation-001",
         )
     )
