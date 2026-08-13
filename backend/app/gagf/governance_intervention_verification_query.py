@@ -7,6 +7,11 @@ from backend.app.gagf.governance_intervention_verification_ledger import (
     GovernanceInterventionVerificationLedgerVerification,
     GovernanceInterventionVerificationRecord,
 )
+from backend.app.gagf.governance_intervention_verification_lifecycle import (
+    GovernanceInterventionVerificationLifecycleEvent,
+    GovernanceInterventionVerificationLifecycleLedger,
+    GovernanceInterventionVerificationLifecycleState,
+)
 
 
 class GovernanceInterventionVerificationQueryError(ValueError):
@@ -31,6 +36,12 @@ class GovernanceInterventionVerificationQueryService:
     ) -> None:
         self._ledger = GovernanceInterventionVerificationLedger(
             database_path
+        )
+
+        self._lifecycle_ledger = (
+            GovernanceInterventionVerificationLifecycleLedger(
+                database_path=database_path
+            )
         )
 
     def get_by_summary_hash(
@@ -67,4 +78,36 @@ class GovernanceInterventionVerificationQueryService:
     ) -> GovernanceInterventionVerificationLedgerVerification:
         return self._ledger.verify_tenant_chain(
             tenant_id=tenant_id
+        )
+
+    def get_lifecycle_state(
+        self,
+        *,
+        tenant_id: str,
+        verification_record_hash: str,
+    ) -> (
+        GovernanceInterventionVerificationLifecycleState
+        | None
+    ):
+        return self._lifecycle_ledger.get_current_state(
+            tenant_id=tenant_id,
+            verification_record_hash=(
+                verification_record_hash
+            ),
+        )
+
+    def list_lifecycle_history(
+        self,
+        *,
+        tenant_id: str,
+        verification_record_hash: str,
+    ) -> tuple[
+        GovernanceInterventionVerificationLifecycleEvent,
+        ...,
+    ]:
+        return self._lifecycle_ledger.list_history(
+            tenant_id=tenant_id,
+            verification_record_hash=(
+                verification_record_hash
+            ),
         )

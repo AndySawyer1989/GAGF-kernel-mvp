@@ -15,6 +15,9 @@ from backend.app.gagf.governance_intervention_verification_ledger import (
     GovernanceInterventionVerificationLedger,
     GovernanceInterventionVerificationRecordBuilder,
 )
+from backend.app.gagf.governance_intervention_verification_lifecycle import (
+    GovernanceInterventionVerificationLifecycleLedger,
+)
 from backend.app.gagf.governance_intervention_verification_summary import (
     GovernanceInterventionVerificationSummary,
     GovernanceInterventionVerificationSummaryDisposition,
@@ -172,7 +175,7 @@ def test_api_constants_are_stable():
     )
     assert (
         GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
-        == "0.1.0"
+        == "0.2.0"
     )
     assert (
         GOVERNANCE_INTERVENTION_VERIFICATION_READ_SCOPE
@@ -682,6 +685,14 @@ def test_no_write_methods_exist_on_verification_paths(tmp_path):
             "/tenant-intervention-verification/"
             "ledger/integrity"
         ),
+        (
+            "/tenant-intervention-verification/"
+            "records/record-1/lifecycle"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "records/record-1/lifecycle/history"
+        ),
     )
 
     headers = authorized_headers()
@@ -774,6 +785,19 @@ def test_registry_registers_verification_router(tmp_path):
     assert (
         "/tenant-intervention-verification/"
         "ledger/integrity"
+        in registered_paths
+    )
+
+    assert (
+        "/tenant-intervention-verification/"
+        "records/{verification_record_hash}/lifecycle"
+        in registered_paths
+    )
+
+    assert (
+        "/tenant-intervention-verification/"
+        "records/{verification_record_hash}/"
+        "lifecycle/history"
         in registered_paths
     )
 
@@ -934,3 +958,475 @@ def test_query_surface_cannot_mutate_tampered_record(tmp_path):
 
     assert tampered.verify() is False
     assert record.verify() is True
+
+def test_get_lifecycle_state_returns_active_state(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    _, record = append_record(
+        database_path
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"records/{record.record_hash}/lifecycle"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()["lifecycle"]
+
+    assert payload["tenant_id"] == "tenant-a"
+    assert (
+        payload["verification_record_hash"]
+        == record.record_hash
+    )
+    assert payload["lifecycle_status"] == "ACTIVE"
+    assert payload["superseded_by_record_hash"] is None
+
+
+def test_get_lifecycle_state_returns_current_state(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    _, record = append_record(
+        database_path
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    lifecycle.mark_stale(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"records/{record.record_hash}/lifecycle"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.json()["lifecycle"]["lifecycle_status"]
+        == "STALE"
+    )
+
+
+def test_get_lifecycle_state_missing_returns_404(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "records/missing-record/lifecycle"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 404
+
+
+def test_lifecycle_state_is_tenant_scoped(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    _, record = append_record(
+        database_path,
+        tenant_id="tenant-a",
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"records/{record.record_hash}/lifecycle"
+        ),
+        headers=authorized_headers(
+            tenant_id="tenant-b"
+        ),
+    )
+
+    assert response.status_code == 404
+
+
+def test_lifecycle_history_returns_ordered_events(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    _, record = append_record(
+        database_path
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    lifecycle.mark_stale(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    lifecycle.require_reverification(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"records/{record.record_hash}/"
+            "lifecycle/history"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["event_count"] == 3
+
+    assert [
+        event["lifecycle_status"]
+        for event in payload["events"]
+    ] == [
+        "ACTIVE",
+        "STALE",
+        "REVERIFICATION_REQUIRED",
+    ]
+
+
+def test_lifecycle_history_missing_is_empty(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "records/missing-record/lifecycle/history"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["event_count"] == 0
+    assert response.json()["events"] == []
+
+
+def test_lifecycle_history_is_tenant_scoped(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    _, record = append_record(
+        database_path,
+        tenant_id="tenant-a",
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"records/{record.record_hash}/"
+            "lifecycle/history"
+        ),
+        headers=authorized_headers(
+            tenant_id="tenant-b"
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["event_count"] == 0
+    assert response.json()["events"] == []
+
+
+def test_lifecycle_reads_require_existing_authorization(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "records/record/lifecycle"
+        ),
+        headers=authorized_headers(
+            policy_scope="wrong:scope"
+        ),
+    )
+
+    assert response.status_code == 403
+
+
+def test_lifecycle_routes_are_get_only(tmp_path):
+    app = make_app(
+        tmp_path / "verification.db"
+    )
+
+    paths = app.openapi()["paths"]
+
+    state_path = (
+        "/tenant-intervention-verification/"
+        "records/{verification_record_hash}/lifecycle"
+    )
+
+    history_path = (
+        "/tenant-intervention-verification/"
+        "records/{verification_record_hash}/"
+        "lifecycle/history"
+    )
+
+    assert state_path in paths
+    assert history_path in paths
+
+    assert set(paths[state_path]) == {"get"}
+    assert set(paths[history_path]) == {"get"}
+
+
+def test_lifecycle_api_does_not_mutate_history(tmp_path):
+    database_path = tmp_path / "verification.db"
+
+    _, record = append_record(
+        database_path
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    before = lifecycle.list_history(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    for _ in range(3):
+        response = client.get(
+            (
+                "/tenant-intervention-verification/"
+                f"records/{record.record_hash}/lifecycle"
+            ),
+            headers=authorized_headers(),
+        )
+
+        assert response.status_code == 200
+
+    after = lifecycle.list_history(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    assert after == before
+
+
+def test_lifecycle_api_contains_no_causal_or_action_claims(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    _, record = append_record(
+        database_path
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    lifecycle.require_reverification(
+        tenant_id="tenant-a",
+        verification_record_hash=record.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"records/{record.record_hash}/lifecycle"
+        ),
+        headers=authorized_headers(),
+    )
+
+    payload = response.json()["lifecycle"]
+
+    forbidden = {
+        "success",
+        "failure",
+        "causation",
+        "causal_effect",
+        "causal_attribution",
+        "authorized",
+        "execute",
+        "rollback",
+        "continue_intervention",
+        "recommended_action",
+        "next_action",
+    }
+
+    assert forbidden.isdisjoint(payload)
+
+
+def test_lifecycle_api_exposes_supersession_without_rewriting_record(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    original_summary, original = append_record(
+        database_path,
+        verification_set_hash="set-original",
+    )
+
+    _, replacement = append_record(
+        database_path,
+        verification_set_hash="set-replacement",
+        disposition=(
+            GovernanceInterventionVerificationSummaryDisposition
+            .INCONCLUSIVE
+        ),
+        verified_count=2,
+        inconclusive_count=1,
+    )
+
+    lifecycle = GovernanceInterventionVerificationLifecycleLedger(
+        database_path=database_path
+    )
+
+    lifecycle.activate(
+        tenant_id="tenant-a",
+        verification_record_hash=original.record_hash,
+    )
+
+    lifecycle.supersede(
+        tenant_id="tenant-a",
+        verification_record_hash=original.record_hash,
+        superseded_by_record_hash=replacement.record_hash,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"records/{original.record_hash}/lifecycle"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    lifecycle_payload = response.json()["lifecycle"]
+
+    assert (
+        lifecycle_payload["lifecycle_status"]
+        == "SUPERSEDED"
+    )
+    assert (
+        lifecycle_payload["superseded_by_record_hash"]
+        == replacement.record_hash
+    )
+
+    verification_ledger = (
+        GovernanceInterventionVerificationLedger(
+            database_path
+        )
+    )
+
+    stored_original = (
+        verification_ledger.get_by_summary_hash(
+            tenant_id="tenant-a",
+            verification_summary_hash=(
+                original_summary.verification_summary_hash
+            ),
+        )
+    )
+
+    assert stored_original == original
+    assert (
+        stored_original.verification_disposition
+        == original.verification_disposition
+    )
