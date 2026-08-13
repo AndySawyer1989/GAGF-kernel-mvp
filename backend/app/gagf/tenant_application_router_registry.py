@@ -1,8 +1,11 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import FastAPI
 
+from backend.app.gagf.governance_intervention_verification_api import (
+    create_governance_intervention_verification_router,
+)
 from backend.app.gagf.tenant_boundary_audit_query_api import (
     create_tenant_boundary_audit_query_router,
 )
@@ -27,6 +30,7 @@ class TenantApplicationDatabasePaths:
     context_binding_database_path: Path
     namespace_database_path: Path
     boundary_audit_database_path: Path
+    intervention_verification_database_path: Path
 
     @classmethod
     def from_directory(
@@ -57,6 +61,9 @@ class TenantApplicationDatabasePaths:
             ),
             boundary_audit_database_path=(
                 directory / "tenant-boundary-audit.db"
+            ),
+            intervention_verification_database_path=(
+                directory / "intervention-verification.db"
             ),
         )
 
@@ -89,6 +96,9 @@ class TenantApplicationDatabasePaths:
             ),
             "boundary_audit_database_path": str(
                 self.boundary_audit_database_path
+            ),
+            "intervention_verification_database_path": str(
+                self.intervention_verification_database_path
             ),
         }
 
@@ -127,6 +137,7 @@ class TenantApplicationRouterRegistration:
     registered: bool
     scientific_authority_prefix: str
     boundary_audit_prefix: str
+    intervention_verification_prefix: str
     database_paths: TenantApplicationDatabasePaths
 
     def to_dict(self) -> dict:
@@ -139,6 +150,9 @@ class TenantApplicationRouterRegistration:
             ),
             "boundary_audit_prefix": (
                 self.boundary_audit_prefix
+            ),
+            "intervention_verification_prefix": (
+                self.intervention_verification_prefix
             ),
             "database_paths": (
                 self.database_paths.to_dict()
@@ -170,6 +184,15 @@ def register_tenant_application_routers(
         )
     )
 
+    app.include_router(
+        create_governance_intervention_verification_router(
+            database_path=(
+                database_paths
+                .intervention_verification_database_path
+            )
+        )
+    )
+
     return TenantApplicationRouterRegistration(
         registry_id=(
             TENANT_APPLICATION_ROUTER_REGISTRY_ID
@@ -183,6 +206,9 @@ def register_tenant_application_routers(
         ),
         boundary_audit_prefix=(
             "/tenant-boundary-audit"
+        ),
+        intervention_verification_prefix=(
+            "/tenant-intervention-verification"
         ),
         database_paths=database_paths,
     )
