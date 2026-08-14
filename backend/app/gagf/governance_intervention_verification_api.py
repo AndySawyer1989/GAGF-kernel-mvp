@@ -7,6 +7,9 @@ from fastapi import APIRouter, Header, HTTPException, status
 from backend.app.gagf.governance_intervention_verification_ledger import (
     GovernanceInterventionVerificationLedgerError,
 )
+from backend.app.gagf.governance_intervention_verification_lifecycle import (
+    GovernanceInterventionVerificationLifecycleError,
+)
 from backend.app.gagf.governance_intervention_verification_query import (
     GovernanceInterventionVerificationQueryService,
 )
@@ -15,7 +18,7 @@ from backend.app.gagf.governance_intervention_verification_query import (
 GOVERNANCE_INTERVENTION_VERIFICATION_API_ID = (
     "governance-intervention-verification-api"
 )
-GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION = "0.1.0"
+GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION = "0.2.0"
 
 GOVERNANCE_INTERVENTION_VERIFICATION_READ_SCOPE = (
     "intervention-verification:read"
@@ -433,6 +436,171 @@ def create_governance_intervention_verification_router(
                     verification.last_chain_hash
                 ),
             },
+        }
+
+    @router.get(
+        "/records/{verification_record_hash}/lifecycle"
+    )
+    def get_verification_lifecycle_state(
+        verification_record_hash: str,
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=(
+                x_credential_verified
+            ),
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            lifecycle = (
+                query_service.get_lifecycle_state(
+                    tenant_id=x_tenant_id,
+                    verification_record_hash=(
+                        verification_record_hash
+                    ),
+                )
+            )
+        except GovernanceInterventionVerificationLifecycleError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        if lifecycle is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Governed intervention verification "
+                    "lifecycle state was not found."
+                ),
+            )
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "lifecycle": lifecycle.to_dict(),
+        }
+
+    @router.get(
+        "/records/{verification_record_hash}/lifecycle/history"
+    )
+    def get_verification_lifecycle_history(
+        verification_record_hash: str,
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=(
+                x_credential_verified
+            ),
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            history = (
+                query_service.list_lifecycle_history(
+                    tenant_id=x_tenant_id,
+                    verification_record_hash=(
+                        verification_record_hash
+                    ),
+                )
+            )
+        except GovernanceInterventionVerificationLifecycleError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "tenant_id": x_tenant_id,
+            "verification_record_hash": (
+                verification_record_hash
+            ),
+            "event_count": len(history),
+            "events": [
+                event.to_dict()
+                for event in history
+            ],
         }
 
     return router
