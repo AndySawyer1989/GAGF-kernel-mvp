@@ -5,6 +5,18 @@ from dataclasses import replace
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.app.gagf.governance_intervention_reverification_request import (
+    GovernanceInterventionReverificationRequest,
+)
+from backend.app.gagf.governance_intervention_reverification_request_ledger import (
+    GovernanceInterventionReverificationRequestLedger,
+)
+from backend.app.gagf.governance_intervention_reverification_work_order import (
+    GovernanceInterventionReverificationWorkOrder,
+)
+from backend.app.gagf.governance_intervention_reverification_work_order_ledger import (
+    GovernanceInterventionReverificationWorkOrderLedger,
+)
 from backend.app.gagf.governance_intervention_verification_api import (
     GOVERNANCE_INTERVENTION_VERIFICATION_API_ID,
     GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION,
@@ -175,7 +187,7 @@ def test_api_constants_are_stable():
     )
     assert (
         GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
-        == "0.2.0"
+        == "0.3.0"
     )
     assert (
         GOVERNANCE_INTERVENTION_VERIFICATION_READ_SCOPE
@@ -1430,3 +1442,703 @@ def test_lifecycle_api_exposes_supersession_without_rewriting_record(
         stored_original.verification_disposition
         == original.verification_disposition
     )
+
+
+def make_reverification_request_for_api(
+    *,
+    tenant_id: str = "tenant-a",
+    intervention_id: str = "intervention-1",
+    verification_record_hash: str = "record-1",
+    request_suffix: str = "one",
+):
+    payload = {
+        "request_id": (
+            "governance-intervention-reverification-request"
+        ),
+        "version": "0.1.0",
+        "schema_version": "1.0.0",
+        "tenant_id": tenant_id,
+        "intervention_id": intervention_id,
+        "verification_record_hash": (
+            verification_record_hash
+        ),
+        "lifecycle_event_hash": (
+            f"lifecycle-{request_suffix}"
+        ),
+        "freshness_evaluation_hash": (
+            f"freshness-{request_suffix}"
+        ),
+        "reverification_scope": "POLICY",
+        "trigger_codes": [
+            "POLICY_CHANGED",
+        ],
+    }
+
+    return GovernanceInterventionReverificationRequest(
+        request_id=payload["request_id"],
+        version=payload["version"],
+        schema_version=payload["schema_version"],
+        tenant_id=payload["tenant_id"],
+        intervention_id=payload["intervention_id"],
+        verification_record_hash=payload[
+            "verification_record_hash"
+        ],
+        lifecycle_event_hash=payload[
+            "lifecycle_event_hash"
+        ],
+        freshness_evaluation_hash=payload[
+            "freshness_evaluation_hash"
+        ],
+        reverification_scope=payload[
+            "reverification_scope"
+        ],
+        trigger_codes=tuple(
+            payload["trigger_codes"]
+        ),
+        request_hash=sha256_hex(
+            canonical_json(payload)
+        ),
+    )
+
+
+def make_reverification_work_order_for_api(
+    *,
+    request,
+    request_entry,
+    attempt_id: str = "attempt-1",
+):
+    payload = {
+        "work_order_id": (
+            "governance-intervention-reverification-work-order"
+        ),
+        "version": "0.1.0",
+        "schema_version": "1.0.0",
+        "tenant_id": request.tenant_id,
+        "intervention_id": request.intervention_id,
+        "verification_record_hash": (
+            request.verification_record_hash
+        ),
+        "request_hash": request.request_hash,
+        "request_ledger_chain_hash": (
+            request_entry.chain_hash
+        ),
+        "attempt_id": attempt_id,
+        "reverification_scope": (
+            request.reverification_scope
+        ),
+        "trigger_codes": list(
+            request.trigger_codes
+        ),
+    }
+
+    return GovernanceInterventionReverificationWorkOrder(
+        work_order_id=payload["work_order_id"],
+        version=payload["version"],
+        schema_version=payload["schema_version"],
+        tenant_id=payload["tenant_id"],
+        intervention_id=payload["intervention_id"],
+        verification_record_hash=payload[
+            "verification_record_hash"
+        ],
+        request_hash=payload["request_hash"],
+        request_ledger_chain_hash=payload[
+            "request_ledger_chain_hash"
+        ],
+        attempt_id=payload["attempt_id"],
+        reverification_scope=payload[
+            "reverification_scope"
+        ],
+        trigger_codes=tuple(
+            payload["trigger_codes"]
+        ),
+        work_order_hash=sha256_hex(
+            canonical_json(payload)
+        ),
+    )
+
+
+def append_reverification_request_for_api(
+    database_path,
+    *,
+    tenant_id: str = "tenant-a",
+    intervention_id: str = "intervention-1",
+    verification_record_hash: str = "record-1",
+    request_suffix: str = "one",
+):
+    request = make_reverification_request_for_api(
+        tenant_id=tenant_id,
+        intervention_id=intervention_id,
+        verification_record_hash=verification_record_hash,
+        request_suffix=request_suffix,
+    )
+
+    ledger = GovernanceInterventionReverificationRequestLedger(
+        database_path
+    )
+
+    entry = ledger.append(
+        request=request
+    )
+
+    return request, entry
+
+
+def append_reverification_work_order_for_api(
+    database_path,
+    *,
+    request,
+    request_entry,
+    attempt_id: str = "attempt-1",
+):
+    work_order = make_reverification_work_order_for_api(
+        request=request,
+        request_entry=request_entry,
+        attempt_id=attempt_id,
+    )
+
+    ledger = GovernanceInterventionReverificationWorkOrderLedger(
+        database_path
+    )
+
+    entry = ledger.append(
+        work_order=work_order
+    )
+
+    return work_order, entry
+
+
+def test_reverification_requests_for_record_returns_requests(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    first, _ = append_reverification_request_for_api(
+        database_path,
+        verification_record_hash="record-1",
+        request_suffix="one",
+    )
+
+    second, _ = append_reverification_request_for_api(
+        database_path,
+        verification_record_hash="record-1",
+        request_suffix="two",
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "records/record-1/reverification/requests"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["api_version"] == "0.3.0"
+    assert payload["request_count"] == 2
+
+    assert [
+        request["request_hash"]
+        for request in payload["requests"]
+    ] == [
+        first.request_hash,
+        second.request_hash,
+    ]
+
+
+def test_reverification_requests_for_record_missing_is_empty(
+    tmp_path,
+):
+    client = TestClient(
+        make_app(
+            tmp_path / "verification.db"
+        )
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "records/missing/reverification/requests"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["request_count"] == 0
+    assert response.json()["requests"] == []
+
+
+def test_reverification_request_exact_lookup_returns_request(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    request, _ = append_reverification_request_for_api(
+        database_path
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"reverification/requests/{request.request_hash}"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    assert (
+        response.json()["request"]["request_hash"]
+        == request.request_hash
+    )
+
+
+def test_reverification_request_missing_returns_404(
+    tmp_path,
+):
+    client = TestClient(
+        make_app(
+            tmp_path / "verification.db"
+        )
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/requests/missing"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 404
+
+
+def test_reverification_request_lookup_is_tenant_scoped(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    request, _ = append_reverification_request_for_api(
+        database_path,
+        tenant_id="tenant-a",
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"reverification/requests/{request.request_hash}"
+        ),
+        headers=authorized_headers(
+            tenant_id="tenant-b"
+        ),
+    )
+
+    assert response.status_code == 404
+
+
+def test_reverification_work_orders_for_request_returns_orders(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    request, request_entry = (
+        append_reverification_request_for_api(
+            database_path
+        )
+    )
+
+    first, _ = append_reverification_work_order_for_api(
+        database_path,
+        request=request,
+        request_entry=request_entry,
+        attempt_id="attempt-1",
+    )
+
+    second, _ = append_reverification_work_order_for_api(
+        database_path,
+        request=request,
+        request_entry=request_entry,
+        attempt_id="attempt-2",
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            f"reverification/requests/{request.request_hash}/"
+            "work-orders"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["work_order_count"] == 2
+
+    assert [
+        order["work_order_hash"]
+        for order in payload["work_orders"]
+    ] == [
+        first.work_order_hash,
+        second.work_order_hash,
+    ]
+
+
+def test_reverification_work_orders_missing_request_is_empty(
+    tmp_path,
+):
+    client = TestClient(
+        make_app(
+            tmp_path / "verification.db"
+        )
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/requests/missing/work-orders"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["work_order_count"] == 0
+    assert response.json()["work_orders"] == []
+
+
+def test_reverification_work_order_exact_lookup_returns_order(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    request, request_entry = (
+        append_reverification_request_for_api(
+            database_path
+        )
+    )
+
+    work_order, _ = append_reverification_work_order_for_api(
+        database_path,
+        request=request,
+        request_entry=request_entry,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/work-orders/"
+            f"{work_order.work_order_hash}"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    assert (
+        response.json()["work_order"]["work_order_hash"]
+        == work_order.work_order_hash
+    )
+
+
+def test_reverification_work_order_missing_returns_404(
+    tmp_path,
+):
+    client = TestClient(
+        make_app(
+            tmp_path / "verification.db"
+        )
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/work-orders/missing"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 404
+
+
+def test_reverification_request_ledger_integrity_endpoint(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    append_reverification_request_for_api(
+        database_path
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/request-ledger/integrity"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    integrity = response.json()["integrity"]
+
+    assert integrity["tenant_id"] == "tenant-a"
+    assert integrity["request_count"] == 1
+    assert integrity["valid"] is True
+    assert len(integrity["last_chain_hash"]) == 64
+
+
+def test_reverification_work_order_ledger_integrity_endpoint(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    request, request_entry = (
+        append_reverification_request_for_api(
+            database_path
+        )
+    )
+
+    append_reverification_work_order_for_api(
+        database_path,
+        request=request,
+        request_entry=request_entry,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/work-order-ledger/integrity"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    integrity = response.json()["integrity"]
+
+    assert integrity["tenant_id"] == "tenant-a"
+    assert integrity["work_order_count"] == 1
+    assert integrity["valid"] is True
+    assert len(integrity["last_chain_hash"]) == 64
+
+
+def test_reverification_reads_use_existing_authorization(
+    tmp_path,
+):
+    client = TestClient(
+        make_app(
+            tmp_path / "verification.db"
+        )
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/request-ledger/integrity"
+        ),
+        headers=authorized_headers(
+            policy_scope="wrong:scope"
+        ),
+    )
+
+    assert response.status_code == 403
+
+
+def test_reverification_routes_are_get_only(
+    tmp_path,
+):
+    app = make_app(
+        tmp_path / "verification.db"
+    )
+
+    paths = app.openapi()["paths"]
+
+    expected_paths = {
+        (
+            "/tenant-intervention-verification/"
+            "records/{verification_record_hash}/"
+            "reverification/requests"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/requests/{request_hash}"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/requests/{request_hash}/"
+            "work-orders"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/work-orders/{work_order_hash}"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/request-ledger/integrity"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/work-order-ledger/integrity"
+        ),
+    }
+
+    for path in expected_paths:
+        assert path in paths
+        assert set(paths[path]) == {"get"}
+
+
+def test_reverification_api_reads_do_not_create_artifacts(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    request_ledger = (
+        GovernanceInterventionReverificationRequestLedger(
+            database_path
+        )
+    )
+
+    work_order_ledger = (
+        GovernanceInterventionReverificationWorkOrderLedger(
+            database_path
+        )
+    )
+
+    before_requests = request_ledger.verify_tenant_chain(
+        tenant_id="tenant-a"
+    )
+
+    before_orders = work_order_ledger.verify_tenant_chain(
+        tenant_id="tenant-a"
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    paths = (
+        (
+            "/tenant-intervention-verification/"
+            "records/record-1/reverification/requests"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/requests/missing/work-orders"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/request-ledger/integrity"
+        ),
+        (
+            "/tenant-intervention-verification/"
+            "reverification/work-order-ledger/integrity"
+        ),
+    )
+
+    for path in paths:
+        response = client.get(
+            path,
+            headers=authorized_headers(),
+        )
+
+        assert response.status_code == 200
+
+    after_requests = request_ledger.verify_tenant_chain(
+        tenant_id="tenant-a"
+    )
+
+    after_orders = work_order_ledger.verify_tenant_chain(
+        tenant_id="tenant-a"
+    )
+
+    assert after_requests == before_requests
+    assert after_orders == before_orders
+
+
+def test_reverification_api_contains_no_execution_or_action_claims(
+    tmp_path,
+):
+    database_path = tmp_path / "verification.db"
+
+    request, request_entry = (
+        append_reverification_request_for_api(
+            database_path
+        )
+    )
+
+    work_order, _ = append_reverification_work_order_for_api(
+        database_path,
+        request=request,
+        request_entry=request_entry,
+    )
+
+    client = TestClient(
+        make_app(database_path)
+    )
+
+    response = client.get(
+        (
+            "/tenant-intervention-verification/"
+            "reverification/work-orders/"
+            f"{work_order.work_order_hash}"
+        ),
+        headers=authorized_headers(),
+    )
+
+    assert response.status_code == 200
+
+    payload = response.json()["work_order"]
+
+    forbidden = {
+        "executed",
+        "execution_status",
+        "started",
+        "completed",
+        "reverified",
+        "reverification_completed",
+        "verification_disposition",
+        "measurement",
+        "observation",
+        "success",
+        "failure",
+        "causation",
+        "causal_effect",
+        "authorized",
+        "rollback",
+        "continue_intervention",
+        "recommended_action",
+        "next_action",
+    }
+
+    assert forbidden.isdisjoint(payload)

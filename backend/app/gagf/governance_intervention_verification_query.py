@@ -2,6 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from backend.app.gagf.governance_intervention_reverification_request import (
+    GovernanceInterventionReverificationRequest,
+)
+from backend.app.gagf.governance_intervention_reverification_request_ledger import (
+    GovernanceInterventionReverificationRequestLedger,
+    GovernanceInterventionReverificationRequestLedgerVerification,
+)
+from backend.app.gagf.governance_intervention_reverification_work_order import (
+    GovernanceInterventionReverificationWorkOrder,
+)
+from backend.app.gagf.governance_intervention_reverification_work_order_ledger import (
+    GovernanceInterventionReverificationWorkOrderLedger,
+    GovernanceInterventionReverificationWorkOrderLedgerVerification,
+)
 from backend.app.gagf.governance_intervention_verification_ledger import (
     GovernanceInterventionVerificationLedger,
     GovernanceInterventionVerificationLedgerVerification,
@@ -20,11 +34,16 @@ class GovernanceInterventionVerificationQueryError(ValueError):
 
 class GovernanceInterventionVerificationQueryService:
     """
-    Read-only operational query boundary over the I-G verification ledger.
+    Read-only operational query boundary over governed intervention
+    verification and reverification ledgers.
 
     This service:
     - never creates a verification disposition;
-    - never mutates verification history;
+    - never creates a reverification request;
+    - never creates a reverification work order;
+    - never starts or executes reverification;
+    - never performs measurement or observation;
+    - never mutates verification or lifecycle history;
     - never authorizes future intervention activity;
     - never performs causal inference.
     """
@@ -41,6 +60,18 @@ class GovernanceInterventionVerificationQueryService:
         self._lifecycle_ledger = (
             GovernanceInterventionVerificationLifecycleLedger(
                 database_path=database_path
+            )
+        )
+
+        self._reverification_request_ledger = (
+            GovernanceInterventionReverificationRequestLedger(
+                database_path
+            )
+        )
+
+        self._reverification_work_order_ledger = (
+            GovernanceInterventionReverificationWorkOrderLedger(
+                database_path
             )
         )
 
@@ -85,15 +116,10 @@ class GovernanceInterventionVerificationQueryService:
         *,
         tenant_id: str,
         verification_record_hash: str,
-    ) -> (
-        GovernanceInterventionVerificationLifecycleState
-        | None
-    ):
+    ) -> GovernanceInterventionVerificationLifecycleState | None:
         return self._lifecycle_ledger.get_current_state(
             tenant_id=tenant_id,
-            verification_record_hash=(
-                verification_record_hash
-            ),
+            verification_record_hash=verification_record_hash,
         )
 
     def list_lifecycle_history(
@@ -107,7 +133,87 @@ class GovernanceInterventionVerificationQueryService:
     ]:
         return self._lifecycle_ledger.list_history(
             tenant_id=tenant_id,
-            verification_record_hash=(
-                verification_record_hash
-            ),
+            verification_record_hash=verification_record_hash,
+        )
+
+    def get_reverification_request(
+        self,
+        *,
+        tenant_id: str,
+        request_hash: str,
+    ) -> GovernanceInterventionReverificationRequest | None:
+        return (
+            self._reverification_request_ledger.get_by_request_hash(
+                tenant_id=tenant_id,
+                request_hash=request_hash,
+            )
+        )
+
+    def list_reverification_requests_for_record(
+        self,
+        *,
+        tenant_id: str,
+        verification_record_hash: str,
+    ) -> tuple[
+        GovernanceInterventionReverificationRequest,
+        ...,
+    ]:
+        return (
+            self._reverification_request_ledger
+            .list_for_verification_record(
+                tenant_id=tenant_id,
+                verification_record_hash=verification_record_hash,
+            )
+        )
+
+    def verify_reverification_request_ledger(
+        self,
+        *,
+        tenant_id: str,
+    ) -> GovernanceInterventionReverificationRequestLedgerVerification:
+        return (
+            self._reverification_request_ledger.verify_tenant_chain(
+                tenant_id=tenant_id
+            )
+        )
+
+    def get_reverification_work_order(
+        self,
+        *,
+        tenant_id: str,
+        work_order_hash: str,
+    ) -> GovernanceInterventionReverificationWorkOrder | None:
+        return (
+            self._reverification_work_order_ledger
+            .get_by_work_order_hash(
+                tenant_id=tenant_id,
+                work_order_hash=work_order_hash,
+            )
+        )
+
+    def list_reverification_work_orders_for_request(
+        self,
+        *,
+        tenant_id: str,
+        request_hash: str,
+    ) -> tuple[
+        GovernanceInterventionReverificationWorkOrder,
+        ...,
+    ]:
+        return (
+            self._reverification_work_order_ledger.list_for_request(
+                tenant_id=tenant_id,
+                request_hash=request_hash,
+            )
+        )
+
+    def verify_reverification_work_order_ledger(
+        self,
+        *,
+        tenant_id: str,
+    ) -> GovernanceInterventionReverificationWorkOrderLedgerVerification:
+        return (
+            self._reverification_work_order_ledger.verify_tenant_chain(
+                tenant_id=tenant_id
+            )
         )
