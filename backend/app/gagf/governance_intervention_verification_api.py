@@ -4,6 +4,12 @@ from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException, status
 
+from backend.app.gagf.governance_intervention_reverification_request_ledger import (
+    GovernanceInterventionReverificationRequestLedgerError,
+)
+from backend.app.gagf.governance_intervention_reverification_work_order_ledger import (
+    GovernanceInterventionReverificationWorkOrderLedgerError,
+)
 from backend.app.gagf.governance_intervention_verification_ledger import (
     GovernanceInterventionVerificationLedgerError,
 )
@@ -18,7 +24,7 @@ from backend.app.gagf.governance_intervention_verification_query import (
 GOVERNANCE_INTERVENTION_VERIFICATION_API_ID = (
     "governance-intervention-verification-api"
 )
-GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION = "0.2.0"
+GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION = "0.3.0"
 
 GOVERNANCE_INTERVENTION_VERIFICATION_READ_SCOPE = (
     "intervention-verification:read"
@@ -601,6 +607,474 @@ def create_governance_intervention_verification_router(
                 event.to_dict()
                 for event in history
             ],
+        }
+
+    @router.get(
+        "/records/{verification_record_hash}/reverification/requests"
+    )
+    def get_reverification_requests_for_record(
+        verification_record_hash: str,
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=x_credential_verified,
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            requests = (
+                query_service
+                .list_reverification_requests_for_record(
+                    tenant_id=x_tenant_id,
+                    verification_record_hash=(
+                        verification_record_hash
+                    ),
+                )
+            )
+        except GovernanceInterventionReverificationRequestLedgerError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "tenant_id": x_tenant_id,
+            "verification_record_hash": (
+                verification_record_hash
+            ),
+            "request_count": len(requests),
+            "requests": [
+                request.to_dict()
+                for request in requests
+            ],
+        }
+
+    @router.get(
+        "/reverification/requests/{request_hash}"
+    )
+    def get_reverification_request(
+        request_hash: str,
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=x_credential_verified,
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            request = query_service.get_reverification_request(
+                tenant_id=x_tenant_id,
+                request_hash=request_hash,
+            )
+        except GovernanceInterventionReverificationRequestLedgerError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        if request is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Governed intervention reverification "
+                    "request was not found."
+                ),
+            )
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "request": request.to_dict(),
+        }
+
+    @router.get(
+        "/reverification/requests/{request_hash}/work-orders"
+    )
+    def get_reverification_work_orders_for_request(
+        request_hash: str,
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=x_credential_verified,
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            work_orders = (
+                query_service
+                .list_reverification_work_orders_for_request(
+                    tenant_id=x_tenant_id,
+                    request_hash=request_hash,
+                )
+            )
+        except GovernanceInterventionReverificationWorkOrderLedgerError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "tenant_id": x_tenant_id,
+            "request_hash": request_hash,
+            "work_order_count": len(work_orders),
+            "work_orders": [
+                work_order.to_dict()
+                for work_order in work_orders
+            ],
+        }
+
+    @router.get(
+        "/reverification/work-orders/{work_order_hash}"
+    )
+    def get_reverification_work_order(
+        work_order_hash: str,
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=x_credential_verified,
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            work_order = (
+                query_service.get_reverification_work_order(
+                    tenant_id=x_tenant_id,
+                    work_order_hash=work_order_hash,
+                )
+            )
+        except GovernanceInterventionReverificationWorkOrderLedgerError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        if work_order is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Governed intervention reverification "
+                    "work order was not found."
+                ),
+            )
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "work_order": work_order.to_dict(),
+        }
+
+    @router.get(
+        "/reverification/request-ledger/integrity"
+    )
+    def get_reverification_request_ledger_integrity(
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=x_credential_verified,
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            verification = (
+                query_service
+                .verify_reverification_request_ledger(
+                    tenant_id=x_tenant_id
+                )
+            )
+        except GovernanceInterventionReverificationRequestLedgerError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "integrity": {
+                "tenant_id": verification.tenant_id,
+                "request_count": verification.request_count,
+                "valid": verification.valid,
+                "last_chain_hash": (
+                    verification.last_chain_hash
+                ),
+            },
+        }
+
+    @router.get(
+        "/reverification/work-order-ledger/integrity"
+    )
+    def get_reverification_work_order_ledger_integrity(
+        x_tenant_id: str = Header(
+            ...,
+            alias="x-tenant-id",
+        ),
+        x_role_id: str = Header(
+            ...,
+            alias="x-role-id",
+        ),
+        x_policy_scope: str = Header(
+            ...,
+            alias="x-policy-scope",
+        ),
+        x_credential_verified: str = Header(
+            ...,
+            alias="x-credential-verified",
+        ),
+        x_session_verified: str = Header(
+            ...,
+            alias="x-session-verified",
+        ),
+        x_device_trusted: str = Header(
+            ...,
+            alias="x-device-trusted",
+        ),
+        x_tenant_membership_verified: str = Header(
+            ...,
+            alias="x-tenant-membership-verified",
+        ),
+    ) -> dict:
+        authorization = common_authorization(
+            x_tenant_id=x_tenant_id,
+            x_role_id=x_role_id,
+            x_policy_scope=x_policy_scope,
+            x_credential_verified=x_credential_verified,
+            x_session_verified=x_session_verified,
+            x_device_trusted=x_device_trusted,
+            x_tenant_membership_verified=(
+                x_tenant_membership_verified
+            ),
+        )
+
+        try:
+            verification = (
+                query_service
+                .verify_reverification_work_order_ledger(
+                    tenant_id=x_tenant_id
+                )
+            )
+        except GovernanceInterventionReverificationWorkOrderLedgerError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        return {
+            "api_id": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_ID
+            ),
+            "api_version": (
+                GOVERNANCE_INTERVENTION_VERIFICATION_API_VERSION
+            ),
+            "authorization": authorization,
+            "integrity": {
+                "tenant_id": verification.tenant_id,
+                "work_order_count": (
+                    verification.work_order_count
+                ),
+                "valid": verification.valid,
+                "last_chain_hash": (
+                    verification.last_chain_hash
+                ),
+            },
         }
 
     return router
