@@ -28,6 +28,10 @@ from backend.app.gagf.governance_paid_assessment_delivery_event import (
     GovernancePaidAssessmentDeliveryEventService,
     HumanAssessmentDeliveryConfirmation,
 )
+from backend.app.gagf.governance_paid_assessment_client_acknowledgment import (
+    ClientAssessmentReceiptAcknowledgment,
+    GovernancePaidAssessmentClientAcknowledgmentService,
+)
 from backend.app.gagf.governance_paid_assessment_execution_coordinator import (
     GovernancePaidAssessmentExecutionCoordinator,
 )
@@ -409,3 +413,70 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
     assert "customer_outcome_verified" not in delivery_event_payload
     assert "causal_success" not in delivery_event_payload
     assert "roi_verified" not in delivery_event_payload
+
+    client_receipt_acknowledgment = (
+        ClientAssessmentReceiptAcknowledgment(
+            acknowledgment_id="client-ack-001",
+            tenant_id=delivery_event.tenant_id,
+            client_id=delivery_event.client_id,
+            engagement_id=delivery_event.engagement_id,
+            assessment_id=delivery_event.assessment_id,
+            report_id=delivery_event.report_id,
+            delivery_event_id=delivery_event.delivery_event_id,
+            delivery_event_hash=delivery_event.delivery_event_hash,
+            acknowledged_by="ACME Client Representative",
+            acknowledged_at="2026-08-18T19:30:00+00:00",
+            acknowledgment_method="email_reply",
+            acknowledgment_reference="mail-reply-001",
+            client_acknowledged_receipt=True,
+        )
+    )
+
+    acknowledgment_service = (
+        GovernancePaidAssessmentClientAcknowledgmentService()
+    )
+
+    client_acknowledgment = (
+        acknowledgment_service.record_acknowledgment(
+            delivery_event=delivery_event,
+            acknowledgment=client_receipt_acknowledgment,
+        )
+    )
+
+    assert (
+        client_acknowledgment.acknowledgment_status
+        == "client_receipt_acknowledged"
+    )
+    assert (
+        client_acknowledgment.hierarchy_key
+        == EXPECTED_HIERARCHY
+    )
+    assert (
+        client_acknowledgment.report_id
+        == delivery_event.report_id
+    )
+    assert (
+        client_acknowledgment.delivery_event_id
+        == delivery_event.delivery_event_id
+    )
+    assert (
+        client_acknowledgment.delivery_event_hash
+        == delivery_event.delivery_event_hash
+    )
+    assert (
+        client_acknowledgment.acknowledgment_evidence_hash
+        == client_receipt_acknowledgment.acknowledgment_evidence_hash
+    )
+
+    acknowledgment_payload = client_acknowledgment.to_dict()
+
+    # Receipt acknowledgment proves only that the client explicitly
+    # acknowledged receipt of the delivered assessment.
+    assert "findings_accepted" not in acknowledgment_payload
+    assert "recommendations_accepted" not in acknowledgment_payload
+    assert "client_satisfied" not in acknowledgment_payload
+    assert "intervention_authorized" not in acknowledgment_payload
+    assert "causal_success" not in acknowledgment_payload
+    assert "roi_verified" not in acknowledgment_payload
+    assert "remediation_success" not in acknowledgment_payload
+    assert "customer_outcome_verified" not in acknowledgment_payload
