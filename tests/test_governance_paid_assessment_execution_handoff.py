@@ -19,12 +19,14 @@ class StubAssessmentExecutionRequest:
         self,
         *,
         tenant_id: str = "tenant-alpha",
+        client_id: str = "client-acme",
         engagement_id: str = "engagement-001",
         assessment_id: str = "assessment-001",
         assessment_name: str = "Governance Runway Assessment",
     ) -> None:
         self.context = SimpleNamespace(
             tenant_id=tenant_id,
+            client_id=client_id,
             engagement_id=engagement_id,
             assessment_id=assessment_id,
         )
@@ -35,6 +37,7 @@ class StubAssessmentExecutionRequest:
             "hierarchy_key": "/".join(
                 (
                     self.context.tenant_id,
+                    self.context.client_id,
                     self.context.engagement_id,
                     self.context.assessment_id,
                 )
@@ -125,6 +128,7 @@ def build_authorization(**overrides):
     values = {
         "authorization_id": "paid-work-auth-001",
         "tenant_id": "tenant-alpha",
+        "client_id": "client-acme",
         "engagement_id": "engagement-001",
         "assessment_id": "assessment-001",
         "contract_execution_event_id": "contract-event-001",
@@ -168,7 +172,7 @@ def test_handoff_builds_ready_artifact():
         PaidAssessmentExecutionHandoffStatus.READY
     )
     assert handoff.hierarchy_key == (
-        "tenant-alpha/engagement-001/assessment-001"
+        "tenant-alpha/client-acme/engagement-001/assessment-001"
     )
 
 
@@ -301,6 +305,17 @@ def test_rejects_cross_tenant_authorization():
     ):
         build_handoff(authorization=authorization)
 
+
+def test_rejects_cross_client_authorization():
+    authorization = build_authorization(
+        client_id="client-other"
+    )
+
+    with pytest.raises(
+        PaidAssessmentExecutionHandoffError,
+        match="hierarchy does not match",
+    ):
+        build_handoff(authorization=authorization)
 
 def test_rejects_cross_engagement_authorization():
     authorization = build_authorization(
