@@ -24,6 +24,10 @@ from backend.app.gagf.governance_paid_assessment_delivery_envelope import (
     GovernancePaidAssessmentDeliveryEnvelopeService,
     PaidAssessmentDeliveryApproval,
 )
+from backend.app.gagf.governance_paid_assessment_delivery_event import (
+    GovernancePaidAssessmentDeliveryEventService,
+    HumanAssessmentDeliveryConfirmation,
+)
 from backend.app.gagf.governance_paid_assessment_execution_coordinator import (
     GovernancePaidAssessmentExecutionCoordinator,
 )
@@ -344,3 +348,64 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
     assert "recommendations_accepted" not in serialized
     assert "intervention_authorized" not in serialized
     assert "customer_outcome_verified" not in serialized
+
+    human_delivery_confirmation = (
+        HumanAssessmentDeliveryConfirmation(
+            delivery_event_id="delivery-event-001",
+            tenant_id=envelope.tenant_id,
+            client_id=envelope.client_id,
+            engagement_id=envelope.engagement_id,
+            assessment_id=envelope.assessment_id,
+            report_id=envelope.report_id,
+            delivered_by="Andy Sawyer",
+            delivered_at="2026-08-18T19:15:00+00:00",
+            delivery_method="email",
+            delivery_reference="mail-message-001",
+            delivery_completed=True,
+        )
+    )
+
+    delivery_event_service = (
+        GovernancePaidAssessmentDeliveryEventService()
+    )
+
+    delivery_event = delivery_event_service.record_delivery(
+        delivery_envelope=envelope,
+        human_confirmation=human_delivery_confirmation,
+    )
+
+    assert delivery_event.delivery_status == "delivered"
+    assert delivery_event.hierarchy_key == EXPECTED_HIERARCHY
+    assert delivery_event.report_id == envelope.report_id
+    assert (
+        delivery_event.delivery_envelope_hash
+        == envelope.envelope_hash
+    )
+    assert (
+        delivery_event.delivery_approval_hash
+        == envelope.delivery_approval_hash
+    )
+    assert (
+        delivery_event.human_delivery_confirmation_hash
+        == human_delivery_confirmation.confirmation_hash
+    )
+    assert delivery_event.delivered_by == "Andy Sawyer"
+    assert delivery_event.delivery_method == "email"
+    assert (
+        delivery_event.delivery_reference
+        == "mail-message-001"
+    )
+
+    delivery_event_payload = delivery_event.to_dict()
+
+    # PA-005 records only the completed human delivery action.
+    # Delivery is not client receipt, acknowledgment, acceptance,
+    # intervention authorization, or verified customer outcome.
+    assert "client_received" not in delivery_event_payload
+    assert "client_acknowledged" not in delivery_event_payload
+    assert "client_accepted" not in delivery_event_payload
+    assert "recommendations_accepted" not in delivery_event_payload
+    assert "intervention_authorized" not in delivery_event_payload
+    assert "customer_outcome_verified" not in delivery_event_payload
+    assert "causal_success" not in delivery_event_payload
+    assert "roi_verified" not in delivery_event_payload
