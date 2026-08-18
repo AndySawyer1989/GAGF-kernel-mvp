@@ -60,6 +60,7 @@ def require_bool_true(value: Any, field_name: str) -> None:
 class PaidAssessmentWorkAuthorization:
     authorization_id: str
     tenant_id: str
+    client_id: str
     engagement_id: str
     assessment_id: str
     contract_execution_event_id: str
@@ -71,6 +72,7 @@ class PaidAssessmentWorkAuthorization:
         for field_name in (
             "authorization_id",
             "tenant_id",
+            "client_id",
             "engagement_id",
             "assessment_id",
             "contract_execution_event_id",
@@ -107,6 +109,7 @@ class PaidAssessmentWorkAuthorization:
                 {
                     "authorization_id": self.authorization_id,
                     "tenant_id": self.tenant_id,
+                    "client_id": self.client_id,
                     "engagement_id": self.engagement_id,
                     "assessment_id": self.assessment_id,
                     "contract_execution_event_id": (
@@ -125,6 +128,7 @@ class PaidAssessmentWorkAuthorization:
         return {
             "authorization_id": self.authorization_id,
             "tenant_id": self.tenant_id,
+            "client_id": self.client_id,
             "engagement_id": self.engagement_id,
             "assessment_id": self.assessment_id,
             "contract_execution_event_id": (
@@ -142,6 +146,7 @@ class PaidAssessmentWorkAuthorization:
 @dataclass(frozen=True, slots=True)
 class PaidAssessmentExecutionHandoff:
     tenant_id: str
+    client_id: str
     engagement_id: str
     assessment_id: str
     contract_execution_event_id: str
@@ -162,6 +167,7 @@ class PaidAssessmentExecutionHandoff:
         return "/".join(
             (
                 self.tenant_id,
+                self.client_id,
                 self.engagement_id,
                 self.assessment_id,
             )
@@ -173,6 +179,7 @@ class PaidAssessmentExecutionHandoff:
             "version": self.version,
             "schema_version": self.schema_version,
             "tenant_id": self.tenant_id,
+            "client_id": self.client_id,
             "engagement_id": self.engagement_id,
             "assessment_id": self.assessment_id,
             "hierarchy_key": self.hierarchy_key,
@@ -234,6 +241,10 @@ class GovernancePaidAssessmentExecutionHandoffService:
             getattr(context, "tenant_id", ""),
             "assessment_execution_request.context.tenant_id",
         )
+        client_id = require_text(
+            getattr(context, "client_id", ""),
+            "assessment_execution_request.context.client_id",
+        )
         engagement_id = require_text(
             getattr(context, "engagement_id", ""),
             "assessment_execution_request.context.engagement_id",
@@ -246,6 +257,7 @@ class GovernancePaidAssessmentExecutionHandoffService:
         self._validate_hierarchy_binding(
             paid_work_authorization=paid_work_authorization,
             tenant_id=tenant_id,
+            client_id=client_id,
             engagement_id=engagement_id,
             assessment_id=assessment_id,
         )
@@ -288,6 +300,7 @@ class GovernancePaidAssessmentExecutionHandoffService:
         expected_hierarchy_key = "/".join(
             (
                 tenant_id,
+                client_id,
                 engagement_id,
                 assessment_id,
             )
@@ -315,6 +328,7 @@ class GovernancePaidAssessmentExecutionHandoffService:
                 PAID_ASSESSMENT_EXECUTION_HANDOFF_SCHEMA_VERSION
             ),
             "tenant_id": tenant_id,
+            "client_id": client_id,
             "engagement_id": engagement_id,
             "assessment_id": assessment_id,
             "contract_execution_event_id": (
@@ -339,6 +353,7 @@ class GovernancePaidAssessmentExecutionHandoffService:
 
         return PaidAssessmentExecutionHandoff(
             tenant_id=tenant_id,
+            client_id=client_id,
             engagement_id=engagement_id,
             assessment_id=assessment_id,
             contract_execution_event_id=(
@@ -528,16 +543,19 @@ class GovernancePaidAssessmentExecutionHandoffService:
         *,
         paid_work_authorization: PaidAssessmentWorkAuthorization,
         tenant_id: str,
+        client_id: str,
         engagement_id: str,
         assessment_id: str,
     ) -> None:
         expected = (
             tenant_id,
+            client_id,
             engagement_id,
             assessment_id,
         )
         actual = (
             paid_work_authorization.tenant_id,
+            paid_work_authorization.client_id,
             paid_work_authorization.engagement_id,
             paid_work_authorization.assessment_id,
         )

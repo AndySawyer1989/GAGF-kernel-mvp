@@ -20,17 +20,20 @@ class StubRequest:
         self,
         *,
         tenant_id="tenant-alpha",
+        client_id="client-acme",
         engagement_id="engagement-001",
         assessment_id="assessment-001",
         assessment_name="Governance Runway Assessment",
     ):
         self.context = SimpleNamespace(
             tenant_id=tenant_id,
+            client_id=client_id,
             engagement_id=engagement_id,
             assessment_id=assessment_id,
             hierarchy_key="/".join(
                 (
                     tenant_id,
+                    client_id,
                     engagement_id,
                     assessment_id,
                 )
@@ -71,6 +74,7 @@ def build_handoff(
 
     values = {
         "tenant_id": "tenant-alpha",
+        "client_id": "client-acme",
         "engagement_id": "engagement-001",
         "assessment_id": "assessment-001",
         "contract_execution_event_id": "contract-event-001",
@@ -91,7 +95,7 @@ class FakeApplicationService:
         self,
         *,
         hierarchy_key=(
-            "tenant-alpha/engagement-001/assessment-001"
+            "tenant-alpha/client-acme/engagement-001/assessment-001"
         ),
         request_hash_override=None,
         completed=True,
@@ -176,7 +180,7 @@ def test_result_preserves_handoff_hierarchy():
     )
 
     assert result.hierarchy_key == (
-        "tenant-alpha/engagement-001/assessment-001"
+        "tenant-alpha/client-acme/engagement-001/assessment-001"
     )
 
 

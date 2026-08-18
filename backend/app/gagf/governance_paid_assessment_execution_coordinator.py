@@ -30,6 +30,7 @@ class PaidAssessmentExecutionCoordinatorError(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class PaidAssessmentExecutionResult:
     tenant_id: str
+    client_id: str
     engagement_id: str
     assessment_id: str
     handoff_hash: str
@@ -53,6 +54,7 @@ class PaidAssessmentExecutionResult:
         return "/".join(
             (
                 self.tenant_id,
+                self.client_id,
                 self.engagement_id,
                 self.assessment_id,
             )
@@ -64,6 +66,7 @@ class PaidAssessmentExecutionResult:
             "version": self.version,
             "schema_version": self.schema_version,
             "tenant_id": self.tenant_id,
+            "client_id": self.client_id,
             "engagement_id": self.engagement_id,
             "assessment_id": self.assessment_id,
             "hierarchy_key": self.hierarchy_key,
@@ -162,6 +165,7 @@ class GovernancePaidAssessmentExecutionCoordinator:
                 PAID_ASSESSMENT_EXECUTION_COORDINATOR_SCHEMA_VERSION
             ),
             "tenant_id": handoff.tenant_id,
+            "client_id": handoff.client_id,
             "engagement_id": handoff.engagement_id,
             "assessment_id": handoff.assessment_id,
             "handoff_hash": handoff.handoff_hash,
@@ -187,6 +191,7 @@ class GovernancePaidAssessmentExecutionCoordinator:
 
         return PaidAssessmentExecutionResult(
             tenant_id=handoff.tenant_id,
+            client_id=handoff.client_id,
             engagement_id=handoff.engagement_id,
             assessment_id=handoff.assessment_id,
             handoff_hash=handoff.handoff_hash,
