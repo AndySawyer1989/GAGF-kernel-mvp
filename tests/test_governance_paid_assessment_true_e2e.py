@@ -32,6 +32,10 @@ from backend.app.gagf.governance_paid_assessment_client_acknowledgment import (
     ClientAssessmentReceiptAcknowledgment,
     GovernancePaidAssessmentClientAcknowledgmentService,
 )
+from backend.app.gagf.governance_paid_assessment_client_response import (
+    ClientAssessmentResponse,
+    GovernancePaidAssessmentClientResponseService,
+)
 from backend.app.gagf.governance_paid_assessment_execution_coordinator import (
     GovernancePaidAssessmentExecutionCoordinator,
 )
@@ -480,3 +484,60 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
     assert "roi_verified" not in acknowledgment_payload
     assert "remediation_success" not in acknowledgment_payload
     assert "customer_outcome_verified" not in acknowledgment_payload
+
+    client_response_evidence = ClientAssessmentResponse(
+        response_id="client-response-001",
+        tenant_id=client_acknowledgment.tenant_id,
+        client_id=client_acknowledgment.client_id,
+        engagement_id=client_acknowledgment.engagement_id,
+        assessment_id=client_acknowledgment.assessment_id,
+        report_id=client_acknowledgment.report_id,
+        acknowledgment_id=client_acknowledgment.acknowledgment_id,
+        acknowledgment_hash=client_acknowledgment.acknowledgment_hash,
+        responded_by="ACME Client Representative",
+        responded_at="2026-08-18T20:00:00+00:00",
+        response_method="email_reply",
+        response_reference="assessment-response-001",
+        findings_disposition="acknowledged",
+        recommendations_disposition="accepted",
+        response_note="Client accepts recommendations for planning review.",
+    )
+
+    client_response_service = (
+        GovernancePaidAssessmentClientResponseService()
+    )
+
+    client_response = client_response_service.record_response(
+        client_acknowledgment=client_acknowledgment,
+        response=client_response_evidence,
+    )
+
+    assert client_response.response_status == "client_response_recorded"
+    assert client_response.hierarchy_key == EXPECTED_HIERARCHY
+    assert client_response.report_id == client_acknowledgment.report_id
+    assert (
+        client_response.acknowledgment_id
+        == client_acknowledgment.acknowledgment_id
+    )
+    assert (
+        client_response.acknowledgment_hash
+        == client_acknowledgment.acknowledgment_hash
+    )
+    assert client_response.findings_disposition == "acknowledged"
+    assert client_response.recommendations_disposition == "accepted"
+    assert (
+        client_response.response_evidence_hash
+        == client_response_evidence.response_evidence_hash
+    )
+
+    response_payload = client_response.to_dict()
+
+    # Recommendation acceptance is a client disposition only.
+    # It does not create authority to implement or intervene.
+    assert "intervention_requested" not in response_payload
+    assert "intervention_authorized" not in response_payload
+    assert "intervention_executed" not in response_payload
+    assert "causal_success" not in response_payload
+    assert "roi_verified" not in response_payload
+    assert "remediation_success" not in response_payload
+    assert "customer_outcome_verified" not in response_payload
