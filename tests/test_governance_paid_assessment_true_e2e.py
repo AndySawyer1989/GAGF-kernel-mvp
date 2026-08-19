@@ -36,6 +36,12 @@ from backend.app.gagf.governance_paid_assessment_client_response import (
     ClientAssessmentResponse,
     GovernancePaidAssessmentClientResponseService,
 )
+from backend.app.gagf.governance_paid_assessment_lifecycle_persistence import (
+    ACKNOWLEDGMENT_ARTIFACT_TYPE,
+    CLIENT_RESPONSE_ARTIFACT_TYPE,
+    DELIVERY_ARTIFACT_TYPE,
+    GovernancePaidAssessmentLifecyclePersistenceService,
+)
 from backend.app.gagf.governance_paid_assessment_execution_coordinator import (
     GovernancePaidAssessmentExecutionCoordinator,
 )
@@ -541,3 +547,107 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
     assert "roi_verified" not in response_payload
     assert "remediation_success" not in response_payload
     assert "customer_outcome_verified" not in response_payload
+
+    # The real assessment application already persisted 10 governed
+    # assessment artifacts into this exact repository instance.
+    artifacts_before_lifecycle = repository.list_artifacts(
+        context=request.context
+    )
+
+    assert len(artifacts_before_lifecycle) == 10
+    assert (
+        [item.sequence_number for item in artifacts_before_lifecycle]
+        == list(range(1, 11))
+    )
+    assert repository.verify_chain(context=request.context) is True
+
+    lifecycle_persistence_service = (
+        GovernancePaidAssessmentLifecyclePersistenceService()
+    )
+
+    lifecycle_receipt = (
+        lifecycle_persistence_service.persist_lifecycle(
+            repository=repository,
+            delivery_event=delivery_event,
+            client_acknowledgment=client_acknowledgment,
+            client_response=client_response,
+        )
+    )
+
+    assert lifecycle_receipt.hierarchy_key == EXPECTED_HIERARCHY
+    assert lifecycle_receipt.first_sequence_number == 11
+    assert lifecycle_receipt.last_sequence_number == 13
+    assert lifecycle_receipt.repository_chain_valid is True
+
+    artifacts_after_lifecycle = repository.list_artifacts(
+        context=request.context
+    )
+
+    assert len(artifacts_after_lifecycle) == 13
+    assert (
+        [item.sequence_number for item in artifacts_after_lifecycle]
+        == list(range(1, 14))
+    )
+
+    lifecycle_artifacts = artifacts_after_lifecycle[-3:]
+
+    assert [
+        item.artifact_type
+        for item in lifecycle_artifacts
+    ] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        CLIENT_RESPONSE_ARTIFACT_TYPE,
+    ]
+
+    assert (
+        lifecycle_artifacts[0].payload
+        == delivery_event.to_dict()
+    )
+    assert (
+        lifecycle_artifacts[1].payload
+        == client_acknowledgment.to_dict()
+    )
+    assert (
+        lifecycle_artifacts[2].payload
+        == client_response.to_dict()
+    )
+
+    assert (
+        lifecycle_receipt.delivery_artifact_id
+        == lifecycle_artifacts[0].artifact_id
+    )
+    assert (
+        lifecycle_receipt.delivery_artifact_hash
+        == lifecycle_artifacts[0].artifact_hash
+    )
+    assert (
+        lifecycle_receipt.acknowledgment_artifact_id
+        == lifecycle_artifacts[1].artifact_id
+    )
+    assert (
+        lifecycle_receipt.acknowledgment_artifact_hash
+        == lifecycle_artifacts[1].artifact_hash
+    )
+    assert (
+        lifecycle_receipt.response_artifact_id
+        == lifecycle_artifacts[2].artifact_id
+    )
+    assert (
+        lifecycle_receipt.response_artifact_hash
+        == lifecycle_artifacts[2].artifact_hash
+    )
+
+    assert repository.verify_chain(context=request.context) is True
+
+    persistence_payload = lifecycle_receipt.to_dict()
+
+    # Durable persistence records the governed facts already established.
+    # It does not create new commercial or intervention authority.
+    assert "intervention_requested" not in persistence_payload
+    assert "intervention_authorized" not in persistence_payload
+    assert "intervention_executed" not in persistence_payload
+    assert "causal_success" not in persistence_payload
+    assert "roi_verified" not in persistence_payload
+    assert "remediation_success" not in persistence_payload
+    assert "customer_outcome_verified" not in persistence_payload
