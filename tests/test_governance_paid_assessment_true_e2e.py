@@ -42,6 +42,11 @@ from backend.app.gagf.governance_paid_assessment_lifecycle_persistence import (
     DELIVERY_ARTIFACT_TYPE,
     GovernancePaidAssessmentLifecyclePersistenceService,
 )
+from backend.app.gagf.governance_paid_assessment_lifecycle_query import (
+    GovernancePaidAssessmentLifecycleQueryService,
+    LIFECYCLE_STAGE_CLIENT_RESPONSE_RECORDED,
+    NEXT_STEP_NONE,
+)
 from backend.app.gagf.governance_paid_assessment_execution_coordinator import (
     GovernancePaidAssessmentExecutionCoordinator,
 )
@@ -651,3 +656,83 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
     assert "roi_verified" not in persistence_payload
     assert "remediation_success" not in persistence_payload
     assert "customer_outcome_verified" not in persistence_payload
+
+    # PA-009 queries the exact same 13-artifact repository and derives
+    # current lifecycle state without mutating the repository.
+    artifacts_before_query = repository.list_artifacts(
+        context=request.context
+    )
+
+    assert len(artifacts_before_query) == 13
+
+    lifecycle_query_service = (
+        GovernancePaidAssessmentLifecycleQueryService(
+            repository=repository
+        )
+    )
+
+    lifecycle_state = lifecycle_query_service.get_state(
+        context=request.context
+    )
+
+    assert lifecycle_state.hierarchy_key == EXPECTED_HIERARCHY
+    assert (
+        lifecycle_state.current_stage
+        == LIFECYCLE_STAGE_CLIENT_RESPONSE_RECORDED
+    )
+    assert lifecycle_state.pending_next_step == NEXT_STEP_NONE
+    assert lifecycle_state.delivery_recorded is True
+    assert lifecycle_state.receipt_acknowledged is True
+    assert lifecycle_state.client_response_recorded is True
+    assert lifecycle_state.report_id == execution_result.report_id
+    assert lifecycle_state.findings_disposition == "acknowledged"
+    assert lifecycle_state.recommendations_disposition == "accepted"
+    assert lifecycle_state.lifecycle_artifact_count == 3
+    assert lifecycle_state.repository_artifact_count == 13
+    assert lifecycle_state.repository_chain_valid is True
+
+    assert lifecycle_state.latest_lifecycle_artifact is not None
+    assert (
+        lifecycle_state.latest_lifecycle_artifact.artifact_type
+        == CLIENT_RESPONSE_ARTIFACT_TYPE
+    )
+    assert (
+        lifecycle_state.latest_lifecycle_artifact.sequence_number
+        == 13
+    )
+
+    assert [
+        artifact.artifact_type
+        for artifact in lifecycle_state.lifecycle_artifacts
+    ] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        CLIENT_RESPONSE_ARTIFACT_TYPE,
+    ]
+
+    assert [
+        artifact.sequence_number
+        for artifact in lifecycle_state.lifecycle_artifacts
+    ] == [11, 12, 13]
+
+    artifacts_after_query = repository.list_artifacts(
+        context=request.context
+    )
+
+    # Query projection is read-only.
+    assert artifacts_after_query == artifacts_before_query
+    assert len(artifacts_after_query) == 13
+    assert repository.verify_chain(context=request.context) is True
+
+    query_payload = lifecycle_state.to_dict()
+
+    # "accepted" is client disposition only; query projection creates
+    # no intervention or outcome authority.
+    assert query_payload["recommendations_disposition"] == "accepted"
+    assert "intervention_requested" not in query_payload
+    assert "intervention_authorized" not in query_payload
+    assert "intervention_executed" not in query_payload
+    assert "causal_success" not in query_payload
+    assert "roi_verified" not in query_payload
+    assert "remediation_success" not in query_payload
+    assert "customer_outcome_verified" not in query_payload
