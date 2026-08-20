@@ -53,6 +53,11 @@ from backend.app.gagf.governance_paid_assessment_closeout import (
     GovernancePaidAssessmentCloseoutService,
     PaidAssessmentCloseoutRequest,
 )
+from backend.app.gagf.governance_paid_assessment_operator_workflow import (
+    ACTION_NONE,
+    WORKFLOW_STAGE_CLOSED,
+    GovernancePaidAssessmentOperatorWorkflowService,
+)
 from backend.app.gagf.governance_paid_assessment_execution_coordinator import (
     GovernancePaidAssessmentExecutionCoordinator,
 )
@@ -843,3 +848,132 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
 
     assert assessment_after_closeout == assessment_before_closeout
     assert assessment_after_closeout.status == "complete"
+
+    # PA-011 projects the operator-facing state from the exact same
+    # governed repository after PA-010 closeout.
+    #
+    # This projection is read-only: it must not create artifact #15,
+    # mutate the assessment, or manufacture downstream authority.
+    artifacts_before_operator_workflow = repository.list_artifacts(
+        context=request.context
+    )
+    assessment_before_operator_workflow = repository.get_assessment(
+        context=request.context
+    )
+
+    assert len(artifacts_before_operator_workflow) == 14
+    assert (
+        artifacts_before_operator_workflow[-1].artifact_type
+        == PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE
+    )
+    assert (
+        artifacts_before_operator_workflow[-1].sequence_number
+        == 14
+    )
+
+    operator_workflow_service = (
+        GovernancePaidAssessmentOperatorWorkflowService(
+            repository=repository
+        )
+    )
+
+    operator_workflow = operator_workflow_service.get_workflow(
+        context=request.context
+    )
+
+    assert operator_workflow.hierarchy_key == EXPECTED_HIERARCHY
+    assert operator_workflow.workflow_stage == WORKFLOW_STAGE_CLOSED
+    assert operator_workflow.required_operator_action == ACTION_NONE
+    assert operator_workflow.allowed_operator_actions == ()
+    assert operator_workflow.assessment_closed is True
+
+    assert (
+        operator_workflow.lifecycle_stage
+        == LIFECYCLE_STAGE_CLIENT_RESPONSE_RECORDED
+    )
+    assert operator_workflow.lifecycle_pending_next_step == NEXT_STEP_NONE
+
+    assert (
+        operator_workflow.report_id
+        == execution_result.report_id
+    )
+    assert (
+        operator_workflow.findings_disposition
+        == "acknowledged"
+    )
+    assert (
+        operator_workflow.recommendations_disposition
+        == "accepted"
+    )
+
+    assert operator_workflow.lifecycle_artifact_count == 3
+    assert operator_workflow.repository_artifact_count == 14
+    assert operator_workflow.repository_chain_valid is True
+
+    assert operator_workflow.latest_lifecycle_artifact is not None
+    assert (
+        operator_workflow.latest_lifecycle_artifact.artifact_type
+        == CLIENT_RESPONSE_ARTIFACT_TYPE
+    )
+    assert (
+        operator_workflow.latest_lifecycle_artifact.sequence_number
+        == 13
+    )
+
+    assert operator_workflow.closeout_artifact is not None
+    assert (
+        operator_workflow.closeout_artifact.artifact_type
+        == PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE
+    )
+    assert operator_workflow.closeout_artifact.sequence_number == 14
+    assert (
+        operator_workflow.closeout_artifact.artifact_id
+        == closeout.artifact_id
+    )
+    assert (
+        operator_workflow.closeout_artifact.artifact_hash
+        == closeout.artifact_hash
+    )
+
+    assert [
+        artifact.sequence_number
+        for artifact in operator_workflow.evidence_artifacts
+    ] == [11, 12, 13, 14]
+
+    operator_payload = operator_workflow.to_dict()
+
+    assert operator_payload["workflow_stage"] == "closed"
+    assert operator_payload["required_operator_action"] == "none"
+    assert operator_payload["assessment_closed"] is True
+
+    # Operator guidance is not downstream operational authority.
+    assert "recommendations_implemented" not in operator_payload
+    assert "intervention_requested" not in operator_payload
+    assert "intervention_authorized" not in operator_payload
+    assert "intervention_executed" not in operator_payload
+    assert "causal_success" not in operator_payload
+    assert "roi_verified" not in operator_payload
+    assert "remediation_success" not in operator_payload
+    assert "customer_outcome_verified" not in operator_payload
+
+    artifacts_after_operator_workflow = repository.list_artifacts(
+        context=request.context
+    )
+    assessment_after_operator_workflow = repository.get_assessment(
+        context=request.context
+    )
+
+    # Critical PA-011 invariant:
+    # operator projection does not become artifact #15.
+    assert (
+        artifacts_after_operator_workflow
+        == artifacts_before_operator_workflow
+    )
+    assert len(artifacts_after_operator_workflow) == 14
+    assert (
+        assessment_after_operator_workflow
+        == assessment_before_operator_workflow
+    )
+    assert repository.verify_chain(
+        context=request.context
+    ) is True
