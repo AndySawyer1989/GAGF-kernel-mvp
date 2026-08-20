@@ -39,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-json",
         help=(
             "Optional path to write the final governed dry-run "
-            "result as JSON."
+            "result as JSON. Existing files are never overwritten."
         ),
     )
 
@@ -51,6 +51,28 @@ def main() -> int:
     args = parser.parse_args()
 
     database_path = Path(args.database)
+    output_path = (
+        None
+        if not args.output_json
+        else Path(args.output_json)
+    )
+
+    if output_path is not None and output_path.exists():
+        print(
+            json.dumps(
+                {
+                    "dry_run_passed": False,
+                    "error": (
+                        "output JSON already exists; refusing to "
+                        f"overwrite evidence: {output_path}"
+                    ),
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        return 1
 
     try:
         result = SyntheticPaidAssessmentDryRunService().run(
@@ -113,19 +135,37 @@ def main() -> int:
 
     print(serialized)
 
-    if args.output_json:
-        output_path = Path(args.output_json)
-
+    if output_path is not None:
         if output_path.parent and not output_path.parent.exists():
             output_path.parent.mkdir(
                 parents=True,
                 exist_ok=True,
             )
 
-        output_path.write_text(
-            serialized + "\n",
-            encoding="utf-8",
-        )
+        try:
+            with output_path.open(
+                "x",
+                encoding="utf-8",
+                newline="\n",
+            ) as output_file:
+                output_file.write(serialized + "\n")
+        except FileExistsError:
+            print(
+                json.dumps(
+                    {
+                        "dry_run_passed": False,
+                        "error": (
+                            "output JSON appeared during execution; "
+                            "refusing to overwrite evidence: "
+                            f"{output_path}"
+                        ),
+                    },
+                    indent=2,
+                    sort_keys=True,
+                ),
+                file=sys.stderr,
+            )
+            return 1
 
     return 0
 

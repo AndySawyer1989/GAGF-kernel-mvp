@@ -285,3 +285,51 @@ def test_cli_fails_closed_for_existing_database(
     assert "already exists" in payload["error"]
 
     assert database_path.read_bytes() == original
+
+def test_cli_refuses_existing_output_json_before_service_execution(
+    tmp_path,
+):
+    import json
+    import subprocess
+    import sys
+
+    database_path = tmp_path / "must-not-be-created.sqlite3"
+    output_path = tmp_path / "existing-result.json"
+
+    original_output = b'{"preserve":"this evidence exactly"}\n'
+    output_path.write_bytes(original_output)
+
+    assert database_path.exists() is False
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_synthetic_paid_assessment.py",
+            "--database",
+            str(database_path),
+            "--output-json",
+            str(output_path),
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 1
+
+    error_payload = json.loads(completed.stderr)
+
+    assert error_payload["dry_run_passed"] is False
+    assert "output JSON already exists" in error_payload["error"]
+    assert "refusing to overwrite evidence" in error_payload["error"]
+
+    # The output collision must be detected before the governed
+    # dry-run service is invoked.
+    assert database_path.exists() is False
+
+    # Existing evidence is byte-for-byte immutable.
+    assert output_path.read_bytes() == original_output
+
+    # Failure is emitted only as structured stderr evidence.
+    assert completed.stdout == ""
