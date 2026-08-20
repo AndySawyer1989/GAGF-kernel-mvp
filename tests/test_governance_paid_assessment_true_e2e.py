@@ -47,6 +47,12 @@ from backend.app.gagf.governance_paid_assessment_lifecycle_query import (
     LIFECYCLE_STAGE_CLIENT_RESPONSE_RECORDED,
     NEXT_STEP_NONE,
 )
+from backend.app.gagf.governance_paid_assessment_closeout import (
+    PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
+    PAID_ASSESSMENT_CLOSEOUT_STATUS,
+    GovernancePaidAssessmentCloseoutService,
+    PaidAssessmentCloseoutRequest,
+)
 from backend.app.gagf.governance_paid_assessment_execution_coordinator import (
     GovernancePaidAssessmentExecutionCoordinator,
 )
@@ -736,3 +742,104 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
     assert "roi_verified" not in query_payload
     assert "remediation_success" not in query_payload
     assert "customer_outcome_verified" not in query_payload
+
+    # Capture the authoritative assessment record before PA-010.
+    # Closeout must append evidence without mutating this record.
+    assessment_before_closeout = repository.get_assessment(
+        context=request.context
+    )
+
+    # PA-010 records the administrative endpoint of this assessment.
+    #
+    # Closeout does not mean recommendations were implemented and does not
+    # create intervention, causation, ROI, remediation, or outcome authority.
+    closeout_service = GovernancePaidAssessmentCloseoutService(
+        repository=repository
+    )
+
+    closeout = closeout_service.close_assessment(
+        request=PaidAssessmentCloseoutRequest(
+            context=request.context,
+            report_id=execution_result.report_id,
+            closed_by="FIP Operator",
+            closeout_reason=(
+                "Assessment delivery, receipt, and client response "
+                "have been recorded."
+            ),
+            administrative_closeout_confirmed=True,
+        )
+    )
+
+    assert (
+        closeout.closeout_status
+        == PAID_ASSESSMENT_CLOSEOUT_STATUS
+    )
+    assert closeout.closeout_status == "assessment_closed"
+    assert closeout.hierarchy_key == EXPECTED_HIERARCHY
+    assert closeout.report_id == execution_result.report_id
+    assert closeout.findings_disposition == "acknowledged"
+    assert closeout.recommendations_disposition == "accepted"
+    assert closeout.repository_chain_valid is True
+
+    assert closeout.sequence_number == 14
+
+    artifacts_after_closeout = repository.list_artifacts(
+        context=request.context
+    )
+
+    assert len(artifacts_after_closeout) == 14
+    assert artifacts_after_closeout[-1].artifact_type == (
+        PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE
+    )
+    assert artifacts_after_closeout[-1].sequence_number == 14
+    assert (
+        artifacts_after_closeout[-1].artifact_id
+        == closeout.artifact_id
+    )
+    assert (
+        artifacts_after_closeout[-1].artifact_hash
+        == closeout.artifact_hash
+    )
+
+    assert repository.verify_chain(
+        context=request.context
+    ) is True
+
+    # PA-010 must bind directly to the PA-007 client-response evidence
+    # that PA-009 identified as the latest lifecycle artifact.
+    assert lifecycle_state.latest_lifecycle_artifact is not None
+    assert (
+        closeout.client_response_artifact_id
+        == lifecycle_state.latest_lifecycle_artifact.artifact_id
+    )
+    assert (
+        closeout.client_response_artifact_hash
+        == lifecycle_state.latest_lifecycle_artifact.artifact_hash
+    )
+
+    closeout_payload = closeout.to_dict()
+
+    assert closeout_payload["closeout_status"] == "assessment_closed"
+    assert (
+        closeout_payload["recommendations_disposition"]
+        == "accepted"
+    )
+
+    # Administrative closeout is not downstream operational authority.
+    assert "recommendations_implemented" not in closeout_payload
+    assert "intervention_requested" not in closeout_payload
+    assert "intervention_authorized" not in closeout_payload
+    assert "intervention_executed" not in closeout_payload
+    assert "causal_success" not in closeout_payload
+    assert "roi_verified" not in closeout_payload
+    assert "remediation_success" not in closeout_payload
+    assert "customer_outcome_verified" not in closeout_payload
+
+    # The original assessment record remains unchanged. Closeout exists
+    # solely as the next immutable repository artifact.
+    assessment_after_closeout = repository.get_assessment(
+        context=request.context
+    )
+
+    assert assessment_after_closeout == assessment_before_closeout
+    assert assessment_after_closeout.status == "complete"
