@@ -358,12 +358,26 @@ class GovernanceAssessmentDemonstrationPersistenceService:
         payload_json = canonical_json(payload)
         expected_hash = sha256_text(payload_json)
 
+        artifacts_of_type = self._repository.list_artifacts(
+            context=context,
+            artifact_type=artifact_type,
+        )
+
+        conflicting = tuple(
+            artifact
+            for artifact in artifacts_of_type
+            if artifact.artifact_hash != expected_hash
+        )
+
+        if conflicting:
+            raise DemonstrationPersistenceError(
+                "repository contains conflicting artifact payload "
+                f"for type: {artifact_type}"
+            )
+
         existing = tuple(
             artifact
-            for artifact in self._repository.list_artifacts(
-                context=context,
-                artifact_type=artifact_type,
-            )
+            for artifact in artifacts_of_type
             if artifact.artifact_hash == expected_hash
         )
 

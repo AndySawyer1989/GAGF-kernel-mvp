@@ -172,6 +172,7 @@ class GovernanceRealPaidAssessmentExecutionService:
         contract_execution_event: dict[str, Any],
         paid_work_authorization: PaidAssessmentWorkAuthorization,
         request: AssessmentExecutionRequest,
+        allow_existing_database: bool = False,
     ) -> RealPaidAssessmentExecutionResult:
         if not isinstance(
             intake,
@@ -231,7 +232,7 @@ class GovernanceRealPaidAssessmentExecutionService:
                 "database_path is required"
             )
 
-        if path.exists():
+        if path.exists() and allow_existing_database is not True:
             raise RealPaidAssessmentExecutionError(
                 "real paid-assessment database already exists: "
                 f"{path}"
