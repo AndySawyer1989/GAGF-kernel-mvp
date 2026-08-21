@@ -172,8 +172,43 @@ class GovernanceRealPaidAssessmentExecutionService:
         contract_execution_event: dict[str, Any],
         paid_work_authorization: PaidAssessmentWorkAuthorization,
         request: AssessmentExecutionRequest,
-        allow_existing_database: bool = False,
     ) -> RealPaidAssessmentExecutionResult:
+        """
+        Execute a fresh real paid assessment.
+
+        Public execution always fails closed when the target database
+        already exists. Existing-database continuation belongs to the
+        governed PA014 recovery path.
+        """
+        return self._execute_governed(
+            database_path=database_path,
+            intake=intake,
+            authorization_bridge=authorization_bridge,
+            evidence_binding=evidence_binding,
+            contract_execution_event=contract_execution_event,
+            paid_work_authorization=paid_work_authorization,
+            request=request,
+            require_fresh_database=True,
+        )
+
+    def _execute_governed(
+        self,
+        *,
+        database_path: str | Path,
+        intake: RealPaidAssessmentIntake,
+        authorization_bridge: RealPaidAssessmentAuthorizationBridge,
+        evidence_binding: RealPaidAssessmentExecutionEvidenceBinding,
+        contract_execution_event: dict[str, Any],
+        paid_work_authorization: PaidAssessmentWorkAuthorization,
+        request: AssessmentExecutionRequest,
+        require_fresh_database: bool,
+    ) -> RealPaidAssessmentExecutionResult:
+        """
+        Internal governed execution primitive.
+
+        PA014 recovery may continue an existing database only after its
+        durable-attempt and repository-state preflight succeeds.
+        """
         if not isinstance(
             intake,
             RealPaidAssessmentIntake,
@@ -232,7 +267,7 @@ class GovernanceRealPaidAssessmentExecutionService:
                 "database_path is required"
             )
 
-        if path.exists() and allow_existing_database is not True:
+        if path.exists() and require_fresh_database is True:
             raise RealPaidAssessmentExecutionError(
                 "real paid-assessment database already exists: "
                 f"{path}"
