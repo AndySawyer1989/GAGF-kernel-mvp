@@ -1,3 +1,4 @@
+import inspect
 import sqlite3
 from dataclasses import replace
 from datetime import date, datetime, timezone
@@ -583,6 +584,19 @@ def test_normal_real_execution_still_rejects_existing_database(
             paid_work_authorization=values["authorization"],
             request=values["request"],
         )
+
+def test_public_execution_api_has_no_existing_database_bypass():
+    from backend.app.gagf.governance_real_paid_assessment_execution import (
+        GovernanceRealPaidAssessmentExecutionService,
+    )
+
+    parameters = inspect.signature(
+        GovernanceRealPaidAssessmentExecutionService.execute
+    ).parameters
+
+    assert "allow_existing_database" not in parameters
+    assert "require_fresh_database" not in parameters
+
 
 def execute_recoverably(
     *,

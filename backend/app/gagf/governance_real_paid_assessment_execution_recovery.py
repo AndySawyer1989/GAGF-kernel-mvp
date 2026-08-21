@@ -760,7 +760,7 @@ class GovernanceRealPaidAssessmentExecutionRecoveryService:
 
         execution_result = (
             GovernanceRealPaidAssessmentExecutionService()
-            .execute(
+            ._execute_governed(
                 database_path=path,
                 intake=intake,
                 authorization_bridge=authorization_bridge,
@@ -768,7 +768,7 @@ class GovernanceRealPaidAssessmentExecutionRecoveryService:
                 contract_execution_event=contract_execution_event,
                 paid_work_authorization=paid_work_authorization,
                 request=request,
-                allow_existing_database=True,
+                require_fresh_database=False,
             )
         )
 
