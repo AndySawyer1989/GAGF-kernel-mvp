@@ -323,3 +323,257 @@ def test_persistence_does_not_create_new_authority(repository):
     assert "roi_verified" not in payload
     assert "remediation_success" not in payload
     assert "customer_outcome_verified" not in payload
+
+def test_event_by_event_delivery_is_immediately_durable(repository):
+    delivery = build_delivery_event()
+
+    receipt = SERVICE.persist_delivery(
+        repository=repository,
+        delivery_event=delivery,
+    )
+
+    artifacts = repository.list_artifacts(
+        context=build_context()
+    )
+
+    assert len(artifacts) == 1
+    assert artifacts[0].artifact_type == DELIVERY_ARTIFACT_TYPE
+    assert artifacts[0].payload == delivery.to_dict()
+
+    assert receipt.artifact_type == DELIVERY_ARTIFACT_TYPE
+    assert receipt.artifact_id == artifacts[0].artifact_id
+    assert receipt.artifact_hash == artifacts[0].artifact_hash
+    assert receipt.sequence_number == 1
+    assert receipt.chain_hash == artifacts[0].chain_hash
+    assert receipt.repository_chain_valid is True
+
+    payload = receipt.to_dict()
+    assert payload["boundaries"][
+        "persistence_does_not_create_acknowledgment"
+    ] is True
+    assert payload["boundaries"][
+        "persistence_does_not_create_client_response"
+    ] is True
+
+
+def test_event_by_event_acknowledgment_requires_durable_delivery(
+    repository,
+):
+    acknowledgment = build_acknowledgment()
+
+    with pytest.raises(
+        PaidAssessmentLifecyclePersistenceError,
+        match="before delivery",
+    ):
+        SERVICE.persist_acknowledgment(
+            repository=repository,
+            client_acknowledgment=acknowledgment,
+        )
+
+    assert repository.list_artifacts(
+        context=build_context()
+    ) == ()
+
+
+def test_event_by_event_acknowledgment_becomes_second_artifact(
+    repository,
+):
+    delivery = build_delivery_event()
+    acknowledgment = build_acknowledgment(delivery)
+
+    SERVICE.persist_delivery(
+        repository=repository,
+        delivery_event=delivery,
+    )
+
+    receipt = SERVICE.persist_acknowledgment(
+        repository=repository,
+        client_acknowledgment=acknowledgment,
+    )
+
+    artifacts = repository.list_artifacts(
+        context=build_context()
+    )
+
+    assert [item.artifact_type for item in artifacts] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+    ]
+    assert [item.sequence_number for item in artifacts] == [1, 2]
+    assert artifacts[1].payload == acknowledgment.to_dict()
+    assert receipt.sequence_number == 2
+    assert receipt.repository_chain_valid is True
+
+
+def test_event_by_event_response_requires_durable_acknowledgment(
+    repository,
+):
+    delivery = build_delivery_event()
+    acknowledgment = build_acknowledgment(delivery)
+    response = build_response(acknowledgment)
+
+    SERVICE.persist_delivery(
+        repository=repository,
+        delivery_event=delivery,
+    )
+
+    with pytest.raises(
+        PaidAssessmentLifecyclePersistenceError,
+        match="before receipt acknowledgment",
+    ):
+        SERVICE.persist_client_response(
+            repository=repository,
+            client_response=response,
+        )
+
+    artifacts = repository.list_artifacts(
+        context=build_context()
+    )
+
+    assert len(artifacts) == 1
+    assert artifacts[0].artifact_type == DELIVERY_ARTIFACT_TYPE
+
+
+def test_event_by_event_response_becomes_third_artifact(repository):
+    delivery = build_delivery_event()
+    acknowledgment = build_acknowledgment(delivery)
+    response = build_response(acknowledgment)
+
+    SERVICE.persist_delivery(
+        repository=repository,
+        delivery_event=delivery,
+    )
+    SERVICE.persist_acknowledgment(
+        repository=repository,
+        client_acknowledgment=acknowledgment,
+    )
+
+    receipt = SERVICE.persist_client_response(
+        repository=repository,
+        client_response=response,
+    )
+
+    artifacts = repository.list_artifacts(
+        context=build_context()
+    )
+
+    assert [item.artifact_type for item in artifacts] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        CLIENT_RESPONSE_ARTIFACT_TYPE,
+    ]
+    assert [item.sequence_number for item in artifacts] == [1, 2, 3]
+
+    assert artifacts[0].payload == delivery.to_dict()
+    assert artifacts[1].payload == acknowledgment.to_dict()
+    assert artifacts[2].payload == response.to_dict()
+
+    assert receipt.sequence_number == 3
+    assert receipt.repository_chain_valid is True
+    assert repository.verify_chain(
+        context=build_context()
+    ) is True
+
+
+def test_event_by_event_rejects_duplicate_delivery_before_append(
+    repository,
+):
+    delivery = build_delivery_event()
+
+    SERVICE.persist_delivery(
+        repository=repository,
+        delivery_event=delivery,
+    )
+
+    before = repository.list_artifacts(
+        context=build_context()
+    )
+
+    with pytest.raises(
+        PaidAssessmentLifecyclePersistenceError,
+        match="delivery lifecycle artifact already exists",
+    ):
+        SERVICE.persist_delivery(
+            repository=repository,
+            delivery_event=delivery,
+        )
+
+    after = repository.list_artifacts(
+        context=build_context()
+    )
+
+    assert after == before
+
+
+def test_event_by_event_rejects_acknowledgment_lineage_substitution(
+    repository,
+):
+    delivery = build_delivery_event()
+
+    SERVICE.persist_delivery(
+        repository=repository,
+        delivery_event=delivery,
+    )
+
+    acknowledgment = build_acknowledgment(
+        delivery,
+        report_id="report-substituted",
+    )
+
+    with pytest.raises(
+        PaidAssessmentLifecyclePersistenceError,
+        match="persisted delivery field report_id",
+    ):
+        SERVICE.persist_acknowledgment(
+            repository=repository,
+            client_acknowledgment=acknowledgment,
+        )
+
+    artifacts = repository.list_artifacts(
+        context=build_context()
+    )
+
+    assert len(artifacts) == 1
+    assert artifacts[0].artifact_type == DELIVERY_ARTIFACT_TYPE
+
+
+def test_event_by_event_rejects_response_lineage_substitution(
+    repository,
+):
+    delivery = build_delivery_event()
+    acknowledgment = build_acknowledgment(delivery)
+
+    SERVICE.persist_delivery(
+        repository=repository,
+        delivery_event=delivery,
+    )
+    SERVICE.persist_acknowledgment(
+        repository=repository,
+        client_acknowledgment=acknowledgment,
+    )
+
+    response = build_response(
+        acknowledgment,
+        acknowledgment_id="ack-substituted",
+    )
+
+    with pytest.raises(
+        PaidAssessmentLifecyclePersistenceError,
+        match="persisted acknowledgment field acknowledgment_id",
+    ):
+        SERVICE.persist_client_response(
+            repository=repository,
+            client_response=response,
+        )
+
+    artifacts = repository.list_artifacts(
+        context=build_context()
+    )
+
+    assert len(artifacts) == 2
+    assert [
+        item.artifact_type for item in artifacts
+    ] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+    ]
