@@ -259,6 +259,9 @@ def test_controlled_real_paid_assessment_executes_to_report_boundary(
     assert result.artifact_count == 10
     assert result.report_id
     assert result.report_package_hash
+    assert result.assessment_execution_request_hash
+    assert result.application_request_hash
+    assert result.demonstration_hash
 
     assert (
         result.hierarchy_key
@@ -266,6 +269,19 @@ def test_controlled_real_paid_assessment_executes_to_report_boundary(
     )
 
     payload = result.to_dict()
+
+    assert (
+        payload["assessment_execution_request_hash"]
+        == result.assessment_execution_request_hash
+    )
+    assert (
+        payload["application_request_hash"]
+        == result.application_request_hash
+    )
+    assert (
+        payload["demonstration_hash"]
+        == result.demonstration_hash
+    )
 
     assert payload["boundaries"][
         "execution_complete_is_not_delivery_approval"

@@ -86,8 +86,11 @@ class RealPaidAssessmentExecutionResult:
     execution_status: str
 
     handoff_hash: str
+    assessment_execution_request_hash: str
+    application_request_hash: str
     execution_result_hash: str
     application_hash: str
+    demonstration_hash: str
     persistence_hash: str
 
     report_id: str
@@ -124,8 +127,13 @@ class RealPaidAssessmentExecutionResult:
             "hierarchy_key": self.hierarchy_key,
             "execution_status": self.execution_status,
             "handoff_hash": self.handoff_hash,
+            "assessment_execution_request_hash": (
+                self.assessment_execution_request_hash
+            ),
+            "application_request_hash": self.application_request_hash,
             "execution_result_hash": self.execution_result_hash,
             "application_hash": self.application_hash,
+            "demonstration_hash": self.demonstration_hash,
             "persistence_hash": self.persistence_hash,
             "report_id": self.report_id,
             "report_package_hash": self.report_package_hash,
@@ -506,10 +514,17 @@ class GovernanceRealPaidAssessmentExecutionService:
             assessment_id=execution_result.assessment_id,
             execution_status=REAL_EXECUTION_STATUS_COMPLETE,
             handoff_hash=execution_result.handoff_hash,
+            assessment_execution_request_hash=(
+                execution_result.assessment_execution_request_hash
+            ),
+            application_request_hash=(
+                execution_result.application_request_hash
+            ),
             execution_result_hash=(
                 execution_result.execution_result_hash
             ),
             application_hash=execution_result.application_hash,
+            demonstration_hash=execution_result.demonstration_hash,
             persistence_hash=execution_result.persistence_hash,
             report_id=execution_result.report_id,
             report_package_hash=(

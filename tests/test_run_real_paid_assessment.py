@@ -389,6 +389,12 @@ def test_fresh_operator_execution_produces_ten_artifacts(
     assert payload["result"]["artifact_count_before"] == 0
     assert payload["result"]["artifact_count_after"] == 10
 
+    execution_result = payload["result"]["execution_result"]
+
+    assert execution_result["assessment_execution_request_hash"]
+    assert execution_result["application_request_hash"]
+    assert execution_result["demonstration_hash"]
+
     assert (
         payload["boundaries"][
             "operator_command_is_not_paid_work_authorization"
