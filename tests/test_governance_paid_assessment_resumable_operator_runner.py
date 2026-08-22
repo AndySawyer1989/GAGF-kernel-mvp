@@ -118,6 +118,11 @@ def build_governed_with_computed_hash(
             f"governed fixture payload missing {hash_field}"
         )
 
+    # Match the authoritative PA005/PA006/PA007 canonical
+    # business-event hash contract. hierarchy_key is a derived
+    # serialization projection, not hash-authoritative input.
+    payload.pop("hierarchy_key", None)
+
     working[hash_field] = sha256_text(
         canonical_json(payload)
     )

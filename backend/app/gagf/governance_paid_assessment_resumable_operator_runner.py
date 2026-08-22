@@ -452,6 +452,12 @@ class GovernancePaidAssessmentResumableOperatorRunner:
         hash_payload = dict(payload)
         del hash_payload[hash_field]
 
+        # hierarchy_key is a derived serialization projection and is
+        # not part of the canonical PA005/PA006/PA007 business-event
+        # hash payload defined by those domain authorities.
+        hash_payload.pop("hierarchy_key", None)
+
+
         expected_hash = sha256_text(
             canonical_json(hash_payload)
         )
