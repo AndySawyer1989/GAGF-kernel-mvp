@@ -18,12 +18,17 @@ def test_first_real_paid_assessment_runbook_contract():
     required_sections = (
         "# First Real Paid Assessment Controlled Execution Runbook",
         "## Constitutional Boundary",
-        "## Phase 2 — Run PILOT-004 Preflight",
-        "## Phase 3 — Prepare PILOT-005 Execution Package",
-        "## Phase 5 — Human Go/No-Go",
-        "## Phase 6 — Execute the Exact PA015 argv",
-        "## Phase 8 — Verify PA015 Result",
-        "## Phase 10 — Stop Before Delivery",
+        "## Phase 2 - Run PILOT-004 Preflight",
+        "## Phase 3 - Prepare PILOT-005 Execution Package",
+        (
+            "## Phase 5 - Run PILOT-012 "
+            "Controlled-Execution Readiness"
+        ),
+        "## Phase 6 - Run PILOT-013 Launch Manifest",
+        "## Phase 7 - Human Launch Review / Go-No-Go",
+        "## Phase 8 - Execute the Exact PA015 argv",
+        "## Phase 10 - Verify PA015 Result",
+        "## Phase 12 - Stop Before Delivery",
         "## Failure Handling",
         "## Evidence Preservation Rule",
         "## First Real Client Safety Rule",
@@ -37,6 +42,14 @@ def test_first_real_paid_assessment_runbook_contract():
     required_module_commands = (
         "-m scripts.run_real_paid_assessment_preflight",
         "-m scripts.prepare_real_paid_assessment_execution_package",
+        (
+            "-m scripts."
+            "verify_first_real_paid_assessment_execution_readiness"
+        ),
+        (
+            "-m scripts."
+            "verify_first_real_paid_assessment_launch_manifest"
+        ),
         "scripts.run_real_paid_assessment",
     )
 
@@ -54,6 +67,12 @@ def test_first_real_paid_assessment_runbook_contract():
         "human_go_no_go_required = true",
         "automatically_execute = false",
         "artifact_count_after = 10",
+        "status = ready_for_controlled_execution",
+        "ready_for_controlled_execution = true",
+        "status = ready_for_human_launch_review",
+        "ready_for_human_launch_review = true",
+        "perform_human_controlled_launch_review",
+        "--payment-confirmation-json",
     )
 
     for field in required_fields:
@@ -62,18 +81,40 @@ def test_first_real_paid_assessment_runbook_contract():
     required_boundaries = (
         "PILOT-004 READY",
         "!= PILOT-005 package prepared",
-        "!= human go/no-go",
+        "!= PILOT-012 READY",
+        "!= PILOT-013 ready_for_human_launch_review",
+        "!= human launch GO",
+        "!= paid-work authorization",
         "!= PA015 invocation",
         "!= governed execution",
         "!= delivery approval",
         "!= customer outcome",
+        "Payment confirmation is not paid-work authorization.",
+        (
+            "PILOT-012 READY is not human launch approval "
+            "or execution authority."
+        ),
+        (
+            "PILOT-013 ready_for_human_launch_review is not "
+            "human launch approval or execution authority."
+        ),
     )
 
     for boundary in required_boundaries:
         assert boundary in content
 
     assert (
-        "It preserves a separate human go/no-go checkpoint "
+        "PILOT-012 remains the execution-readiness authority."
+        in content
+    )
+
+    assert (
+        "PILOT-013 verifies launch-manifest convergence only."
+        in content
+    )
+
+    assert (
+        "It preserves a separate human launch decision "
         "and does not itself execute the assessment."
         in content
     )
