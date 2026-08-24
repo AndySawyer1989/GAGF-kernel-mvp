@@ -2254,3 +2254,13 @@ _register_governance_assessment_api(
     app=app,
     database_path=_ASSESSMENT_DATABASE_PATH,
 )
+
+
+# WEB-001-01F: PRELIVE Blind Assessment API
+from backend.app.gagf.prelive_api_registration import (
+    register_prelive_api as _register_prelive_api,
+)
+
+_register_prelive_api(
+    app=app,
+)
