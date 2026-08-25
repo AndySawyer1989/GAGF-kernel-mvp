@@ -9,6 +9,9 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field
 
+from backend.app.gagf.governance_paid_assessment_execution_handoff import (
+    PaidAssessmentWorkAuthorization,
+)
 from backend.app.gagf.prelive_assessment_execution_bridge import (
     PreliveAssessmentExecutionBridge,
     PreliveAssessmentExecutionMetadata,
@@ -18,6 +21,9 @@ from backend.app.gagf.prelive_blind_assessment import (
 )
 from backend.app.gagf.prelive_blind_assessment_service import (
     PreliveBlindAssessmentService,
+)
+from backend.app.gagf.prelive_execution_handoff_bridge import (
+    PreliveExecutionHandoffBridge,
 )
 
 
@@ -121,6 +127,41 @@ class PreliveBuildRequestApiRequest(BaseModel):
         )
 
 
+class PrelivePrepareHandoffApiRequest(
+    PreliveBuildRequestApiRequest
+):
+    """
+    PRELIVE request for construction of the existing
+    governed paid-assessment execution handoff.
+
+    Preparing the handoff does not execute the
+    assessment.
+
+    Paid-work authorization must be supplied
+    independently of PRELIVE.
+    """
+
+    contract_execution_event: dict[str, Any]
+
+    paid_work_authorization: dict[str, Any]
+
+    def to_paid_work_authorization(
+        self,
+    ) -> PaidAssessmentWorkAuthorization:
+        try:
+            return PaidAssessmentWorkAuthorization(
+                **self.paid_work_authorization
+            )
+        except (
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise PreliveScenarioError(
+                "Invalid PRELIVE paid-work "
+                f"authorization: {exc}"
+            ) from exc
+
+
 def _prelive_error_detail(
     *,
     code: str,
@@ -145,6 +186,7 @@ def create_prelive_router(
     - validation
     - preparation
     - AssessmentExecutionRequest construction
+    - governed execution-handoff preparation
 
     It deliberately does not expose an execution route.
     """
@@ -156,6 +198,12 @@ def create_prelive_router(
 
     execution_bridge = (
         PreliveAssessmentExecutionBridge()
+    )
+
+    execution_handoff_bridge = (
+        PreliveExecutionHandoffBridge(
+            request_bridge=execution_bridge
+        )
     )
 
     @router.post(
@@ -257,6 +305,60 @@ def create_prelive_router(
                 PRELIVE_API_VERSION,
             "operation":
                 "build-request",
+            "authority":
+                "GAGF_FIP_ONLY",
+            "assessment_executed":
+                False,
+            "execution_authorized":
+                False,
+            "human_execution_required":
+                True,
+            "result":
+                result.to_dict(),
+        }
+
+    @router.post(
+        "/prepare-handoff",
+        status_code=status.HTTP_200_OK,
+    )
+    def prepare_prelive_execution_handoff(
+        request: PrelivePrepareHandoffApiRequest,
+    ) -> dict[str, Any]:
+        try:
+            result = (
+                execution_handoff_bridge
+                .prepare_handoff(
+                    scenario=request.scenario,
+                    metadata=(
+                        request.to_bridge_metadata()
+                    ),
+                    contract_execution_event=(
+                        request.contract_execution_event
+                    ),
+                    paid_work_authorization=(
+                        request
+                        .to_paid_work_authorization()
+                    ),
+                )
+            )
+        except PreliveScenarioError as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_422_UNPROCESSABLE_CONTENT
+                ),
+                detail=_prelive_error_detail(
+                    code=(
+                        "PRELIVE_EXECUTION_HANDOFF_FAILED"
+                    ),
+                    message=str(exc),
+                ),
+            ) from exc
+
+        return {
+            "api_version":
+                PRELIVE_API_VERSION,
+            "operation":
+                "prepare-handoff",
             "authority":
                 "GAGF_FIP_ONLY",
             "assessment_executed":
