@@ -104,7 +104,7 @@ export function AssessmentReadinessPanel({
                 }
                 aria-hidden="true"
               >
-                {item.state === "ready" ? "✓" : "!"}
+                {item.state === "ready" ? "OK" : "!"}
               </span>
 
               <div>
