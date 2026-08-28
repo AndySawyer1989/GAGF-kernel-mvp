@@ -105,16 +105,33 @@ describe(
 
       mockedExecuteAssessment
         .mockResolvedValue({
+          completed:
+            true,
+
           hierarchy_key:
             "tenant-alpha/client-acme/engagement-001/assessment-001",
 
           artifact_count:
-            6
-        } as Awaited<
-          ReturnType<
-            typeof executeAssessment
-          >
-        >);
+            6,
+
+          request_hash:
+            "request-hash-001",
+
+          demonstration_hash:
+            "demonstration-hash-001",
+
+          persistence_hash:
+            "persistence-hash-001",
+
+          report_id:
+            "report-001",
+
+          application_hash:
+            "application-hash-001",
+
+          schema_version:
+            "1.0.0"
+        });
     });
 
     it(
