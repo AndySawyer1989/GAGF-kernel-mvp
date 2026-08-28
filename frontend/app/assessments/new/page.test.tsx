@@ -36,18 +36,63 @@ vi.mock(
 
     return {
       ...actual,
+
       getGovernanceAssessmentApiConfig:
-        vi.fn(() => createTestApiConfig()),
-      executeAssessment: vi.fn()
+        vi.fn(
+          () =>
+            createTestApiConfig()
+        ),
+
+      executeAssessment:
+        vi.fn()
     };
   }
 );
 
 const mockedExecuteAssessment =
-  vi.mocked(executeAssessment);
+  vi.mocked(
+    executeAssessment
+  );
+
+async function reachReviewStep() {
+  const user =
+    userEvent.setup();
+
+  await user.click(
+    screen.getByRole(
+      "button",
+      {
+        name:
+          "Continue to scope"
+      }
+    )
+  );
+
+  await user.click(
+    screen.getByRole(
+      "button",
+      {
+        name:
+          "Continue to evidence"
+      }
+    )
+  );
+
+  await user.click(
+    screen.getByRole(
+      "button",
+      {
+        name:
+          "Review assessment"
+      }
+    )
+  );
+
+  return user;
+}
 
 describe(
-  "NewAssessmentPage delivery actions",
+  "NewAssessmentPage guided intake",
   () => {
     beforeEach(() => {
       vi.clearAllMocks();
@@ -58,27 +103,222 @@ describe(
         "/assessments/new"
       );
 
-      mockedExecuteAssessment.mockResolvedValue({
-        hierarchy_key:
-          "tenant-alpha/client-acme/engagement-001/assessment-001",
-        artifact_count: 6
-      } as Awaited<
-        ReturnType<typeof executeAssessment>
-      >);
+      mockedExecuteAssessment
+        .mockResolvedValue({
+          hierarchy_key:
+            "tenant-alpha/client-acme/engagement-001/assessment-001",
+
+          artifact_count:
+            6
+        } as Awaited<
+          ReturnType<
+            typeof executeAssessment
+          >
+        >);
     });
 
     it(
-      "opens the completed assessment and client report from the submitted hierarchy",
+      "guides the operator through client, scope, evidence, and review steps",
       async () => {
-        const user = userEvent.setup();
+        const user =
+          userEvent.setup();
 
-        render(<NewAssessmentPage />);
+        render(
+          <NewAssessmentPage />
+        );
+
+        expect(
+          screen.getByRole(
+            "heading",
+            {
+              name:
+                "Client & Assessment"
+            }
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Step 1 of 4"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Client Current"
+            }
+          )
+        ).toHaveAttribute(
+          "aria-current",
+          "step"
+        );
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Scope Upcoming"
+            }
+          )
+        ).toBeInTheDocument();
 
         await user.click(
           screen.getByRole(
             "button",
             {
-              name: "Execute assessment"
+              name:
+                "Continue to scope"
+            }
+          )
+        );
+
+        expect(
+          screen.getByRole(
+            "heading",
+            {
+              name:
+                "Assessment Scope"
+            }
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Client Complete"
+            }
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Scope Current"
+            }
+          )
+        ).toHaveAttribute(
+          "aria-current",
+          "step"
+        );
+
+        await user.click(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Continue to evidence"
+            }
+          )
+        );
+
+        expect(
+          screen.getByRole(
+            "heading",
+            {
+              name:
+                "Evidence"
+            }
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Count satisfied"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Evidence Current"
+            }
+          )
+        ).toHaveAttribute(
+          "aria-current",
+          "step"
+        );
+
+        await user.click(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Review assessment"
+            }
+          )
+        );
+
+        expect(
+          screen.getByRole(
+            "heading",
+            {
+              name:
+                "Review & Execute"
+            }
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Ready to run FIP"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Review Current"
+            }
+          )
+        ).toHaveAttribute(
+          "aria-current",
+          "step"
+        );
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Execute assessment"
+            }
+          )
+        ).toBeInTheDocument();
+      }
+    );
+
+    it(
+      "submits the governed assessment request only from the review step",
+      async () => {
+        render(
+          <NewAssessmentPage />
+        );
+
+        const user =
+          await reachReviewStep();
+
+        expect(
+          mockedExecuteAssessment
+        ).not.toHaveBeenCalled();
+
+        await user.click(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Execute assessment"
             }
           )
         );
@@ -86,7 +326,87 @@ describe(
         await waitFor(() => {
           expect(
             mockedExecuteAssessment
-          ).toHaveBeenCalledTimes(1);
+          ).toHaveBeenCalledTimes(
+            1
+          );
+        });
+
+        expect(
+          mockedExecuteAssessment
+        ).toHaveBeenCalledWith(
+          expect.anything(),
+
+          expect.objectContaining({
+            tenant_id:
+              "tenant-alpha",
+
+            client_id:
+              "client-acme",
+
+            engagement_id:
+              "engagement-001",
+
+            assessment_id:
+              "assessment-001",
+
+            assessment_name:
+              "Governance Runway Assessment",
+
+            workflow_names: [
+              "Incident Management"
+            ],
+
+            organizational_units: [
+              "IT Operations"
+            ],
+
+            objectives: [
+              "Reduce governance friction"
+            ],
+
+            expected_outcomes: [
+              "Faster completion"
+            ],
+
+            client_display_name:
+              "ACME Corporation",
+
+            prepared_by:
+              "FIP Governance Services",
+
+            maximum_priorities:
+              3
+          })
+        );
+      }
+    );
+
+    it(
+      "opens the completed assessment and client report from the submitted hierarchy",
+      async () => {
+        render(
+          <NewAssessmentPage />
+        );
+
+        const user =
+          await reachReviewStep();
+
+        await user.click(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Execute assessment"
+            }
+          )
+        );
+
+        await waitFor(() => {
+          expect(
+            mockedExecuteAssessment
+          ).toHaveBeenCalledTimes(
+            1
+          );
         });
 
         expect(
@@ -101,28 +421,28 @@ describe(
           )
         ).toBeInTheDocument();
 
-        const assessmentLink =
+        expect(
           screen.getByRole(
             "link",
             {
-              name: "Open assessment"
+              name:
+                "Open assessment"
             }
-          );
-
-        const reportLink =
-          screen.getByRole(
-            "link",
-            {
-              name: "View client report"
-            }
-          );
-
-        expect(assessmentLink).toHaveAttribute(
+          )
+        ).toHaveAttribute(
           "href",
           "/assessments/tenant-alpha/client-acme/engagement-001/assessment-001"
         );
 
-        expect(reportLink).toHaveAttribute(
+        expect(
+          screen.getByRole(
+            "link",
+            {
+              name:
+                "View client report"
+            }
+          )
+        ).toHaveAttribute(
           "href",
           "/assessments/tenant-alpha/client-acme/engagement-001/assessment-001/report"
         );
@@ -131,7 +451,8 @@ describe(
           screen.getByRole(
             "link",
             {
-              name: "View all assessments"
+              name:
+                "View all assessments"
             }
           )
         ).toHaveAttribute(
@@ -144,15 +465,19 @@ describe(
     it(
       "binds delivery links to the submitted identity rather than later form edits",
       async () => {
-        const user = userEvent.setup();
+        render(
+          <NewAssessmentPage />
+        );
 
-        render(<NewAssessmentPage />);
+        const user =
+          await reachReviewStep();
 
         await user.click(
           screen.getByRole(
             "button",
             {
-              name: "Execute assessment"
+              name:
+                "Execute assessment"
             }
           )
         );
@@ -161,15 +486,29 @@ describe(
           "Assessment complete"
         );
 
+        await user.click(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Edit client details"
+            }
+          )
+        );
+
         const clientInput =
           screen.getByRole(
             "textbox",
             {
-              name: "Client ID"
+              name:
+                "Client ID"
             }
           );
 
-        await user.clear(clientInput);
+        await user.clear(
+          clientInput
+        );
+
         await user.type(
           clientInput,
           "client-changed"
@@ -179,7 +518,8 @@ describe(
           screen.getByRole(
             "link",
             {
-              name: "Open assessment"
+              name:
+                "Open assessment"
             }
           )
         ).toHaveAttribute(
@@ -191,13 +531,63 @@ describe(
           screen.getByRole(
             "link",
             {
-              name: "View client report"
+              name:
+                "View client report"
             }
           )
         ).toHaveAttribute(
           "href",
           "/assessments/tenant-alpha/client-acme/engagement-001/assessment-001/report"
         );
+      }
+    );
+
+    it(
+      "lets the operator return from review to edit evidence without executing",
+      async () => {
+        render(
+          <NewAssessmentPage />
+        );
+
+        const user =
+          await reachReviewStep();
+
+        await user.click(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Edit evidence"
+            }
+          )
+        );
+
+        expect(
+          screen.getByRole(
+            "textbox",
+            {
+              name:
+                "CSV evidence"
+            }
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Evidence Current"
+            }
+          )
+        ).toHaveAttribute(
+          "aria-current",
+          "step"
+        );
+
+        expect(
+          mockedExecuteAssessment
+        ).not.toHaveBeenCalled();
       }
     );
   }

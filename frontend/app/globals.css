@@ -4601,3 +4601,441 @@ button:focus-visible {
   }
 }
 
+
+/* FIP-WEB-002A-02 - Guided Assessment Intake UX */
+
+.assessment-intake-overview {
+  margin-top: 28px;
+  padding: 22px 24px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(255, 248, 240, 0.94)
+    );
+  box-shadow: var(--shadow);
+}
+
+.assessment-intake-overview h2 {
+  margin: 4px 0 0;
+}
+
+.assessment-intake-overview p:last-child {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.assessment-intake-position {
+  min-width: 180px;
+  padding: 13px 16px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.assessment-intake-position span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.assessment-intake-position strong {
+  color: var(--purple);
+  font-size: 0.86rem;
+}
+
+.assessment-intake-stepper {
+  margin-top: 16px;
+}
+
+.assessment-intake-stepper ol {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+}
+
+.assessment-intake-step {
+  min-width: 0;
+}
+
+.assessment-intake-step button {
+  width: 100%;
+  min-height: 74px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  color: var(--text);
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+}
+
+.assessment-intake-step button:hover {
+  border-color: rgba(243, 107, 33, 0.42);
+}
+
+.assessment-intake-step button:focus-visible {
+  outline: 3px solid rgba(243, 107, 33, 0.2);
+  outline-offset: 2px;
+}
+
+.assessment-intake-step-number {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--purple);
+  background: var(--surface-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.assessment-intake-step-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.assessment-intake-step-copy strong {
+  font-size: 0.82rem;
+}
+
+.assessment-intake-step-copy small {
+  color: var(--text-muted);
+  font-size: 0.67rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.assessment-intake-step-complete button {
+  border-color: rgba(38, 122, 82, 0.24);
+  background: rgba(38, 122, 82, 0.055);
+}
+
+.assessment-intake-step-complete
+.assessment-intake-step-number {
+  color: var(--success);
+  background: rgba(38, 122, 82, 0.12);
+}
+
+.assessment-intake-step-current button {
+  border-color: rgba(243, 107, 33, 0.55);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(243, 107, 33, 0.13),
+      rgba(255, 196, 61, 0.07)
+    );
+  box-shadow:
+    0 10px 24px
+    rgba(243, 107, 33, 0.11);
+}
+
+.assessment-intake-step-current
+.assessment-intake-step-number {
+  color: white;
+  background:
+    linear-gradient(
+      135deg,
+      var(--orange),
+      var(--orange-dark)
+    );
+}
+
+.assessment-intake-step-upcoming {
+  opacity: 0.72;
+}
+
+.assessment-guided-form {
+  margin-top: 20px;
+}
+
+.assessment-guided-stage {
+  display: grid;
+  gap: 16px;
+}
+
+.assessment-guided-stage-header {
+  padding: 20px 22px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.assessment-guided-stage-header h2 {
+  margin: 4px 0 0;
+}
+
+.assessment-guided-stage-header p:last-child {
+  max-width: 720px;
+  margin: 9px 0 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.assessment-guided-stage-badge {
+  min-width: 56px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--orange-dark);
+  background: rgba(243, 107, 33, 0.11);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.assessment-guided-section {
+  box-shadow: none;
+}
+
+.assessment-evidence-summary {
+  margin-bottom: 22px;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assessment-evidence-summary > div {
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.assessment-evidence-summary span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.assessment-evidence-summary strong {
+  color: var(--purple);
+  font-size: 0.9rem;
+}
+
+.assessment-review-layout {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.assessment-review-card {
+  min-width: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.assessment-review-card-heading h3 {
+  margin: 4px 0 0;
+}
+
+.assessment-review-card-heading > p:last-child {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.assessment-review-list {
+  margin: 18px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+.assessment-review-list > div {
+  padding-bottom: 9px;
+  display: grid;
+  gap: 3px;
+  border-bottom: 1px solid var(--border);
+}
+
+.assessment-review-list dt {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.assessment-review-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.assessment-review-edit {
+  margin-top: auto;
+  padding: 14px 0 0;
+  border: 0;
+  color: var(--orange-dark);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 850;
+  text-align: left;
+}
+
+.assessment-review-edit:hover {
+  text-decoration: underline;
+}
+
+.assessment-review-delivery {
+  grid-column: 1 / -1;
+}
+
+.assessment-execution-gate {
+  grid-column: 1 / -1;
+  padding: 22px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(38, 122, 82, 0.28);
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(38, 122, 82, 0.07),
+      rgba(255, 255, 255, 0.95)
+    );
+}
+
+.assessment-execution-gate h3 {
+  margin: 4px 0 0;
+}
+
+.assessment-execution-gate p:last-child {
+  max-width: 720px;
+  margin: 9px 0 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.assessment-execution-gate-status {
+  min-width: 190px;
+  display: grid;
+  gap: 9px;
+  justify-items: end;
+}
+
+.assessment-execution-gate-status strong {
+  color: var(--purple);
+  font-size: 0.8rem;
+}
+
+.assessment-guided-actions {
+  margin-top: 18px;
+  padding: 18px 0 4px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.assessment-guided-actions-primary {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1050px) {
+  .assessment-intake-stepper ol {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .assessment-review-layout {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .assessment-review-delivery,
+  .assessment-execution-gate {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .assessment-intake-overview,
+  .assessment-guided-stage-header,
+  .assessment-execution-gate {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .assessment-intake-position {
+    width: 100%;
+  }
+
+  .assessment-intake-stepper ol,
+  .assessment-evidence-summary,
+  .assessment-review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .assessment-review-delivery,
+  .assessment-execution-gate {
+    grid-column: auto;
+  }
+
+  .assessment-execution-gate-status {
+    min-width: 0;
+    justify-items: start;
+  }
+
+  .assessment-guided-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .assessment-guided-actions > div,
+  .assessment-guided-actions-primary,
+  .assessment-guided-actions button,
+  .assessment-guided-actions a {
+    width: 100%;
+  }
+
+  .assessment-guided-actions button,
+  .assessment-guided-actions a {
+    justify-content: center;
+  }
+}
