@@ -1570,7 +1570,48 @@ h2 {
     -webkit-print-color-adjust: exact;
   }
 }
+/* FIP-WEB-002B-03A - Evidence Traceability */
 
+.evidence-traceability-notice {
+  margin-top: 20px;
+  padding: 20px 22px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(85, 38, 111, 0.18);
+  border-left: 4px solid var(--purple);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(85, 38, 111, 0.055),
+      rgba(216, 166, 46, 0.045)
+    );
+}
+
+.evidence-traceability-notice h2 {
+  margin-top: 4px;
+}
+
+.evidence-traceability-notice p:last-child {
+  max-width: 780px;
+  margin: 9px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.evidence-traceability-notice .secondary-button {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .evidence-traceability-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
 .evidence-context-loading,
 .evidence-context-list {
   margin-top: 26px;

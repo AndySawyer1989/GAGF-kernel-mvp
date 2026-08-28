@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import {
+  useParams,
+  useSearchParams
+} from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -233,6 +236,11 @@ export default function AssessmentEvidencePage() {
     assessmentId: string;
   }>();
 
+  const searchParams = useSearchParams();
+
+  const requestedConstraint =
+  searchParams.get("constraint")?.trim() ?? "";
+
   const config = useMemo(
     () => getGovernanceAssessmentApiConfig(),
     []
@@ -372,6 +380,26 @@ export default function AssessmentEvidencePage() {
     [evidenceRecords]
   );
 
+
+  useEffect(() => {
+    if (!requestedConstraint) {
+      return;
+    }
+
+    if (
+      eventTypes.includes(
+        requestedConstraint
+      )
+    ) {
+      setSelectedEventType(
+        requestedConstraint
+      );
+    }
+  }, [
+    eventTypes,
+    requestedConstraint
+  ]);
+
   const filteredRecords = useMemo(
     () =>
       selectedEventType === "ALL"
@@ -381,7 +409,10 @@ export default function AssessmentEvidencePage() {
               record.event_type ===
               selectedEventType
           ),
-    [evidenceRecords, selectedEventType]
+    [
+      evidenceRecords,
+      selectedEventType
+    ]
   );
 
   const acceptedRows = numberValue(
@@ -427,7 +458,11 @@ export default function AssessmentEvidencePage() {
         actorId={config.actorId}
       />
 
-      <section className="workspace" id="console-main-content" tabIndex={-1}>
+      <section
+        className="workspace"
+        id="console-main-content"
+        tabIndex={-1}
+      >
         <header className="topbar">
           <div>
             <p className="eyebrow">
@@ -471,7 +506,9 @@ export default function AssessmentEvidencePage() {
                 void loadEvidence()
               }
             >
-              {loading ? "Refreshing?" : "Refresh"}
+              {loading
+                ? "Refreshing?"
+                : "Refresh"}
             </button>
           </div>
         </header>
@@ -485,6 +522,7 @@ export default function AssessmentEvidencePage() {
               <p className="error-title">
                 Evidence unavailable
               </p>
+
               <p>{error}</p>
             </div>
 
@@ -540,6 +578,7 @@ export default function AssessmentEvidencePage() {
                   <p className="status-heading">
                     Quality grade
                   </p>
+
                   <p className="status-value">
                     {qualityGrade}
                   </p>
@@ -549,11 +588,13 @@ export default function AssessmentEvidencePage() {
                   <p className="status-heading">
                     Intake chain
                   </p>
+
                   <span className="status-badge status-healthy">
                     <span
                       className="status-dot"
                       aria-hidden="true"
                     />
+
                     Verified
                   </span>
                 </div>
@@ -562,7 +603,11 @@ export default function AssessmentEvidencePage() {
               <section className="result-metrics-grid">
                 <article className="result-metric">
                   <p>Accepted records</p>
-                  <strong>{acceptedRows}</strong>
+
+                  <strong>
+                    {acceptedRows}
+                  </strong>
+
                   <span>
                     Governed evidence events
                   </span>
@@ -570,7 +615,11 @@ export default function AssessmentEvidencePage() {
 
                 <article className="result-metric">
                   <p>Rejected records</p>
-                  <strong>{rejectedRows}</strong>
+
+                  <strong>
+                    {rejectedRows}
+                  </strong>
+
                   <span>
                     Failed intake validation
                   </span>
@@ -578,17 +627,26 @@ export default function AssessmentEvidencePage() {
 
                 <article className="result-metric">
                   <p>Quality score</p>
+
                   <strong>
                     {qualityScore.toFixed(2)}
                   </strong>
-                  <span>{qualityGrade} evidence</span>
+
+                  <span>
+                    {qualityGrade} evidence
+                  </span>
                 </article>
 
                 <article className="result-metric">
                   <p>Requirement coverage</p>
+
                   <strong>
-                    {(coverageRate * 100).toFixed(0)}%
+                    {(coverageRate * 100).toFixed(
+                      0
+                    )}
+                    %
                   </strong>
+
                   <span>
                     Configured commitments met
                   </span>
@@ -601,7 +659,10 @@ export default function AssessmentEvidencePage() {
                     <p className="panel-kicker">
                       Evidence sources
                     </p>
-                    <h2>Source commitments</h2>
+
+                    <h2>
+                      Source commitments
+                    </h2>
                   </div>
 
                   <span className="status-value">
@@ -624,6 +685,7 @@ export default function AssessmentEvidencePage() {
                             <p className="assessment-context">
                               {source.source_kind}
                             </p>
+
                             <h3>
                               {source.display_name}
                             </h3>
@@ -644,24 +706,42 @@ export default function AssessmentEvidencePage() {
 
                         <dl>
                           <div>
-                            <dt>Source ID</dt>
-                            <dd>{source.source_id}</dd>
-                          </div>
+                            <dt>
+                              Source ID
+                            </dt>
 
-                          <div>
-                            <dt>Total rows</dt>
-                            <dd>{source.total_rows}</dd>
-                          </div>
-
-                          <div>
-                            <dt>Accepted</dt>
                             <dd>
-                              {source.accepted_rows}
+                              {source.source_id}
                             </dd>
                           </div>
 
                           <div>
-                            <dt>Acceptance</dt>
+                            <dt>
+                              Total rows
+                            </dt>
+
+                            <dd>
+                              {source.total_rows}
+                            </dd>
+                          </div>
+
+                          <div>
+                            <dt>
+                              Accepted
+                            </dt>
+
+                            <dd>
+                              {
+                                source.accepted_rows
+                              }
+                            </dd>
+                          </div>
+
+                          <div>
+                            <dt>
+                              Acceptance
+                            </dt>
+
                             <dd>
                               {(
                                 source.acceptance_rate *
@@ -673,9 +753,14 @@ export default function AssessmentEvidencePage() {
                         </dl>
 
                         <div className="evidence-hash">
-                          <span>Intake hash</span>
+                          <span>
+                            Intake hash
+                          </span>
+
                           <code
-                            title={source.intake_hash}
+                            title={
+                              source.intake_hash
+                            }
                           >
                             {shortHash(
                               source.intake_hash
@@ -688,20 +773,73 @@ export default function AssessmentEvidencePage() {
                 </div>
               </section>
 
+              {requestedConstraint &&
+                selectedEventType ===
+                  requestedConstraint && (
+                  <section className="evidence-traceability-notice">
+                    <div>
+                      <p className="panel-kicker">
+                        Diagnostic traceability
+                      </p>
+
+                      <h2>
+                        Supporting evidence for{" "}
+                        {
+                          requestedConstraint
+                        }
+                      </h2>
+
+                      <p>
+                        This view is filtered
+                        to accepted evidence
+                        records carrying the
+                        selected governed
+                        constraint category.
+                        Matching evidence
+                        supports the diagnostic
+                        observation but does
+                        not independently
+                        establish root cause,
+                        causality, or
+                        intervention authority.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() =>
+                        setSelectedEventType(
+                          "ALL"
+                        )
+                      }
+                    >
+                      Show all evidence
+                    </button>
+                  </section>
+                )}
+
               <section className="panel evidence-record-panel">
                 <div className="panel-header">
                   <div>
                     <p className="panel-kicker">
                       Accepted evidence
                     </p>
-                    <h2>Governed event records</h2>
+
+                    <h2>
+                      Governed event records
+                    </h2>
                   </div>
 
                   <label className="evidence-filter">
-                    <span>Constraint category</span>
+                    <span>
+                      Constraint category
+                    </span>
 
                     <select
-                      value={selectedEventType}
+                      value={
+                        selectedEventType
+                      }
                       onChange={(event) =>
                         setSelectedEventType(
                           event.target.value
@@ -711,10 +849,13 @@ export default function AssessmentEvidencePage() {
                       {eventTypes.map(
                         (eventType) => (
                           <option
-                            value={eventType}
+                            value={
+                              eventType
+                            }
                             key={eventType}
                           >
-                            {eventType === "ALL"
+                            {eventType ===
+                            "ALL"
                               ? "All categories"
                               : eventType}
                           </option>
@@ -726,30 +867,54 @@ export default function AssessmentEvidencePage() {
 
                 <div className="evidence-record-table">
                   <div className="evidence-record-header">
-                    <span>Event</span>
-                    <span>Constraint</span>
-                    <span>Work item</span>
-                    <span>Occurred</span>
-                    <span>Evidence hash</span>
+                    <span>
+                      Event
+                    </span>
+
+                    <span>
+                      Constraint
+                    </span>
+
+                    <span>
+                      Work item
+                    </span>
+
+                    <span>
+                      Occurred
+                    </span>
+
+                    <span>
+                      Evidence hash
+                    </span>
                   </div>
 
                   {filteredRecords.map(
                     (record) => (
                       <div
                         className="evidence-record-row"
-                        key={record.evidence_hash}
+                        key={
+                          record.evidence_hash
+                        }
                       >
                         <div>
                           <strong>
-                            {record.event_id}
+                            {
+                              record.event_id
+                            }
                           </strong>
+
                           <span>
-                            Row {record.row_number}
+                            Row{" "}
+                            {
+                              record.row_number
+                            }
                           </span>
                         </div>
 
                         <span className="constraint-badge">
-                          {record.event_type}
+                          {
+                            record.event_type
+                          }
                         </span>
 
                         <span>
@@ -764,7 +929,9 @@ export default function AssessmentEvidencePage() {
                         </span>
 
                         <code
-                          title={record.evidence_hash}
+                          title={
+                            record.evidence_hash
+                          }
                         >
                           {shortHash(
                             record.evidence_hash
@@ -775,10 +942,11 @@ export default function AssessmentEvidencePage() {
                   )}
                 </div>
 
-                {filteredRecords.length === 0 && (
+                {filteredRecords.length ===
+                  0 && (
                   <div className="evidence-no-results">
-                    No evidence records match this
-                    category.
+                    No evidence records
+                    match this category.
                   </div>
                 )}
               </section>
