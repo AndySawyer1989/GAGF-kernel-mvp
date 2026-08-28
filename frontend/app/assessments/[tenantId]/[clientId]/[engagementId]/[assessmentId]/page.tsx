@@ -192,20 +192,16 @@ export default function AssessmentDetailPage() {
     useState<GovernanceAssessmentRecord | null>(
       null
     );
-
   const [summary, setSummary] =
     useState<GovernanceAssessmentSummary | null>(
       null
     );
-
   const [artifacts, setArtifacts] =
     useState<GovernanceAssessmentArtifactList | null>(
       null
     );
-
   const [loading, setLoading] =
     useState(true);
-
   const [error, setError] =
     useState<string | null>(null);
 
@@ -249,8 +245,7 @@ export default function AssessmentDetailPage() {
         }
 
         if (
-          caught instanceof
-          GovernanceAssessmentApiError
+          caught instanceof GovernanceAssessmentApiError
         ) {
           setError(
             `Backend returned ${caught.status}. The assessment may not exist or may not be visible to this tenant.`
@@ -281,27 +276,22 @@ export default function AssessmentDetailPage() {
     artifacts,
     "evidence-quality"
   );
-
   const frictionArtifact = findArtifact(
     artifacts,
     "friction-summary"
   );
-
   const debtArtifact = findArtifact(
     artifacts,
     "governance-debt-score"
   );
-
   const interventionArtifact = findArtifact(
     artifacts,
     "intervention-plan"
   );
-
   const roadmapArtifact = findArtifact(
     artifacts,
     "assessment-roadmap"
   );
-
   const projectionArtifact = findArtifact(
     artifacts,
     "executive-projection"
@@ -342,7 +332,6 @@ export default function AssessmentDetailPage() {
       frictionArtifact?.payload,
       "total_friction_score"
     ) ?? 0;
-
   const constraintAggregations = objectArray(
     frictionArtifact?.payload,
     "constraint_aggregations"
@@ -360,87 +349,85 @@ export default function AssessmentDetailPage() {
       "unique_work_item_count"
     ) ?? 0;
 
-  const frictionMapItems:
-    GovernanceFrictionMapItem[] =
-      constraintAggregations.flatMap(
-        (aggregation) => {
-          const category = textValue(
-            aggregation,
-            "category"
-          );
+  const frictionMapItems: GovernanceFrictionMapItem[] =
+    constraintAggregations.flatMap(
+      (aggregation) => {
+        const category = textValue(
+          aggregation,
+          "category"
+        );
 
-          const eventCount = numberValue(
-            aggregation,
-            "event_count"
-          );
+        const eventCount = numberValue(
+          aggregation,
+          "event_count"
+        );
 
-          const uniqueWorkItemCount =
-            numberValue(
-              aggregation,
-              "unique_work_item_count"
-            );
+        const uniqueWorkItemCount = numberValue(
+          aggregation,
+          "unique_work_item_count"
+        );
 
-          const firstOccurredAt = textValue(
-            aggregation,
-            "first_occurred_at"
-          );
+        const firstOccurredAt = textValue(
+          aggregation,
+          "first_occurred_at"
+        );
 
-          const lastOccurredAt = textValue(
-            aggregation,
-            "last_occurred_at"
-          );
+        const lastOccurredAt = textValue(
+          aggregation,
+          "last_occurred_at"
+        );
 
-          const weight = numberValue(
-            aggregation,
-            "weight"
-          );
+        const weight = numberValue(
+          aggregation,
+          "weight"
+        );
 
-          const frictionScore = numberValue(
-            aggregation,
-            "friction_score"
-          );
+        const frictionScore = numberValue(
+          aggregation,
+          "friction_score"
+        );
 
-          const eventShare = numberValue(
-            aggregation,
-            "event_share"
-          );
+        const eventShare = numberValue(
+          aggregation,
+          "event_share"
+        );
 
-          const band = textValue(
-            aggregation,
-            "band"
-          );
+        const band = textValue(
+          aggregation,
+          "band"
+        );
 
-          if (
-            category === null ||
-            eventCount === null ||
-            uniqueWorkItemCount === null ||
-            firstOccurredAt === null ||
-            lastOccurredAt === null ||
-            weight === null ||
-            frictionScore === null ||
-            eventShare === null ||
-            band === null
-          ) {
-            return [];
-          }
-
-          return [
-            {
-              category,
-              eventCount,
-              uniqueWorkItemCount,
-              firstOccurredAt,
-              lastOccurredAt,
-              weight,
-              frictionScore,
-              eventShare,
-              band,
-              isDominant:
-                category === dominantConstraint
-            }
-          ];
+        if (
+          category === null ||
+          eventCount === null ||
+          uniqueWorkItemCount === null ||
+          firstOccurredAt === null ||
+          lastOccurredAt === null ||
+          weight === null ||
+          frictionScore === null ||
+          eventShare === null ||
+          band === null
+        ) {
+          return [];
         }
-      );
+
+        return [
+          {
+            category,
+            eventCount,
+            uniqueWorkItemCount,
+            firstOccurredAt,
+            lastOccurredAt,
+            weight,
+            frictionScore,
+            eventShare,
+            band,
+            isDominant:
+              category === dominantConstraint
+          }
+        ];
+      }
+    );
 
   const executiveSummary =
     textValue(
@@ -453,11 +440,10 @@ export default function AssessmentDetailPage() {
     "key_findings"
   );
 
-  const interventionCandidates =
-    objectArray(
-      interventionArtifact?.payload,
-      "interventions"
-    );
+  const interventionCandidates = objectArray(
+    interventionArtifact?.payload,
+    "interventions"
+  );
 
   const interventionGovernanceDebtScore =
     numberValue(
@@ -475,126 +461,122 @@ export default function AssessmentDetailPage() {
     "plan_hash"
   );
 
-  const interventionSchemaVersion =
-    textValue(
-      interventionArtifact?.payload,
-      "schema_version"
-    );
+  const interventionSchemaVersion = textValue(
+    interventionArtifact?.payload,
+    "schema_version"
+  );
 
   const interventionPlanItems:
     GovernanceInterventionPlanItem[] =
-      interventionCandidates.flatMap(
-        (candidate) => {
-          const interventionId = textValue(
+    interventionCandidates.flatMap(
+      (candidate) => {
+        const interventionId = textValue(
+          candidate,
+          "intervention_id"
+        );
+
+        const interventionType = textValue(
+          candidate,
+          "intervention_type"
+        );
+
+        const title = textValue(
+          candidate,
+          "title"
+        );
+
+        const constraintCategory = textValue(
+          candidate,
+          "constraint_category"
+        );
+
+        const priority = textValue(
+          candidate,
+          "priority"
+        );
+
+        const rank = numberValue(
+          candidate,
+          "rank"
+        );
+
+        const valueScore = numberValue(
+          candidate,
+          "value_score"
+        );
+
+        const expectedFrictionReduction =
+          numberValue(
             candidate,
-            "intervention_id"
+            "expected_friction_reduction"
           );
 
-          const interventionType = textValue(
+        const evidenceConfidence =
+          numberValue(
             candidate,
-            "intervention_type"
+            "evidence_confidence"
           );
 
-          const title = textValue(
+        const affectedWorkReach =
+          numberValue(
             candidate,
-            "title"
+            "affected_work_reach"
           );
 
-          const constraintCategory =
-            textValue(
-              candidate,
-              "constraint_category"
-            );
-
-          const priority = textValue(
+        const implementationBurden =
+          numberValue(
             candidate,
-            "priority"
+            "implementation_burden"
           );
 
-          const rank = numberValue(
+        const reversibility =
+          numberValue(
             candidate,
-            "rank"
+            "reversibility"
           );
 
-          const valueScore = numberValue(
-            candidate,
-            "value_score"
-          );
-
-          const expectedFrictionReduction =
-            numberValue(
-              candidate,
-              "expected_friction_reduction"
-            );
-
-          const evidenceConfidence =
-            numberValue(
-              candidate,
-              "evidence_confidence"
-            );
-
-          const affectedWorkReach =
-            numberValue(
-              candidate,
-              "affected_work_reach"
-            );
-
-          const implementationBurden =
-            numberValue(
-              candidate,
-              "implementation_burden"
-            );
-
-          const reversibility =
-            numberValue(
-              candidate,
-              "reversibility"
-            );
-
-          if (
-            interventionId === null ||
-            interventionType === null ||
-            title === null ||
-            constraintCategory === null ||
-            priority === null ||
-            rank === null ||
-            valueScore === null ||
-            expectedFrictionReduction ===
-              null ||
-            evidenceConfidence === null ||
-            affectedWorkReach === null ||
-            implementationBurden === null ||
-            reversibility === null
-          ) {
-            return [];
-          }
-
-          return [
-            {
-              interventionId,
-              interventionType,
-              title,
-              constraintCategory,
-              priority,
-              rank,
-              valueScore,
-              expectedFrictionReduction,
-              evidenceConfidence,
-              affectedWorkReach,
-              implementationBurden,
-              reversibility,
-              rationale: stringArray(
-                candidate,
-                "rationale"
-              ),
-              isTopIntervention:
-                interventionId ===
-                topInterventionId
-            }
-          ];
+        if (
+          interventionId === null ||
+          interventionType === null ||
+          title === null ||
+          constraintCategory === null ||
+          priority === null ||
+          rank === null ||
+          valueScore === null ||
+          expectedFrictionReduction === null ||
+          evidenceConfidence === null ||
+          affectedWorkReach === null ||
+          implementationBurden === null ||
+          reversibility === null
+        ) {
+          return [];
         }
-      );
 
+        return [
+          {
+            interventionId,
+            interventionType,
+            title,
+            constraintCategory,
+            priority,
+            rank,
+            valueScore,
+            expectedFrictionReduction,
+            evidenceConfidence,
+            affectedWorkReach,
+            implementationBurden,
+            reversibility,
+            rationale: stringArray(
+              candidate,
+              "rationale"
+            ),
+            isTopIntervention:
+              interventionId ===
+              topInterventionId
+          }
+        ];
+      }
+    );
   const roadmapPhases = objectArray(
     roadmapArtifact?.payload,
     "phases"
@@ -624,148 +606,140 @@ export default function AssessmentDetailPage() {
 
   const governanceRoadmapPhases:
     GovernanceRoadmapPhase[] =
-      roadmapPhases.flatMap(
-        (phase) => {
-          const horizon = textValue(
-            phase,
-            "horizon"
-          );
+    roadmapPhases.flatMap(
+      (phase) => {
+        const horizon = textValue(
+          phase,
+          "horizon"
+        );
 
-          const objective = textValue(
-            phase,
-            "objective"
-          );
+        const objective = textValue(
+          phase,
+          "objective"
+        );
 
-          const itemCount = numberValue(
-            phase,
-            "item_count"
-          );
+        const itemCount = numberValue(
+          phase,
+          "item_count"
+        );
 
-          if (
-            horizon === null ||
-            objective === null ||
-            itemCount === null
-          ) {
-            return [];
-          }
-
-          const items = objectArray(
-            phase,
-            "items"
-          ).flatMap(
-            (item) => {
-              const roadmapItemId =
-                textValue(
-                  item,
-                  "roadmap_item_id"
-                );
-
-              const interventionId =
-                textValue(
-                  item,
-                  "intervention_id"
-                );
-
-              const interventionType =
-                textValue(
-                  item,
-                  "intervention_type"
-                );
-
-              const title = textValue(
-                item,
-                "title"
-              );
-
-              const itemHorizon =
-                textValue(
-                  item,
-                  "horizon"
-                );
-
-              const sequence = numberValue(
-                item,
-                "sequence"
-              );
-
-              const ownerRole = textValue(
-                item,
-                "owner_role"
-              );
-
-              const measurableOutcome =
-                textValue(
-                  item,
-                  "measurable_outcome"
-                );
-
-              const valueScore =
-                numberValue(
-                  item,
-                  "value_score"
-                );
-
-              const implementationBurden =
-                numberValue(
-                  item,
-                  "implementation_burden"
-                );
-
-              const status = textValue(
-                item,
-                "status"
-              );
-
-              if (
-                roadmapItemId === null ||
-                interventionId === null ||
-                interventionType === null ||
-                title === null ||
-                itemHorizon === null ||
-                sequence === null ||
-                ownerRole === null ||
-                measurableOutcome === null ||
-                valueScore === null ||
-                implementationBurden ===
-                  null ||
-                status === null
-              ) {
-                return [];
-              }
-
-              return [
-                {
-                  roadmapItemId,
-                  interventionId,
-                  interventionType,
-                  title,
-                  horizon: itemHorizon,
-                  sequence,
-                  ownerRole,
-                  measurableOutcome,
-                  valueScore,
-                  implementationBurden,
-                  dependencyIds: stringArray(
-                    item,
-                    "dependency_ids"
-                  ),
-                  status
-                }
-              ];
-            }
-          );
-
-          return [
-            {
-              horizon,
-              objective,
-              itemCount,
-              items
-            }
-          ];
+        if (
+          horizon === null ||
+          objective === null ||
+          itemCount === null
+        ) {
+          return [];
         }
-      );
 
+        const items = objectArray(
+          phase,
+          "items"
+        ).flatMap(
+          (item) => {
+            const roadmapItemId = textValue(
+              item,
+              "roadmap_item_id"
+            );
+
+            const interventionId = textValue(
+              item,
+              "intervention_id"
+            );
+
+            const interventionType = textValue(
+              item,
+              "intervention_type"
+            );
+
+            const title = textValue(
+              item,
+              "title"
+            );
+
+            const itemHorizon = textValue(
+              item,
+              "horizon"
+            );
+
+            const sequence = numberValue(
+              item,
+              "sequence"
+            );
+
+            const ownerRole = textValue(
+              item,
+              "owner_role"
+            );
+
+            const measurableOutcome = textValue(
+              item,
+              "measurable_outcome"
+            );
+
+            const valueScore = numberValue(
+              item,
+              "value_score"
+            );
+
+            const implementationBurden =
+              numberValue(
+                item,
+                "implementation_burden"
+              );
+
+            const status = textValue(
+              item,
+              "status"
+            );
+
+            if (
+              roadmapItemId === null ||
+              interventionId === null ||
+              interventionType === null ||
+              title === null ||
+              itemHorizon === null ||
+              sequence === null ||
+              ownerRole === null ||
+              measurableOutcome === null ||
+              valueScore === null ||
+              implementationBurden === null ||
+              status === null
+            ) {
+              return [];
+            }
+
+            return [
+              {
+                roadmapItemId,
+                interventionId,
+                interventionType,
+                title,
+                horizon: itemHorizon,
+                sequence,
+                ownerRole,
+                measurableOutcome,
+                valueScore,
+                implementationBurden,
+                dependencyIds: stringArray(
+                  item,
+                  "dependency_ids"
+                ),
+                status
+              }
+            ];
+          }
+        );
+
+        return [
+          {
+            horizon,
+            objective,
+            itemCount,
+            items
+          }
+        ];
+      }
+    );
   const priorities = objectArray(
     projectionArtifact?.payload,
     "priorities"
@@ -776,94 +750,84 @@ export default function AssessmentDetailPage() {
       qualityArtifact?.payload,
       "ready_for_analysis"
     ) ?? false;
+const diagnosticArtifactsReady =
+  Boolean(qualityArtifact) &&
+  Boolean(frictionArtifact) &&
+  Boolean(debtArtifact) &&
+  Boolean(projectionArtifact);
 
-  const diagnosticArtifactsReady =
-    Boolean(qualityArtifact) &&
-    Boolean(frictionArtifact) &&
-    Boolean(debtArtifact) &&
-    Boolean(projectionArtifact);
+const interventionPrioritiesReady =
+  Boolean(interventionArtifact) &&
+  priorities.length > 0;
 
-  const interventionPrioritiesReady =
-    Boolean(interventionArtifact) &&
-    priorities.length > 0;
+const repositoryIntegrityReady =
+  summary?.repository_chain_valid === true &&
+  summary.artifact_count === artifacts?.count;
 
-  const repositoryIntegrityReady =
-    summary?.repository_chain_valid === true &&
-    summary.artifact_count ===
-      artifacts?.count;
+const clientReportReady = Boolean(
+  findArtifact(
+    artifacts,
+    CLIENT_REPORT_ARTIFACT_TYPE
+  )
+);
 
-  const clientReportReady = Boolean(
-    findArtifact(
-      artifacts,
-      CLIENT_REPORT_ARTIFACT_TYPE
-    )
-  );
-
-  const readinessItems:
-    AssessmentReadinessItem[] = [
-      {
-        id: "evidence",
-        label: "Evidence",
-        description:
-          "Evidence passed the governed quality gate and is available for analysis.",
-        state: readyForAnalysis
-          ? "ready"
-          : "review",
-        readyLabel: "Evidence ready",
-        reviewLabel:
-          "Evidence review required"
-      },
-      {
-        id: "diagnostics",
-        label: "Diagnostic artifacts",
-        description:
-          "Evidence quality, friction, governance debt, and executive projection artifacts are present.",
-        state: diagnosticArtifactsReady
-          ? "ready"
-          : "review",
-        readyLabel:
-          "Diagnostics complete",
-        reviewLabel:
-          "Diagnostics incomplete"
-      },
-      {
-        id: "interventions",
-        label: "Intervention priorities",
-        description:
-          "A governed intervention plan and ranked priorities are available.",
-        state: interventionPrioritiesReady
-          ? "ready"
-          : "review",
-        readyLabel: "Priorities ready",
-        reviewLabel:
-          "Priorities unavailable"
-      },
-      {
-        id: "repository",
-        label: "Repository integrity",
-        description:
-          "The artifact chain is valid and the summary inventory matches the loaded repository inventory.",
-        state: repositoryIntegrityReady
-          ? "ready"
-          : "review",
-        readyLabel:
-          "Repository verified",
-        reviewLabel:
-          "Integrity review required"
-      },
-      {
-        id: "report",
-        label: "Client report",
-        description:
-          "The governed client-report package is present in the assessment artifact chain.",
-        state: clientReportReady
-          ? "ready"
-          : "review",
-        readyLabel: "Report ready",
-        reviewLabel:
-          "Report unavailable"
-      }
-    ];
+const readinessItems: AssessmentReadinessItem[] = [
+  {
+    id: "evidence",
+    label: "Evidence",
+    description:
+      "Evidence passed the governed quality gate and is available for analysis.",
+    state: readyForAnalysis
+      ? "ready"
+      : "review",
+    readyLabel: "Evidence ready",
+    reviewLabel: "Evidence review required"
+  },
+  {
+    id: "diagnostics",
+    label: "Diagnostic artifacts",
+    description:
+      "Evidence quality, friction, governance debt, and executive projection artifacts are present.",
+    state: diagnosticArtifactsReady
+      ? "ready"
+      : "review",
+    readyLabel: "Diagnostics complete",
+    reviewLabel: "Diagnostics incomplete"
+  },
+  {
+    id: "interventions",
+    label: "Intervention priorities",
+    description:
+      "A governed intervention plan and ranked priorities are available.",
+    state: interventionPrioritiesReady
+      ? "ready"
+      : "review",
+    readyLabel: "Priorities ready",
+    reviewLabel: "Priorities unavailable"
+  },
+  {
+    id: "repository",
+    label: "Repository integrity",
+    description:
+      "The artifact chain is valid and the summary inventory matches the loaded repository inventory.",
+    state: repositoryIntegrityReady
+      ? "ready"
+      : "review",
+    readyLabel: "Repository verified",
+    reviewLabel: "Integrity review required"
+  },
+  {
+    id: "report",
+    label: "Client report",
+    description:
+      "The governed client-report package is present in the assessment artifact chain.",
+    state: clientReportReady
+      ? "ready"
+      : "review",
+    readyLabel: "Report ready",
+    reviewLabel: "Report unavailable"
+  }
+];
 
   const findingsReady =
     Boolean(projectionArtifact) &&
@@ -871,39 +835,23 @@ export default function AssessmentDetailPage() {
 
   const evidenceHref =
     "/evidence/"
-    + encodeURIComponent(
-      identity.tenantId
-    )
+    + encodeURIComponent(identity.tenantId)
     + "/"
-    + encodeURIComponent(
-      identity.clientId
-    )
+    + encodeURIComponent(identity.clientId)
     + "/"
-    + encodeURIComponent(
-      identity.engagementId
-    )
+    + encodeURIComponent(identity.engagementId)
     + "/"
-    + encodeURIComponent(
-      identity.assessmentId
-    );
+    + encodeURIComponent(identity.assessmentId);
 
   const reportHref =
     "/assessments/"
-    + encodeURIComponent(
-      identity.tenantId
-    )
+    + encodeURIComponent(identity.tenantId)
     + "/"
-    + encodeURIComponent(
-      identity.clientId
-    )
+    + encodeURIComponent(identity.clientId)
     + "/"
-    + encodeURIComponent(
-      identity.engagementId
-    )
+    + encodeURIComponent(identity.engagementId)
     + "/"
-    + encodeURIComponent(
-      identity.assessmentId
-    )
+    + encodeURIComponent(identity.assessmentId)
     + "/report";
 
   const workflowCompletion = [
@@ -971,7 +919,6 @@ export default function AssessmentDetailPage() {
         state: workflowState(4)
       }
     ];
-
   return (
     <main className="console-shell">
       <ConsoleSidebar
@@ -980,22 +927,16 @@ export default function AssessmentDetailPage() {
         actorId={config.actorId}
       />
 
-      <section
-        className="workspace"
-        id="console-main-content"
-        tabIndex={-1}
-      >
+      <section className="workspace" id="console-main-content" tabIndex={-1}>
         <header className="topbar">
           <div>
             <p className="eyebrow">
               Governance Assessment Results
             </p>
-
             <h1>
               {assessment?.assessment_name ??
                 "Assessment"}
             </h1>
-
             <p className="page-description">
               {identity.clientId} /{" "}
               {identity.engagementId} /{" "}
@@ -1013,14 +954,33 @@ export default function AssessmentDetailPage() {
 
             <Link
               className="secondary-button button-link"
-              href={evidenceHref}
+              href={
+                "/evidence/"
+                + encodeURIComponent(identity.tenantId)
+                + "/"
+                + encodeURIComponent(identity.clientId)
+                + "/"
+                + encodeURIComponent(identity.engagementId)
+                + "/"
+                + encodeURIComponent(identity.assessmentId)
+              }
             >
               Explore evidence
             </Link>
 
             <Link
               className="secondary-button button-link"
-              href={reportHref}
+              href={
+                "/assessments/"
+                + encodeURIComponent(identity.tenantId)
+                + "/"
+                + encodeURIComponent(identity.clientId)
+                + "/"
+                + encodeURIComponent(identity.engagementId)
+                + "/"
+                + encodeURIComponent(identity.assessmentId)
+                + "/report"
+              }
             >
               View client report
             </Link>
@@ -1033,9 +993,7 @@ export default function AssessmentDetailPage() {
                 void loadAssessment()
               }
             >
-              {loading
-                ? "Refreshing..."
-                : "Refresh"}
+              {loading ? "Refreshing?" : "Refresh"}
             </button>
           </div>
         </header>
@@ -1049,7 +1007,6 @@ export default function AssessmentDetailPage() {
               <p className="error-title">
                 Assessment unavailable
               </p>
-
               <p>{error}</p>
             </div>
           </section>
@@ -1074,13 +1031,11 @@ export default function AssessmentDetailPage() {
                   <p className="status-heading">
                     Assessment status
                   </p>
-
                   <span className="status-badge status-healthy">
                     <span
                       className="status-dot"
                       aria-hidden="true"
                     />
-
                     {assessment.status}
                   </span>
                 </div>
@@ -1089,7 +1044,6 @@ export default function AssessmentDetailPage() {
                   <p className="status-heading">
                     Repository chain
                   </p>
-
                   <span
                     className={
                       summary.repository_chain_valid
@@ -1101,7 +1055,6 @@ export default function AssessmentDetailPage() {
                       className="status-dot"
                       aria-hidden="true"
                     />
-
                     {summary.repository_chain_valid
                       ? "Verified"
                       : "Review required"}
@@ -1112,7 +1065,6 @@ export default function AssessmentDetailPage() {
                   <p className="status-heading">
                     Created
                   </p>
-
                   <p className="status-value">
                     {formatDate(
                       assessment.created_at
@@ -1123,17 +1075,12 @@ export default function AssessmentDetailPage() {
 
               <AssessmentWorkflowShell
                 clientId={identity.clientId}
-                engagementId={
-                  identity.engagementId
-                }
-                assessmentId={
-                  identity.assessmentId
-                }
+                engagementId={identity.engagementId}
+                assessmentId={identity.assessmentId}
                 steps={workflowSteps}
                 evidenceHref={evidenceHref}
                 reportHref={reportHref}
               />
-
               <section className="result-metrics-grid">
                 <ResultMetric
                   label="Governance debt"
@@ -1166,9 +1113,7 @@ export default function AssessmentDetailPage() {
 
               <GovernanceFrictionMap
                 items={frictionMapItems}
-                totalFrictionScore={
-                  totalFriction
-                }
+                totalFrictionScore={totalFriction}
                 recognizedEventCount={
                   recognizedConstraintEvents
                 }
@@ -1185,27 +1130,18 @@ export default function AssessmentDetailPage() {
                 governanceDebtScore={
                   interventionGovernanceDebtScore
                 }
-                planHash={
-                  interventionPlanHash
-                }
+                planHash={interventionPlanHash}
                 schemaVersion={
                   interventionSchemaVersion
                 }
               />
-
               <GovernanceRoadmap
-                phases={
-                  governanceRoadmapPhases
-                }
-                totalItems={
-                  roadmapTotalItems
-                }
+                phases={governanceRoadmapPhases}
+                totalItems={roadmapTotalItems}
                 interventionPlanHash={
                   roadmapInterventionPlanHash
                 }
-                roadmapHash={
-                  roadmapHash
-                }
+                roadmapHash={roadmapHash}
                 schemaVersion={
                   roadmapSchemaVersion
                 }
@@ -1218,10 +1154,7 @@ export default function AssessmentDetailPage() {
                       <p className="panel-kicker">
                         Executive projection
                       </p>
-
-                      <h2>
-                        Assessment conclusion
-                      </h2>
+                      <h2>Assessment conclusion</h2>
                     </div>
 
                     <span
@@ -1235,7 +1168,6 @@ export default function AssessmentDetailPage() {
                         className="status-dot"
                         aria-hidden="true"
                       />
-
                       {readyForAnalysis
                         ? "Evidence ready"
                         : "Evidence review"}
@@ -1251,7 +1183,6 @@ export default function AssessmentDetailPage() {
                     <span>
                       Dominant constraint
                     </span>
-
                     <strong>
                       {dominantConstraint}
                     </strong>
@@ -1260,18 +1191,15 @@ export default function AssessmentDetailPage() {
                   <div className="result-findings">
                     <h3>Key findings</h3>
 
-                    {findings.map(
-                      (finding) => (
-                        <div key={finding}>
-                          <span
-                            className="finding-check"
-                            aria-hidden="true"
-                          />
-
-                          <p>{finding}</p>
-                        </div>
-                      )
-                    )}
+                    {findings.map((finding) => (
+                      <div key={finding}>
+                        <span
+                          className="finding-check"
+                          aria-hidden="true"
+                        />
+                        <p>{finding}</p>
+                      </div>
+                    ))}
                   </div>
                 </article>
 
@@ -1281,52 +1209,35 @@ export default function AssessmentDetailPage() {
                       <p className="panel-kicker">
                         Evidence constitution
                       </p>
-
-                      <h2>
-                        Record identity
-                      </h2>
+                      <h2>Record identity</h2>
                     </div>
                   </div>
 
                   <dl className="connection-list">
                     <div>
                       <dt>Tenant</dt>
-                      <dd>
-                        {assessment.tenant_id}
-                      </dd>
+                      <dd>{assessment.tenant_id}</dd>
                     </div>
-
                     <div>
                       <dt>Client</dt>
-                      <dd>
-                        {assessment.client_id}
-                      </dd>
+                      <dd>{assessment.client_id}</dd>
                     </div>
-
                     <div>
                       <dt>Engagement</dt>
                       <dd>
-                        {
-                          assessment.engagement_id
-                        }
+                        {assessment.engagement_id}
                       </dd>
                     </div>
-
                     <div>
                       <dt>Assessment</dt>
                       <dd>
-                        {
-                          assessment.assessment_id
-                        }
+                        {assessment.assessment_id}
                       </dd>
                     </div>
-
                     <div>
                       <dt>Schema</dt>
                       <dd>
-                        {
-                          assessment.schema_version
-                        }
+                        {assessment.schema_version}
                       </dd>
                     </div>
                   </dl>
@@ -1339,10 +1250,7 @@ export default function AssessmentDetailPage() {
                     <p className="panel-kicker">
                       Intervention plan
                     </p>
-
-                    <h2>
-                      Priority actions
-                    </h2>
+                    <h2>Priority actions</h2>
                   </div>
 
                   <span className="status-value">
@@ -1358,8 +1266,7 @@ export default function AssessmentDetailPage() {
                           textValue(
                             priority,
                             "intervention_id"
-                          ) ??
-                          String(index)
+                          ) ?? String(index)
                         }
                         className="priority-item"
                       >
@@ -1367,8 +1274,7 @@ export default function AssessmentDetailPage() {
                           {numberValue(
                             priority,
                             "rank"
-                          ) ??
-                            index + 1}
+                          ) ?? index + 1}
                         </span>
 
                         <div>
@@ -1376,24 +1282,18 @@ export default function AssessmentDetailPage() {
                             {textValue(
                               priority,
                               "title"
-                            ) ??
-                              "Intervention"}
+                            ) ?? "Intervention"}
                           </h3>
-
                           <p>
                             {textValue(
                               priority,
                               "owner_role"
-                            ) ??
-                              "Unassigned owner"}
-
-                            {" / "}
-
+                            ) ?? "Unassigned owner"}
+                            {" ? "}
                             {textValue(
                               priority,
                               "target_horizon"
-                            ) ??
-                              "No horizon"}
+                            ) ?? "No horizon"}
                           </p>
                         </div>
 
@@ -1417,10 +1317,7 @@ export default function AssessmentDetailPage() {
                     <p className="panel-kicker">
                       Repository inventory
                     </p>
-
-                    <h2>
-                      Governed artifact chain
-                    </h2>
+                    <h2>Governed artifact chain</h2>
                   </div>
 
                   <span className="status-value">
@@ -1440,28 +1337,17 @@ export default function AssessmentDetailPage() {
                     (artifact) => (
                       <div
                         className="artifact-table-row"
-                        key={
-                          artifact.artifact_id
-                        }
+                        key={artifact.artifact_id}
                       >
                         <span>
-                          {
-                            artifact.sequence_number
-                          }
+                          {artifact.sequence_number}
                         </span>
-
                         <strong>
-                          {
-                            artifact.artifact_type
-                          }
+                          {artifact.artifact_type}
                         </strong>
-
                         <code>
-                          {
-                            artifact.artifact_id
-                          }
+                          {artifact.artifact_id}
                         </code>
-
                         <span className="status-badge status-healthy">
                           Verified
                         </span>
