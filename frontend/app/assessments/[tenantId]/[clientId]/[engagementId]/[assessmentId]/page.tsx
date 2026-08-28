@@ -1191,9 +1191,9 @@ const readinessItems: AssessmentReadinessItem[] = [
                   <div className="panel-header">
                     <div>
                       <p className="panel-kicker">
-                        Executive projection
-                      </p>
-                      <h2>Assessment conclusion</h2>
+                        Executive interpretation
+                    </p>
+                    <h2>Assessment interpretation</h2>
                     </div>
 
                     <span
@@ -1218,28 +1218,6 @@ const readinessItems: AssessmentReadinessItem[] = [
                       "No executive summary was generated."}
                   </p>
 
-                  <div className="dominant-constraint">
-                    <span>
-                      Dominant constraint
-                    </span>
-                    <strong>
-                      {dominantConstraint}
-                    </strong>
-                  </div>
-
-                  <div className="result-findings">
-                    <h3>Key findings</h3>
-
-                    {findings.map((finding) => (
-                      <div key={finding}>
-                        <span
-                          className="finding-check"
-                          aria-hidden="true"
-                        />
-                        <p>{finding}</p>
-                      </div>
-                    ))}
-                  </div>
                 </article>
 
                 <article className="panel">
