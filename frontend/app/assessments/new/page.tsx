@@ -705,72 +705,230 @@ export default function NewAssessmentPage() {
         )}
 
         {result && (
-          <section
-            className="execution-success"
-            aria-live="polite"
-          >
-            <div>
-              <p className="panel-kicker">
-                Assessment complete
-              </p>
+  <section
+    className="execution-success governed-execution-receipt"
+    aria-live="polite"
+    aria-labelledby="governed-execution-receipt-title"
+  >
+    <header className="governed-execution-receipt-header">
+      <div>
+        <p className="panel-kicker">
+          Governed execution receipt
+        </p>
 
-              <h2>
-                {result.hierarchy_key}
-              </h2>
+        <h2 id="governed-execution-receipt-title">
+          Assessment execution complete
+        </h2>
 
-              <p>
-                {result.artifact_count} governed
-                artifacts were persisted.
-              </p>
-            </div>
+        <p>
+          FIP completed the governed assessment,
+          persisted the resulting artifacts, and
+          returned the cryptographic bindings for
+          this execution.
+        </p>
+      </div>
 
-            <div className="execution-success-actions">
-              <span className="status-badge status-healthy">
-                <span
-                  className="status-dot"
-                  aria-hidden="true"
-                />
+      <span className="status-badge status-healthy">
+        <span
+          className="status-dot"
+          aria-hidden="true"
+        />
 
-                Execution verified
-              </span>
+        Execution verified
+      </span>
+    </header>
 
-              {completedAssessmentUrl && (
-                <Link
-                  className="refresh-button button-link"
-                  href={
-                    completedAssessmentUrl
-                  }
-                >
-                  Open assessment
-                </Link>
-              )}
+    <div className="governed-execution-checks">
+      <article>
+        <span
+          className="governed-execution-check"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
 
-              {completedReportUrl && (
-                <Link
-                  className="secondary-button button-link"
-                  href={
-                    completedReportUrl
-                  }
-                >
-                  View client report
-                </Link>
-              )}
+        <div>
+          <strong>Request bound</strong>
+          <p>
+            The submitted assessment package was
+            canonicalized and hashed before
+            execution.
+          </p>
+        </div>
+      </article>
 
-              <Link
-                className="secondary-button button-link"
-                href="/assessments"
-              >
-                View all assessments
-              </Link>
-            </div>
-          </section>
-        )}
+      <article>
+        <span
+          className="governed-execution-check"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
+
+        <div>
+          <strong>Assessment executed</strong>
+          <p>
+            The governed assessment pipeline
+            completed successfully.
+          </p>
+        </div>
+      </article>
+
+      <article>
+        <span
+          className="governed-execution-check"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
+
+        <div>
+          <strong>Persistence bound</strong>
+          <p>
+            The persisted result references the
+            exact executed demonstration.
+          </p>
+        </div>
+      </article>
+
+      <article>
+        <span
+          className="governed-execution-check"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
+
+        <div>
+          <strong>Report generated</strong>
+          <p>
+            The execution produced a governed
+            report package for this assessment.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div className="governed-execution-summary">
+      <article>
+        <span>Hierarchy</span>
+        <strong>{result.hierarchy_key}</strong>
+      </article>
+
+      <article>
+        <span>Governed artifacts</span>
+        <strong>{result.artifact_count}</strong>
+      </article>
+
+      <article>
+        <span>Report ID</span>
+        <strong>{result.report_id}</strong>
+      </article>
+
+      {result.schema_version && (
+        <article>
+          <span>Receipt schema</span>
+          <strong>{result.schema_version}</strong>
+        </article>
+      )}
+    </div>
+
+    <div className="governed-execution-provenance">
+      <div className="governed-execution-provenance-heading">
+        <div>
+          <p className="panel-kicker">
+            Cryptographic provenance
+          </p>
+
+          <h3>Execution bindings</h3>
+        </div>
+
+        <p>
+          These hashes bind the submitted request,
+          executed assessment, persisted result,
+          and final application receipt.
+        </p>
+      </div>
+
+      <dl className="governed-execution-hashes">
+        <div>
+          <dt>Request hash</dt>
+          <dd>
+            <code>{result.request_hash}</code>
+          </dd>
+        </div>
+
+        <div>
+          <dt>Demonstration hash</dt>
+          <dd>
+            <code>{result.demonstration_hash}</code>
+          </dd>
+        </div>
+
+        <div>
+          <dt>Persistence hash</dt>
+          <dd>
+            <code>{result.persistence_hash}</code>
+          </dd>
+        </div>
+
+        <div>
+          <dt>Application hash</dt>
+          <dd>
+            <code>{result.application_hash}</code>
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <aside className="governed-execution-integrity-boundary">
+      <div>
+        <strong>Execution integrity established</strong>
+
+        <p>
+          Repository-chain integrity is verified
+          separately when the persisted assessment
+          workspace loads.
+        </p>
+      </div>
+
+      <span>
+        Next: repository verification
+      </span>
+    </aside>
+
+    <div className="execution-success-actions governed-execution-actions">
+      {completedAssessmentUrl && (
+        <Link
+          className="refresh-button button-link"
+          href={completedAssessmentUrl}
+        >
+          Open assessment
+        </Link>
+      )}
+
+      {completedReportUrl && (
+        <Link
+          className="secondary-button button-link"
+          href={completedReportUrl}
+        >
+          View client report
+        </Link>
+      )}
+
+      <Link
+        className="secondary-button button-link"
+        href="/assessments"
+      >
+        View all assessments
+      </Link>
+    </div>
+  </section>
+)}
 
         <form
           className="execution-form assessment-guided-form"
-          onSubmit={
-            submitAssessment
-          }
+          onSubmit={submitAssessment}
         >
           <section className="assessment-guided-stage">
             <header className="assessment-guided-stage-header">
@@ -780,9 +938,7 @@ export default function NewAssessmentPage() {
                 </p>
 
                 <h2>
-                  {
-                    currentStepDefinition.label
-                  }
+                  {currentStepDefinition.label}
                 </h2>
 
                 <p>
@@ -828,9 +984,7 @@ export default function NewAssessmentPage() {
                     </span>
 
                     <input
-                      value={
-                        config.tenantId
-                      }
+                      value={config.tenantId}
                       disabled
                     />
                   </label>
@@ -882,9 +1036,7 @@ export default function NewAssessmentPage() {
 
                     <input
                       required
-                      value={
-                        engagementId
-                      }
+                      value={engagementId}
                       onChange={(
                         event
                       ) =>
@@ -903,9 +1055,7 @@ export default function NewAssessmentPage() {
 
                     <input
                       required
-                      value={
-                        assessmentId
-                      }
+                      value={assessmentId}
                       onChange={(
                         event
                       ) =>

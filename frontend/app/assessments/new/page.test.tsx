@@ -105,30 +105,20 @@ describe(
 
       mockedExecuteAssessment
         .mockResolvedValue({
-          completed:
-            true,
-
+          completed: true,
           hierarchy_key:
             "tenant-alpha/client-acme/engagement-001/assessment-001",
-
-          artifact_count:
-            6,
-
+          artifact_count: 6,
           request_hash:
             "request-hash-001",
-
           demonstration_hash:
             "demonstration-hash-001",
-
           persistence_hash:
             "persistence-hash-001",
-
           report_id:
             "report-001",
-
           application_hash:
             "application-hash-001",
-
           schema_version:
             "1.0.0"
         });
@@ -356,41 +346,30 @@ describe(
           expect.objectContaining({
             tenant_id:
               "tenant-alpha",
-
             client_id:
               "client-acme",
-
             engagement_id:
               "engagement-001",
-
             assessment_id:
               "assessment-001",
-
             assessment_name:
               "Governance Runway Assessment",
-
             workflow_names: [
               "Incident Management"
             ],
-
             organizational_units: [
               "IT Operations"
             ],
-
             objectives: [
               "Reduce governance friction"
             ],
-
             expected_outcomes: [
               "Faster completion"
             ],
-
             client_display_name:
               "ACME Corporation",
-
             prepared_by:
               "FIP Governance Services",
-
             maximum_priorities:
               3
           })
@@ -399,7 +378,7 @@ describe(
     );
 
     it(
-      "opens the completed assessment and client report from the submitted hierarchy",
+      "renders the governed execution receipt and delivery links",
       async () => {
         render(
           <NewAssessmentPage />
@@ -427,14 +406,84 @@ describe(
         });
 
         expect(
-          await screen.findByText(
-            "Assessment complete"
+          await screen.findByRole(
+            "heading",
+            {
+              name:
+                "Assessment execution complete"
+            }
           )
         ).toBeInTheDocument();
 
         expect(
           screen.getByText(
-            "6 governed artifacts were persisted."
+            "Governed execution receipt"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Execution verified"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Request bound"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Assessment executed"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Persistence bound"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Report generated"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "request-hash-001"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "demonstration-hash-001"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "persistence-hash-001"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "application-hash-001"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "report-001"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Next: repository verification"
           )
         ).toBeInTheDocument();
 
@@ -499,8 +548,12 @@ describe(
           )
         );
 
-        await screen.findByText(
-          "Assessment complete"
+        await screen.findByRole(
+          "heading",
+          {
+            name:
+              "Assessment execution complete"
+          }
         );
 
         await user.click(
