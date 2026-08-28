@@ -19,6 +19,9 @@ import {
   type AssessmentWorkflowStep
 } from "@/components/assessment-workflow-shell";
 import {
+  DiagnosticFindingsSummary
+} from "@/components/diagnostic-findings-summary";
+import {
   GovernanceFrictionMap,
   type GovernanceFrictionMapItem
 } from "@/components/governance-friction-map";
@@ -1108,24 +1111,59 @@ const readinessItems: AssessmentReadinessItem[] = [
               </section>
 
               <AssessmentReadinessPanel
-                items={readinessItems}
-              />
+  items={readinessItems}
+/>
 
-              <GovernanceFrictionMap
-                items={frictionMapItems}
-                totalFrictionScore={totalFriction}
-                recognizedEventCount={
-                  recognizedConstraintEvents
-                }
-                uniqueWorkItemCount={
-                  frictionUniqueWorkItemCount
-                }
-                dominantConstraint={
-                  dominantConstraint
-                }
-              />
+<DiagnosticFindingsSummary
+  dominantConstraint={
+    dominantConstraint
+  }
+  governanceDebtScore={
+    debtScore
+  }
+  governanceDebtBand={
+    debtBand
+  }
+  totalFriction={
+    totalFriction
+  }
+  evidenceQualityScore={
+    qualityScore
+  }
+  evidenceQualityGrade={
+    qualityGrade
+  }
+  recognizedConstraintEvents={
+    recognizedConstraintEvents
+  }
+  uniqueWorkItemCount={
+    frictionUniqueWorkItemCount
+  }
+  findings={
+    findings
+  }
+  readyForAnalysis={
+    readyForAnalysis
+  }
+/>
 
-              <GovernanceInterventionPlan
+<GovernanceFrictionMap
+  items={frictionMapItems}
+  totalFrictionScore={
+    totalFriction
+  }
+  recognizedEventCount={
+    recognizedConstraintEvents
+  }
+  uniqueWorkItemCount={
+    frictionUniqueWorkItemCount
+  }
+  dominantConstraint={
+    dominantConstraint
+  }
+/>
+
+<GovernanceInterventionPlan
                 items={interventionPlanItems}
                 governanceDebtScore={
                   interventionGovernanceDebtScore
@@ -1135,6 +1173,7 @@ const readinessItems: AssessmentReadinessItem[] = [
                   interventionSchemaVersion
                 }
               />
+
               <GovernanceRoadmap
                 phases={governanceRoadmapPhases}
                 totalItems={roadmapTotalItems}
@@ -1289,7 +1328,7 @@ const readinessItems: AssessmentReadinessItem[] = [
                               priority,
                               "owner_role"
                             ) ?? "Unassigned owner"}
-                            {" ? "}
+                            {" • "}
                             {textValue(
                               priority,
                               "target_horizon"
