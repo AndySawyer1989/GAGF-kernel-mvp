@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export type DiagnosticFindingsSummaryProps = {
   dominantConstraint: string;
   governanceDebtScore: number;
@@ -9,26 +11,25 @@ export type DiagnosticFindingsSummaryProps = {
   uniqueWorkItemCount: number;
   findings: string[];
   readyForAnalysis: boolean;
+  evidenceHref: string;
 };
 
-function formatBand(
-  value: string
-): string {
-  if (!value.trim()) {
-    return "Unknown";
-  }
-
+function categoryLabel(value: string): string {
   return value
-    .trim()
-    .replace(
-      /[_-]+/g,
-      " "
+    .toLowerCase()
+    .split("_")
+    .map((word) =>
+      word.length > 0
+        ? word[0].toUpperCase() + word.slice(1)
+        : word
     )
-    .replace(
-      /\b\w/g,
-      (character) =>
-        character.toUpperCase()
-    );
+    .join(" ");
+}
+
+function formatScore(value: number): string {
+  return Number.isInteger(value)
+    ? value.toString()
+    : value.toFixed(1);
 }
 
 export function DiagnosticFindingsSummary({
@@ -41,37 +42,46 @@ export function DiagnosticFindingsSummary({
   recognizedConstraintEvents,
   uniqueWorkItemCount,
   findings,
-  readyForAnalysis
+  readyForAnalysis,
+  evidenceHref
 }: DiagnosticFindingsSummaryProps) {
+  const dominantConstraintLabel =
+    dominantConstraint.length > 0
+      ? categoryLabel(dominantConstraint)
+      : "Not identified";
+
+  const dominantEvidenceHref =
+    dominantConstraint.length > 0
+      ? `${evidenceHref}?constraint=${encodeURIComponent(
+          dominantConstraint
+        )}`
+      : evidenceHref;
+
   return (
     <section
-      className="diagnostic-findings-summary"
+      className="panel diagnostic-findings-summary"
       aria-labelledby="diagnostic-findings-summary-title"
     >
-      <header className="diagnostic-findings-summary-header">
+      <div className="panel-header">
         <div>
           <p className="panel-kicker">
             FIP diagnostic findings
           </p>
 
-          <h2
-            id="diagnostic-findings-summary-title"
-          >
+          <h2 id="diagnostic-findings-summary-title">
             What FIP diagnosed
           </h2>
 
-          <p>
-            This summary presents the governed
-            diagnostic conclusion before the
-            detailed friction, intervention, and
-            roadmap analysis.
+          <p className="diagnostic-findings-description">
+            Governed interpretation of the persisted
+            assessment evidence and measured friction.
           </p>
         </div>
 
         <span
           className={
             readyForAnalysis
-              ? "status-badge status-healthy"
+              ? "status-badge status-success"
               : "status-badge status-warning"
           }
         >
@@ -81,186 +91,128 @@ export function DiagnosticFindingsSummary({
           />
 
           {readyForAnalysis
-            ? "Evidence ready"
-            : "Evidence review"}
+            ? "Ready for analysis"
+            : "Analysis constrained"}
         </span>
-      </header>
-
-      <div className="diagnostic-primary-finding">
-        <div className="diagnostic-primary-marker">
-          01
-        </div>
-
-        <div>
-          <span>
-            Primary diagnostic
-          </span>
-
-          <h3>
-            {dominantConstraint}
-          </h3>
-
-          <p>
-            This is the dominant governed
-            constraint identified by the
-            persisted friction analysis. It is
-            the primary diagnostic finding, not
-            an assertion of root cause.
-          </p>
-        </div>
       </div>
 
-      <div className="diagnostic-findings-metrics">
-        <article>
-          <span>
-            Governance debt
-          </span>
+      <div className="diagnostic-findings-primary">
+        <div>
+          <p className="diagnostic-findings-label">
+            Primary diagnostic
+          </p>
+
+          <h3>{dominantConstraintLabel}</h3>
+
+          <p>
+            This is the highest-ranked measured
+            constraint in the governed diagnostic
+            output. It is a primary diagnostic finding,
+            not an assertion of root cause.
+          </p>
+        </div>
+
+        <Link
+          className="diagnostic-findings-evidence-link"
+          href={dominantEvidenceHref}
+        >
+          View supporting evidence
+        </Link>
+      </div>
+
+      <div className="diagnostic-findings-metric-grid">
+        <article className="diagnostic-findings-metric">
+          <span>Governance debt</span>
 
           <strong>
-            {governanceDebtScore.toFixed(1)}
+            {formatScore(governanceDebtScore)}
           </strong>
 
           <small>
-            {formatBand(
-              governanceDebtBand
-            )}{" "}
-            band
+          {`${governanceDebtBand.charAt(0).toUpperCase()}${governanceDebtBand.slice(1)} band`}
           </small>
         </article>
 
-        <article>
-          <span>
-            Weighted friction
-          </span>
+        <article className="diagnostic-findings-metric">
+          <span>Weighted friction</span>
 
           <strong>
-            {totalFriction.toFixed(1)}
+            {formatScore(totalFriction)}
           </strong>
 
           <small>
-            Governed constraint pressure
+            Across recognized governed constraints
           </small>
         </article>
 
-        <article>
-          <span>
-            Evidence quality
-          </span>
+        <article className="diagnostic-findings-metric">
+          <span>Evidence quality</span>
 
           <strong>
-            {evidenceQualityScore.toFixed(
-              2
-            )}
+            {evidenceQualityScore.toFixed(2)}
           </strong>
 
           <small>
-            {formatBand(
-              evidenceQualityGrade
-            )}{" "}
-            quality
+      {`${evidenceQualityGrade.charAt(0).toUpperCase()}${evidenceQualityGrade.slice(1)} quality`}
           </small>
         </article>
 
-        <article>
-          <span>
-            Observed constraints
-          </span>
+        <article className="diagnostic-findings-metric">
+          <span>Observed constraints</span>
 
           <strong>
             {recognizedConstraintEvents}
           </strong>
 
-          <small>
-            Recognized constraint events
-          </small>
+          <small>Recognized constraint events</small>
         </article>
 
-        <article>
-          <span>
-            Affected work
-          </span>
+        <article className="diagnostic-findings-metric">
+          <span>Affected work</span>
 
-          <strong>
-            {uniqueWorkItemCount}
-          </strong>
+          <strong>{uniqueWorkItemCount}</strong>
 
-          <small>
-            Unique work items
-          </small>
+          <small>Unique work items</small>
         </article>
       </div>
 
-      <div className="diagnostic-findings-evidence">
-        <div className="diagnostic-findings-evidence-heading">
-          <div>
-            <p className="panel-kicker">
-              Supporting findings
-            </p>
+      <div className="diagnostic-findings-supporting">
+       <div className="diagnostic-findings-supporting-header">
+        <p className="diagnostic-findings-label">
+        Supporting findings
+       </p>
 
-            <h3>
-              Evidence-backed observations
-            </h3>
-          </div>
-
-          <span>
-            {findings.length}{" "}
-            {findings.length === 1
-              ? "finding"
-              : "findings"}
-          </span>
-        </div>
+    <span>
+      {findings.length}{" "}
+      {findings.length === 1 ? "finding" : "findings"}
+    </span>
+  </div>
 
         {findings.length > 0 ? (
-          <ol className="diagnostic-findings-list">
-            {findings.map(
-              (
-                finding,
-                index
-              ) => (
-                <li
-                  key={`${index}-${finding}`}
-                >
-                  <span
-                    className="diagnostic-finding-number"
-                    aria-hidden="true"
-                  >
-                    {String(
-                      index + 1
-                    ).padStart(
-                      2,
-                      "0"
-                    )}
-                  </span>
-
-                  <p>
-                    {finding}
-                  </p>
-                </li>
-              )
-            )}
-          </ol>
+          <ul>
+            {findings.map((finding, index) => (
+              <li key={`${index}-${finding}`}>
+                {finding}
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="diagnostic-findings-empty">
-            No supporting findings were
-            generated for this assessment.
+            No additional governed findings were
+            persisted for this assessment.
           </p>
         )}
       </div>
 
-      <aside className="diagnostic-interpretation-boundary">
-        <strong>
-          Diagnostic interpretation boundary
-        </strong>
-
+      <footer className="diagnostic-findings-boundary">
         <p>
-          The dominant constraint identifies
-          the strongest governed friction signal
-          in this assessment. It should not be
-          interpreted automatically as the root
-          cause or as authorization for an
-          intervention.
+          Interpretation boundary: diagnostic ranking
+          summarizes measured evidence. Dominant
+          constraint does not independently establish
+          root cause, causality, systemic scope, or
+          intervention authority.
         </p>
-      </aside>
+      </footer>
     </section>
   );
 }

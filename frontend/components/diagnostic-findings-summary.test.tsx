@@ -33,7 +33,8 @@ describe(
               "Approval delay is concentrated in the review workflow.",
               "Escalation events increase after repeated approval waits."
             ]}
-            readyForAnalysis={true}
+            evidenceHref="/evidence/test-tenant/test-client/test-engagement/test-assessment"
+          readyForAnalysis={true}
           />
         );
 
@@ -49,7 +50,7 @@ describe(
 
         expect(
           screen.getByText(
-            "APPROVAL_DELAYED"
+            "Approval Delayed"
           )
         ).toBeInTheDocument();
 
@@ -115,7 +116,7 @@ describe(
 
         expect(
           screen.getByText(
-            "Evidence ready"
+            "Ready for analysis"
           )
         ).toBeInTheDocument();
       }
@@ -135,7 +136,8 @@ describe(
             recognizedConstraintEvents={6}
             uniqueWorkItemCount={4}
             findings={[]}
-            readyForAnalysis={false}
+            evidenceHref="/evidence/test-tenant/test-client/test-engagement/test-assessment"
+          readyForAnalysis={false}
           />
         );
 
@@ -147,19 +149,19 @@ describe(
 
         expect(
           screen.getByText(
-            /should not be interpreted automatically as the root cause/i
+            /does not independently establish root cause/i
           )
         ).toBeInTheDocument();
 
         expect(
           screen.getByText(
-            "Evidence review"
+            "Analysis constrained"
           )
         ).toBeInTheDocument();
 
         expect(
           screen.getByText(
-            "No supporting findings were generated for this assessment."
+            "No additional governed findings were persisted for this assessment."
           )
         ).toBeInTheDocument();
       }

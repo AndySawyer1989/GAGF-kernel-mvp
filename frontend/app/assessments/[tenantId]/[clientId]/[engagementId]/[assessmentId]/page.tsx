@@ -1145,6 +1145,9 @@ const readinessItems: AssessmentReadinessItem[] = [
   readyForAnalysis={
     readyForAnalysis
   }
+  evidenceHref={
+    evidenceHref
+  }
 />
 
 <GovernanceFrictionMap
