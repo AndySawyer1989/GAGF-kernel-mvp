@@ -19,6 +19,9 @@ import {
   type AssessmentWorkflowStep
 } from "@/components/assessment-workflow-shell";
 import {
+  AssessmentDeliveryStatus
+} from "@/components/assessment-delivery-status";
+import {
   DiagnosticFindingsSummary
 } from "@/components/diagnostic-findings-summary";
 import {
@@ -1112,6 +1115,21 @@ const readinessItems: AssessmentReadinessItem[] = [
 
               <AssessmentReadinessPanel
   items={readinessItems}
+/>
+
+<AssessmentDeliveryStatus
+  reportReady={
+    clientReportReady
+  }
+  repositoryVerified={
+    repositoryIntegrityReady
+  }
+  findingsReady={
+    findingsReady
+  }
+  reportHref={
+    reportHref
+  }
 />
 
 <DiagnosticFindingsSummary

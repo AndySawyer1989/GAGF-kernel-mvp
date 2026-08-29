@@ -5779,3 +5779,52 @@ button:focus-visible {
     box-shadow: none;
   }
 }
+/* FIP-WEB-002C-02 - Assessment Completion Delivery Status */
+
+.assessment-delivery-status {
+  margin-top: 24px;
+}
+
+.assessment-delivery-status-ready {
+  border-color: rgba(216, 166, 46, 0.34);
+}
+
+.assessment-delivery-status .panel-header {
+  align-items: flex-start;
+}
+
+.assessment-delivery-checks {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.assessment-delivery-actions {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.assessment-delivery-disabled {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.assessment-delivery-boundary {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .assessment-delivery-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
