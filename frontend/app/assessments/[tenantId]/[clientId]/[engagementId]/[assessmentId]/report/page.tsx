@@ -12,6 +12,9 @@ import {
 import { ConsoleSidebar } from "@/components/console-sidebar";
 import { PrintReportButton } from "@/components/print-report-button";
 import {
+  ReportDeliveryPanel
+} from "@/components/report-delivery-panel";
+import {
   extractClientReport,
   fetchAssessment,
   fetchAssessmentArtifacts,
@@ -494,6 +497,11 @@ export default function ClientReportPage() {
                   </div>
                 </dl>
               </footer>
+             <ReportDeliveryPanel
+  reportId={report.report_id}
+  packageHash={report.manifest.package_hash}
+  schemaVersion={report.manifest.schema_version}
+/>
             </article>
           )}
       </section>

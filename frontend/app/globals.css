@@ -5677,3 +5677,105 @@ button:focus-visible {
     flex-direction: column;
   }
 }
+/* FIP-WEB-002C-01 - Report Delivery Controls */
+
+.report-delivery-panel {
+  margin-top: 24px;
+}
+
+.report-delivery-panel .panel-header {
+  align-items: flex-start;
+}
+
+.report-delivery-panel .panel-header p:last-child {
+  max-width: 760px;
+}
+
+.report-delivery-steps {
+  margin-top: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.report-delivery-steps article {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.report-delivery-steps article > span {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(216, 166, 46, 0.14);
+  color: var(--purple);
+  font-weight: 800;
+}
+
+.report-delivery-steps strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.report-delivery-steps p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.report-delivery-verification {
+  margin-top: 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.report-delivery-verification div {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.report-delivery-verification dt {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.report-delivery-verification dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.report-delivery-boundary {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .report-delivery-verification div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+@media print {
+  .report-delivery-panel {
+    break-before: page;
+    box-shadow: none;
+  }
+}
