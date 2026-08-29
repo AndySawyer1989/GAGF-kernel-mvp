@@ -5775,8 +5775,7 @@ button:focus-visible {
 
 @media print {
   .report-delivery-panel {
-    break-before: page;
-    box-shadow: none;
+    display: none !important;
   }
 }
 /* FIP-WEB-002C-02 - Assessment Completion Delivery Status */
