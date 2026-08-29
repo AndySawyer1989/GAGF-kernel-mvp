@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export type GovernanceFrictionMapItem = {
   category: string;
   eventCount: number;
@@ -17,6 +19,7 @@ type GovernanceFrictionMapProps = {
   recognizedEventCount: number;
   uniqueWorkItemCount: number;
   dominantConstraint: string;
+  evidenceHref: string;
 };
 
 type MapPosition = {
@@ -106,7 +109,8 @@ export function GovernanceFrictionMap({
   totalFrictionScore,
   recognizedEventCount,
   uniqueWorkItemCount,
-  dominantConstraint
+  dominantConstraint,
+  evidenceHref
 }: GovernanceFrictionMapProps) {
   const orderedItems = [...items].sort(
     (left, right) =>
@@ -394,6 +398,17 @@ export function GovernanceFrictionMap({
                   {" – "}
                   {formatDate(item.lastOccurredAt)}
                 </p>
+
+                <Link
+                  className="friction-map-evidence-link"
+                  href={
+                    `${evidenceHref}?constraint=${encodeURIComponent(
+                      item.category
+                    )}`
+                  }
+                >
+                  View supporting evidence
+                </Link>
               </article>
             ))}
           </div>

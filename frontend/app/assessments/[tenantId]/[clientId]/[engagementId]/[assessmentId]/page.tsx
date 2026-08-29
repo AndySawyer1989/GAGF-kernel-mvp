@@ -1161,6 +1161,9 @@ const readinessItems: AssessmentReadinessItem[] = [
   dominantConstraint={
     dominantConstraint
   }
+  evidenceHref={
+    evidenceHref
+  }
 />
 
 <GovernanceInterventionPlan

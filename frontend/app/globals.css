@@ -5615,3 +5615,27 @@ button:focus-visible {
       1px solid var(--border);
   }
 }
+/* FIP-WEB-002B-03B - Finding to Evidence Links */
+
+.friction-map-evidence-link {
+  width: fit-content;
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--purple);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.friction-map-evidence-link::after {
+  content: "→";
+  color: var(--orange);
+}
+
+.friction-map-evidence-link:hover {
+  color: var(--orange-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
