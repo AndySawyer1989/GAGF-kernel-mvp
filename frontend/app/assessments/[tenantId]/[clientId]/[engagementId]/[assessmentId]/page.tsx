@@ -29,6 +29,9 @@ import {
   type GovernanceFrictionMapItem
 } from "@/components/governance-friction-map";
 import {
+  AssessmentCloseoutPanel
+} from "@/components/assessment-closeout-panel";
+import {
   GovernanceInterventionPlan,
   type GovernanceInterventionPlanItem
 } from "@/components/governance-intervention-plan";
@@ -770,11 +773,13 @@ const repositoryIntegrityReady =
   summary?.repository_chain_valid === true &&
   summary.artifact_count === artifacts?.count;
 
+const clientReportArtifact = findArtifact(
+  artifacts,
+  CLIENT_REPORT_ARTIFACT_TYPE
+);
+
 const clientReportReady = Boolean(
-  findArtifact(
-    artifacts,
-    CLIENT_REPORT_ARTIFACT_TYPE
-  )
+  clientReportArtifact
 );
 
 const readinessItems: AssessmentReadinessItem[] = [
@@ -1129,6 +1134,18 @@ const readinessItems: AssessmentReadinessItem[] = [
   }
   reportHref={
     reportHref
+  }
+/>
+
+<AssessmentCloseoutPanel
+  deliveryRecorded={false}
+  reportId={
+    clientReportArtifact?.artifact_id ??
+    "Report package unavailable"
+  }
+  packageHash={
+    clientReportArtifact?.artifact_hash ??
+    "Package hash unavailable"
   }
 />
 
