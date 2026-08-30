@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 from collections.abc import Mapping
@@ -51,6 +51,12 @@ from backend.app.gagf.governance_assessment_dashboard_api import (
 )
 from backend.app.gagf.governance_assessment_repository import (
     GovernanceAssessmentRepository,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_api import (
+    create_governance_commercial_paid_assessment_router,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_execution import (
+    GovernanceCommercialPaidAssessmentExecutionService,
 )
 
 
@@ -131,6 +137,7 @@ def register_governance_assessment_api(
     assessment_database_path = Path(
         assessment_database_path
     )
+
     resolved_environment = (
         environment
         if environment is not None
@@ -140,11 +147,35 @@ def register_governance_assessment_api(
     service = GovernanceAssessmentApplicationService(
         repository=resolved_repository
     )
+
     router = create_governance_assessment_router(
         service=service,
         dependencies=[Depends(require_assessment_actor)],
     )
     app.router.routes.extend(router.routes)
+
+    paid_assessment_execution_directory = (
+        assessment_database_path.parent
+        / "governance_paid_assessment_executions"
+    )
+
+    paid_assessment_service = (
+        GovernanceCommercialPaidAssessmentExecutionService(
+            execution_directory=(
+                paid_assessment_execution_directory
+            )
+        )
+    )
+
+    paid_assessment_router = (
+        create_governance_commercial_paid_assessment_router(
+            service=paid_assessment_service,
+            dependencies=[Depends(require_assessment_actor)],
+        )
+    )
+    app.router.routes.extend(
+        paid_assessment_router.routes
+    )
 
     audit_database_path = assessment_database_path.with_name(
         "governance_assessment_audit.sqlite3"
@@ -241,6 +272,7 @@ def register_governance_assessment_api(
         ),
         key_audit_store=checkpoint_key_audit_store,
     )
+
     dashboard_router = (
         create_governance_assessment_dashboard_router(
             dashboard_service=dashboard_service
@@ -267,7 +299,17 @@ def register_governance_assessment_api(
         resolved_repository
     )
     app.state.governance_assessment_service = service
-    app.state.governance_assessment_audit_ledger = audit_ledger
+
+    app.state.governance_commercial_paid_assessment_service = (
+        paid_assessment_service
+    )
+    app.state.governance_paid_assessment_execution_directory = (
+        paid_assessment_execution_directory
+    )
+
+    app.state.governance_assessment_audit_ledger = (
+        audit_ledger
+    )
     app.state.governance_assessment_checkpoint_store = (
         checkpoint_store
     )
