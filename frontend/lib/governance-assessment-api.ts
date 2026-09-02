@@ -1,4 +1,4 @@
-export type GovernanceAssessmentDashboardSummary = {
+﻿export type GovernanceAssessmentDashboardSummary = {
   tenant_id: string;
   audit_event_count: number;
   audit_chain_valid: boolean;
@@ -192,6 +192,155 @@ export type AssessmentExecutionResponse = {
   report_id: string;
   application_hash: string;
   schema_version?: string;
+};
+
+export type CommercialEvidenceDeclarationRequest = {
+  evidence_id: string;
+  source_kind: string;
+  description: string;
+  classification: string;
+  client_authorized_for_assessment: boolean;
+  minimization_review_completed: boolean;
+  direct_identifiers_removed: boolean;
+};
+
+export type CommercialStorageDeclarationRequest = {
+  operator_controlled_location: boolean;
+  access_restricted: boolean;
+  storage_protection_confirmed: boolean;
+  backup_plan_recorded: boolean;
+  retention_period_recorded: boolean;
+  deletion_plan_recorded: boolean;
+};
+
+export type CommercialPaidAssessmentIntakeRequest = {
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  client_display_name: string;
+  assessment_name: string;
+  operator_name: string;
+  client_contact_name: string;
+  assessment_scope_confirmed: boolean;
+  evidence_scope_confirmed: boolean;
+  client_data_use_confirmed: boolean;
+  operator_readiness_confirmed: boolean;
+  evidence: CommercialEvidenceDeclarationRequest[];
+  storage: CommercialStorageDeclarationRequest;
+};
+
+export type CommercialContractExecutionEventRequest = {
+  contract_execution_event_id: string;
+  contract_executed: boolean;
+  contract_execution_review_ready: boolean;
+  contract_execution_confirmed: boolean;
+  executed_contract_reference_recorded: boolean;
+  executed_at_recorded: boolean;
+  all_required_signatures_recorded: boolean;
+  human_operator_confirmed_execution: boolean;
+  requires_final_paid_work_authorization: boolean;
+  human_boundary_required: boolean;
+  gagf_kernel_authoritative: boolean;
+  ai_override_allowed: boolean;
+};
+
+export type CommercialPaidWorkAuthorizationRequest = {
+  authorization_id: string;
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  contract_execution_event_id: string;
+  authorized_by: string;
+  authorized_at: string;
+  paid_assessment_authorized: boolean;
+};
+
+export type CommercialExecutionEvidenceApprovalRequest = {
+  evidence_id: string;
+  approved_content_sha256: string;
+  approved_by: string;
+  approved_at: string;
+  execution_evidence_approved: boolean;
+};
+
+export type CommercialPaidAssessmentExecutionRequest = {
+  intake: CommercialPaidAssessmentIntakeRequest;
+  contract_execution_event: CommercialContractExecutionEventRequest;
+  paid_work_authorization: CommercialPaidWorkAuthorizationRequest;
+  execution_evidence_approvals:
+    CommercialExecutionEvidenceApprovalRequest[];
+};
+
+export type CommercialPaidAssessmentDisposition =
+  | "executed"
+  | "resumed"
+  | "reconciled";
+
+export type CommercialPaidAssessmentExecutionResult = {
+  recovery_type: string;
+  recovery_version: string;
+  schema_version: string;
+  attempt_hash: string;
+  record_hash: string;
+  hierarchy_key: string;
+  disposition: CommercialPaidAssessmentDisposition;
+  artifact_count_before: number;
+  artifact_count_after: number;
+  execution_result: unknown;
+  boundaries: Record<string, boolean>;
+};
+
+export type CommercialPaidAssessmentExecutionInputBinding = {
+  hierarchy_key: string;
+  assessment_execution_request_hash: string;
+  execution_input_hash: string;
+  binding_hash: string;
+  schema_version: string;
+};
+
+export type CommercialPaidAssessmentEvidenceBindingMetadata = {
+  evidence_id: string;
+  source_id: string;
+  source_kind: string;
+  display_name: string;
+  source_location: string | null;
+  content_sha256: string;
+};
+
+export type CommercialPaidAssessmentExecutionInputBindingMetadata = {
+  hierarchy_key: string;
+  assessment_name: string;
+  client_display_name: string;
+  assessment_execution_request_hash: string;
+  execution_input_hash: string;
+  binding_hash: string;
+  schema_version: string;
+  evidence: CommercialPaidAssessmentEvidenceBindingMetadata[];
+  boundaries: {
+    raw_evidence_not_exposed: boolean;
+    binding_metadata_is_not_execution_authority: boolean;
+    binding_metadata_is_not_evidence_approval: boolean;
+  };
+};
+
+export type CommercialPaidAssessmentExecutionResponse = {
+  operator_run_passed: true;
+  result: CommercialPaidAssessmentExecutionResult;
+  execution_input_binding:
+    CommercialPaidAssessmentExecutionInputBinding;
+  boundaries: {
+    api_request_is_not_paid_work_authorization: boolean;
+    api_request_is_not_execution_authority: boolean;
+    api_request_is_not_recovery_authority: boolean;
+    assessment_execution_request_is_server_bound: boolean;
+    raw_execution_evidence_is_not_browser_resubmitted: boolean;
+    browser_cannot_replace_bound_execution_input: boolean;
+    repository_path_is_server_assigned: boolean;
+    execution_database_is_hierarchy_scoped: boolean;
+    recovery_service_remains_governed_authority_path: boolean;
+  };
 };
 
 export type GovernanceAssessmentAuditEvent = {
@@ -561,6 +710,264 @@ export async function executeAssessment(
   }
 
   return payload as AssessmentExecutionResponse;
+}
+
+export async function fetchPaidAssessmentExecutionInputBinding(
+  config: GovernanceAssessmentApiConfig,
+  identity: GovernanceAssessmentIdentity,
+  signal?: AbortSignal
+): Promise<CommercialPaidAssessmentExecutionInputBindingMetadata> {
+  const segments = [
+    identity.tenantId,
+    identity.clientId,
+    identity.engagementId,
+    identity.assessmentId
+  ].map(encodeURIComponent);
+
+  const url = new URL(
+    `/api/v1/governance-paid-assessments/${segments.join("/")}/execution-input-binding`,
+    config.baseUrl
+  );
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "X-Tenant-ID": config.tenantId,
+      "X-Actor-ID": config.actorId,
+      "X-Actor-Roles": config.actorRoles
+    },
+    cache: "no-store",
+    signal
+  });
+
+  const payload: unknown =
+    await response.json().catch(
+      () => null
+    );
+
+  if (!response.ok) {
+    throw new GovernanceAssessmentApiError(
+      `Paid assessment execution-input binding request failed with status ${response.status}`,
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution-input binding response did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  const binding =
+    payload as CommercialPaidAssessmentExecutionInputBindingMetadata;
+
+  if (
+    typeof binding.hierarchy_key !== "string" ||
+    typeof binding.assessment_name !== "string" ||
+    typeof binding.client_display_name !== "string" ||
+    typeof binding.assessment_execution_request_hash !==
+      "string" ||
+    typeof binding.execution_input_hash !== "string" ||
+    typeof binding.binding_hash !== "string" ||
+    typeof binding.schema_version !== "string" ||
+    !Array.isArray(binding.evidence)
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution-input binding response did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  const expectedHierarchy = [
+    identity.tenantId,
+    identity.clientId,
+    identity.engagementId,
+    identity.assessmentId
+  ].join("/");
+
+  if (
+    binding.hierarchy_key !==
+    expectedHierarchy
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution-input binding hierarchy did not match the requested assessment",
+      response.status,
+      payload
+    );
+  }
+
+  const validEvidence =
+    binding.evidence.every(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof item.evidence_id === "string" &&
+        typeof item.source_id === "string" &&
+        typeof item.source_kind === "string" &&
+        typeof item.display_name === "string" &&
+        (
+          item.source_location === null ||
+          typeof item.source_location === "string"
+        ) &&
+        typeof item.content_sha256 === "string"
+    );
+
+  if (!validEvidence) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution-input binding evidence did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof binding.boundaries !== "object" ||
+    binding.boundaries === null ||
+    binding.boundaries.raw_evidence_not_exposed !==
+      true ||
+    binding.boundaries.binding_metadata_is_not_execution_authority !==
+      true ||
+    binding.boundaries.binding_metadata_is_not_evidence_approval !==
+      true
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution-input binding boundaries did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  return binding;
+}
+
+export async function executePaidAssessment(
+  config: GovernanceAssessmentApiConfig,
+  request: CommercialPaidAssessmentExecutionRequest,
+  signal?: AbortSignal
+): Promise<CommercialPaidAssessmentExecutionResponse> {
+  const url = new URL(
+    "/api/v1/governance-paid-assessments/execute",
+    config.baseUrl
+  );
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Tenant-ID": config.tenantId,
+      "X-Actor-ID": config.actorId,
+      "X-Actor-Roles": config.actorRoles
+    },
+    body: JSON.stringify(request),
+    cache: "no-store",
+    signal
+  });
+
+  const payload: unknown = await response.json().catch(
+    () => null
+  );
+
+  if (!response.ok) {
+    throw new GovernanceAssessmentApiError(
+      `Paid assessment execution failed with status ${response.status}`,
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    (
+      payload as CommercialPaidAssessmentExecutionResponse
+    ).operator_run_passed !== true
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution response did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  const typedPayload =
+    payload as CommercialPaidAssessmentExecutionResponse;
+
+  const result = typedPayload.result;
+  const binding =
+    typedPayload.execution_input_binding;
+  const boundaries =
+    typedPayload.boundaries;
+
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    typeof result.hierarchy_key !== "string" ||
+    typeof result.attempt_hash !== "string" ||
+    typeof result.record_hash !== "string" ||
+    typeof result.artifact_count_before !== "number" ||
+    typeof result.artifact_count_after !== "number" ||
+    !(
+      result.disposition === "executed" ||
+      result.disposition === "resumed" ||
+      result.disposition === "reconciled"
+    )
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution result did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof binding !== "object" ||
+    binding === null ||
+    typeof binding.hierarchy_key !== "string" ||
+    typeof binding.assessment_execution_request_hash !==
+      "string" ||
+    typeof binding.execution_input_hash !== "string" ||
+    typeof binding.binding_hash !== "string" ||
+    typeof binding.schema_version !== "string" ||
+    binding.hierarchy_key !== result.hierarchy_key
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution binding did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  if (
+    typeof boundaries !== "object" ||
+    boundaries === null ||
+    boundaries.assessment_execution_request_is_server_bound !==
+      true ||
+    boundaries.raw_execution_evidence_is_not_browser_resubmitted !==
+      true ||
+    boundaries.browser_cannot_replace_bound_execution_input !==
+      true ||
+    boundaries.repository_path_is_server_assigned !==
+      true ||
+    boundaries.execution_database_is_hierarchy_scoped !==
+      true ||
+    boundaries.recovery_service_remains_governed_authority_path !==
+      true
+  ) {
+    throw new GovernanceAssessmentApiError(
+      "Paid assessment execution boundaries did not match the expected contract",
+      response.status,
+      payload
+    );
+  }
+
+  return typedPayload;
 }
 
 function buildAssessmentPath(

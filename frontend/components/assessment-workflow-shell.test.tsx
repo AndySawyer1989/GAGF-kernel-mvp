@@ -1,4 +1,5 @@
 import {
+  fireEvent,
   render,
   screen
 } from "@testing-library/react";
@@ -6,13 +7,15 @@ import {
 import {
   describe,
   expect,
-  it
+  it,
+  vi
 } from "vitest";
 
 import {
   AssessmentWorkflowShell,
   type AssessmentWorkflowStep
 } from "./assessment-workflow-shell";
+
 
 const steps: AssessmentWorkflowStep[] = [
   {
@@ -52,33 +55,52 @@ const steps: AssessmentWorkflowStep[] = [
   }
 ];
 
+
+function renderShell(
+  overrides: Partial<
+    React.ComponentProps<
+      typeof AssessmentWorkflowShell
+    >
+  > = {}
+) {
+  return render(
+    <AssessmentWorkflowShell
+      clientId="client-acme"
+      engagementId="engagement-001"
+      assessmentId="assessment-001"
+      steps={steps}
+      evidenceHref="/evidence/example"
+      reportHref="/report/example"
+      {...overrides}
+    />
+  );
+}
+
+
 describe(
   "AssessmentWorkflowShell",
   () => {
     it(
       "renders the commercial assessment identity",
       () => {
-        render(
-          <AssessmentWorkflowShell
-            clientId="client-acme"
-            engagementId="engagement-001"
-            assessmentId="assessment-001"
-            steps={steps}
-            evidenceHref="/evidence/example"
-            reportHref="/report/example"
-          />
-        );
+        renderShell();
 
         expect(
-          screen.getByText("client-acme")
+          screen.getByText(
+            "client-acme"
+          )
         ).toBeInTheDocument();
 
         expect(
-          screen.getByText("engagement-001")
+          screen.getByText(
+            "engagement-001"
+          )
         ).toBeInTheDocument();
 
         expect(
-          screen.getByText("assessment-001")
+          screen.getByText(
+            "assessment-001"
+          )
         ).toBeInTheDocument();
       }
     );
@@ -86,35 +108,38 @@ describe(
     it(
       "renders the five operator workflow steps",
       () => {
-        render(
-          <AssessmentWorkflowShell
-            clientId="client-acme"
-            engagementId="engagement-001"
-            assessmentId="assessment-001"
-            steps={steps}
-            evidenceHref="/evidence/example"
-            reportHref="/report/example"
-          />
+        renderShell();
+
+        expect(
+          screen.getByText(
+            "Evidence Intake"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            "Validate Evidence"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getAllByText(
+            "Run Diagnostic"
+          ).length
+        ).toBeGreaterThan(
+          0
         );
 
         expect(
-          screen.getByText("Evidence Intake")
+          screen.getByText(
+            "Review Findings"
+          )
         ).toBeInTheDocument();
 
         expect(
-          screen.getByText("Validate Evidence")
-        ).toBeInTheDocument();
-
-        expect(
-          screen.getByText("Run Diagnostic")
-        ).toBeInTheDocument();
-
-        expect(
-          screen.getByText("Review Findings")
-        ).toBeInTheDocument();
-
-        expect(
-          screen.getByText("Generate Report")
+          screen.getByText(
+            "Generate Report"
+          )
         ).toBeInTheDocument();
       }
     );
@@ -122,23 +147,18 @@ describe(
     it(
       "marks the governed current step",
       () => {
-        render(
-          <AssessmentWorkflowShell
-            clientId="client-acme"
-            engagementId="engagement-001"
-            assessmentId="assessment-001"
-            steps={steps}
-            evidenceHref="/evidence/example"
-            reportHref="/report/example"
-          />
-        );
+        renderShell();
 
         const currentStep =
-          screen.getByText(
+          screen.getAllByText(
             "Run Diagnostic"
-          ).closest("li");
+          )[0].closest(
+            "li"
+          );
 
-        expect(currentStep).toHaveAttribute(
+        expect(
+          currentStep
+        ).toHaveAttribute(
           "aria-current",
           "step"
         );
@@ -148,21 +168,15 @@ describe(
     it(
       "links to governed evidence and report surfaces",
       () => {
-        render(
-          <AssessmentWorkflowShell
-            clientId="client-acme"
-            engagementId="engagement-001"
-            assessmentId="assessment-001"
-            steps={steps}
-            evidenceHref="/evidence/example"
-            reportHref="/report/example"
-          />
-        );
+        renderShell();
 
         expect(
           screen.getByRole(
             "link",
-            { name: "Explore evidence" }
+            {
+              name:
+                "Explore evidence"
+            }
           )
         ).toHaveAttribute(
           "href",
@@ -172,7 +186,10 @@ describe(
         expect(
           screen.getByRole(
             "link",
-            { name: "Open client report" }
+            {
+              name:
+                "Open client report"
+            }
           )
         ).toHaveAttribute(
           "href",
@@ -185,25 +202,166 @@ describe(
       "shows workflow complete only when every step is complete",
       () => {
         const completeSteps =
-          steps.map((step) => ({
-            ...step,
-            state: "complete" as const
-          }));
+          steps.map(
+            (step) => ({
+              ...step,
+              state:
+                "complete" as const
+            })
+          );
 
-        render(
-          <AssessmentWorkflowShell
-            clientId="client-acme"
-            engagementId="engagement-001"
-            assessmentId="assessment-001"
-            steps={completeSteps}
-            evidenceHref="/evidence/example"
-            reportHref="/report/example"
-          />
-        );
+        renderShell({
+          steps:
+            completeSteps
+        });
 
         expect(
           screen.getByText(
             "Workflow complete"
+          )
+        ).toBeInTheDocument();
+      }
+    );
+
+    it(
+      "enables governed diagnostic execution when ready",
+      () => {
+        const onRunDiagnostic =
+          vi.fn();
+
+        renderShell({
+          canRunDiagnostic: true,
+          onRunDiagnostic
+        });
+
+        const button =
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Run Diagnostic"
+            }
+          );
+
+        expect(
+          button
+        ).toBeEnabled();
+
+        fireEvent.click(
+          button
+        );
+
+        expect(
+          onRunDiagnostic
+        ).toHaveBeenCalledTimes(
+          1
+        );
+      }
+    );
+
+    it(
+      "disables diagnostic execution before readiness",
+      () => {
+        const onRunDiagnostic =
+          vi.fn();
+
+        renderShell({
+          canRunDiagnostic: false,
+          onRunDiagnostic
+        });
+
+        const button =
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Run Diagnostic"
+            }
+          );
+
+        expect(
+          button
+        ).toBeDisabled();
+
+        fireEvent.click(
+          button
+        );
+
+        expect(
+          onRunDiagnostic
+        ).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      "shows running state during governed execution",
+      () => {
+        renderShell({
+          canRunDiagnostic: true,
+          diagnosticRunning: true,
+          onRunDiagnostic:
+            vi.fn()
+        });
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Running diagnostic..."
+            }
+          )
+        ).toBeDisabled();
+      }
+    );
+
+    it(
+      "does not allow a second run after diagnostic completion",
+      () => {
+        const completeDiagnosticSteps =
+          steps.map(
+            (step) =>
+              step.id ===
+              "diagnostic"
+                ? {
+                    ...step,
+                    state:
+                      "complete" as const
+                  }
+                : step
+          );
+
+        renderShell({
+          steps:
+            completeDiagnosticSteps,
+          canRunDiagnostic: true,
+          onRunDiagnostic:
+            vi.fn()
+        });
+
+        expect(
+          screen.getByRole(
+            "button",
+            {
+              name:
+                "Diagnostic complete"
+            }
+          )
+        ).toBeDisabled();
+      }
+    );
+
+    it(
+      "surfaces the governed execution disposition",
+      () => {
+        renderShell({
+          diagnosticDisposition:
+            "reconciled"
+        });
+
+        expect(
+          screen.getByText(
+            "Diagnostic reconciled"
           )
         ).toBeInTheDocument();
       }

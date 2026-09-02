@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 export type AssessmentWorkflowStepState =
@@ -12,6 +14,11 @@ export type AssessmentWorkflowStep = {
   state: AssessmentWorkflowStepState;
 };
 
+export type AssessmentDiagnosticDisposition =
+  | "executed"
+  | "resumed"
+  | "reconciled";
+
 type AssessmentWorkflowShellProps = {
   clientId: string;
   engagementId: string;
@@ -19,6 +26,12 @@ type AssessmentWorkflowShellProps = {
   steps: AssessmentWorkflowStep[];
   evidenceHref: string;
   reportHref: string;
+
+  canRunDiagnostic?: boolean;
+  diagnosticRunning?: boolean;
+  diagnosticDisposition?:
+    AssessmentDiagnosticDisposition | null;
+  onRunDiagnostic?: () => void;
 };
 
 function stateLabel(
@@ -35,13 +48,32 @@ function stateLabel(
   return "Upcoming";
 }
 
+function dispositionLabel(
+  disposition:
+    AssessmentDiagnosticDisposition
+): string {
+  if (disposition === "executed") {
+    return "Diagnostic executed";
+  }
+
+  if (disposition === "resumed") {
+    return "Diagnostic resumed";
+  }
+
+  return "Diagnostic reconciled";
+}
+
 export function AssessmentWorkflowShell({
   clientId,
   engagementId,
   assessmentId,
   steps,
   evidenceHref,
-  reportHref
+  reportHref,
+  canRunDiagnostic = false,
+  diagnosticRunning = false,
+  diagnosticDisposition = null,
+  onRunDiagnostic
 }: AssessmentWorkflowShellProps) {
   const completedCount = steps.filter(
     (step) => step.state === "complete"
@@ -49,6 +81,21 @@ export function AssessmentWorkflowShell({
 
   const allComplete =
     completedCount === steps.length;
+
+  const diagnosticStep =
+    steps.find(
+      (step) =>
+        step.id === "diagnostic"
+    );
+
+  const diagnosticComplete =
+    diagnosticStep?.state === "complete";
+
+  const diagnosticActionEnabled =
+    canRunDiagnostic &&
+    !diagnosticRunning &&
+    !diagnosticComplete &&
+    typeof onRunDiagnostic === "function";
 
   return (
     <section
@@ -150,7 +197,46 @@ export function AssessmentWorkflowShell({
         ))}
       </ol>
 
+      {diagnosticDisposition && (
+        <div
+          className="assessment-workflow-diagnostic-status"
+          role="status"
+        >
+          <span
+            className="status-badge status-healthy"
+          >
+            <span
+              className="status-dot"
+              aria-hidden="true"
+            />
+
+            {dispositionLabel(
+              diagnosticDisposition
+            )}
+          </span>
+        </div>
+      )}
+
       <div className="assessment-workflow-actions">
+        <button
+          className="refresh-button"
+          type="button"
+          disabled={
+            !diagnosticActionEnabled
+          }
+          onClick={
+            diagnosticActionEnabled
+              ? onRunDiagnostic
+              : undefined
+          }
+        >
+          {diagnosticRunning
+            ? "Running diagnostic..."
+            : diagnosticComplete
+              ? "Diagnostic complete"
+              : "Run Diagnostic"}
+        </button>
+
         <Link
           className="secondary-button button-link"
           href={evidenceHref}

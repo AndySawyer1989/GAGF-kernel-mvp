@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -18,6 +18,10 @@ import {
   AssessmentWorkflowShell,
   type AssessmentWorkflowStep
 } from "@/components/assessment-workflow-shell";
+import {
+  PaidAssessmentExecutionAuthorization,
+  type PaidAssessmentExecutionAuthorizationValue
+} from "@/components/paid-assessment-execution-authorization";
 import {
   AssessmentDeliveryStatus
 } from "@/components/assessment-delivery-status";
@@ -40,11 +44,15 @@ import {
   type GovernanceRoadmapPhase
 } from "@/components/governance-roadmap";
 import {
+  executePaidAssessment,
   fetchAssessment,
   fetchAssessmentArtifacts,
   fetchAssessmentSummary,
+  fetchPaidAssessmentExecutionInputBinding,
   getGovernanceAssessmentApiConfig,
   GovernanceAssessmentApiError,
+  type CommercialPaidAssessmentDisposition,
+  type CommercialPaidAssessmentExecutionInputBindingMetadata,
   type GovernanceAssessmentArtifact,
   type GovernanceAssessmentArtifactList,
   type GovernanceAssessmentIdentity,
@@ -165,6 +173,41 @@ function ResultMetric({
   );
 }
 
+const EMPTY_PAID_EXECUTION_AUTHORIZATION:
+  PaidAssessmentExecutionAuthorizationValue = {
+    operatorName: "",
+    clientContactName: "",
+    classification: "non_sensitive",
+
+    assessmentScopeConfirmed: false,
+    evidenceScopeConfirmed: false,
+    clientDataUseConfirmed: false,
+    operatorReadinessConfirmed: false,
+
+    clientAuthorizedForAssessment: false,
+    minimizationReviewCompleted: false,
+    directIdentifiersRemoved: false,
+
+    operatorControlledLocation: false,
+    accessRestricted: false,
+    storageProtectionConfirmed: false,
+    backupPlanRecorded: false,
+    retentionPeriodRecorded: false,
+    deletionPlanRecorded: false,
+
+    contractExecuted: false,
+    contractExecutionReviewReady: false,
+    contractExecutionConfirmed: false,
+    executedContractReferenceRecorded: false,
+    executedAtRecorded: false,
+    allRequiredSignaturesRecorded: false,
+    humanOperatorConfirmedExecution: false,
+
+    paidAssessmentAuthorized: false,
+    executionEvidenceApproved: false
+  };
+
+
 export default function AssessmentDetailPage() {
   const params = useParams<{
     tenantId: string;
@@ -213,6 +256,60 @@ export default function AssessmentDetailPage() {
     useState(true);
   const [error, setError] =
     useState<string | null>(null);
+
+  const [
+    executionBinding,
+    setExecutionBinding
+  ] =
+    useState<
+      CommercialPaidAssessmentExecutionInputBindingMetadata | null
+    >(null);
+
+  const [
+    bindingLoading,
+    setBindingLoading
+  ] =
+    useState(true);
+
+  const [
+    bindingError,
+    setBindingError
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    executionAuthorization,
+    setExecutionAuthorization
+  ] =
+    useState<
+      PaidAssessmentExecutionAuthorizationValue
+    >(
+      EMPTY_PAID_EXECUTION_AUTHORIZATION
+    );
+
+  const [
+    diagnosticRunning,
+    setDiagnosticRunning
+  ] =
+    useState(false);
+
+  const [
+    diagnosticDisposition,
+    setDiagnosticDisposition
+  ] =
+    useState<
+      CommercialPaidAssessmentDisposition | null
+    >(null);
+
+  const [
+    diagnosticExecutionError,
+    setDiagnosticExecutionError
+  ] =
+    useState<string | null>(
+      null
+    );
 
   const loadAssessment = useCallback(
     async (signal?: AbortSignal) => {
@@ -280,6 +377,76 @@ export default function AssessmentDetailPage() {
 
     return () => controller.abort();
   }, [loadAssessment]);
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function loadExecutionBinding() {
+      setBindingLoading(true);
+      setBindingError(null);
+
+      try {
+        const result =
+          await fetchPaidAssessmentExecutionInputBinding(
+            config,
+            identity,
+            controller.signal
+          );
+
+        if (
+          !controller.signal.aborted
+        ) {
+          setExecutionBinding(
+            result
+          );
+        }
+      } catch (caught) {
+        if (
+          caught instanceof DOMException &&
+          caught.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (
+          controller.signal.aborted
+        ) {
+          return;
+        }
+
+        setExecutionBinding(
+          null
+        );
+
+        if (
+          caught instanceof
+          GovernanceAssessmentApiError
+        ) {
+          setBindingError(
+            `Execution binding unavailable. Backend returned ${caught.status}.`
+          );
+        } else {
+          setBindingError(
+            "Execution binding could not be loaded."
+          );
+        }
+      } finally {
+        if (
+          !controller.signal.aborted
+        ) {
+          setBindingLoading(
+            false
+          );
+        }
+      }
+    }
+
+    void loadExecutionBinding();
+
+    return () =>
+      controller.abort();
+  }, [config, identity]);
 
   const qualityArtifact = findArtifact(
     artifacts,
@@ -865,12 +1032,17 @@ const readinessItems: AssessmentReadinessItem[] = [
     + encodeURIComponent(identity.assessmentId)
     + "/report";
 
+  const paidDiagnosticComplete =
+    diagnosticDisposition !== null;
+
   const workflowCompletion = [
     true,
     readyForAnalysis,
-    diagnosticArtifactsReady,
-    findingsReady,
-    clientReportReady
+    paidDiagnosticComplete,
+    paidDiagnosticComplete &&
+      findingsReady,
+    paidDiagnosticComplete &&
+      clientReportReady
   ];
 
   const currentWorkflowIndex =
@@ -930,6 +1102,333 @@ const readinessItems: AssessmentReadinessItem[] = [
         state: workflowState(4)
       }
     ];
+  const executionAuthorizationComplete =
+    executionBinding !== null &&
+    executionBinding.evidence.length >
+      0 &&
+    executionAuthorization.operatorName
+      .trim()
+      .length > 0 &&
+    executionAuthorization.clientContactName
+      .trim()
+      .length > 0 &&
+    executionAuthorization.classification
+      .trim()
+      .length > 0 &&
+    executionAuthorization
+      .assessmentScopeConfirmed &&
+    executionAuthorization
+      .evidenceScopeConfirmed &&
+    executionAuthorization
+      .clientDataUseConfirmed &&
+    executionAuthorization
+      .operatorReadinessConfirmed &&
+    executionAuthorization
+      .clientAuthorizedForAssessment &&
+    executionAuthorization
+      .minimizationReviewCompleted &&
+    executionAuthorization
+      .directIdentifiersRemoved &&
+    executionAuthorization
+      .operatorControlledLocation &&
+    executionAuthorization
+      .accessRestricted &&
+    executionAuthorization
+      .storageProtectionConfirmed &&
+    executionAuthorization
+      .backupPlanRecorded &&
+    executionAuthorization
+      .retentionPeriodRecorded &&
+    executionAuthorization
+      .deletionPlanRecorded &&
+    executionAuthorization
+      .contractExecuted &&
+    executionAuthorization
+      .contractExecutionReviewReady &&
+    executionAuthorization
+      .contractExecutionConfirmed &&
+    executionAuthorization
+      .executedContractReferenceRecorded &&
+    executionAuthorization
+      .executedAtRecorded &&
+    executionAuthorization
+      .allRequiredSignaturesRecorded &&
+    executionAuthorization
+      .humanOperatorConfirmedExecution &&
+    executionAuthorization
+      .paidAssessmentAuthorized &&
+    executionAuthorization
+      .executionEvidenceApproved;
+
+  const canRunDiagnostic =
+    readyForAnalysis &&
+    executionAuthorizationComplete &&
+    !bindingLoading &&
+    !diagnosticRunning &&
+    !paidDiagnosticComplete;
+
+  async function handleRunDiagnostic() {
+    if (
+      !executionBinding ||
+      !canRunDiagnostic
+    ) {
+      return;
+    }
+
+    setDiagnosticRunning(
+      true
+    );
+
+    setDiagnosticExecutionError(
+      null
+    );
+
+    const authorizedAt =
+      new Date().toISOString();
+
+    const eventNonce =
+      `${Date.now()}`;
+
+    const contractExecutionEventId =
+      `contract-${identity.assessmentId}-${eventNonce}`;
+
+    const authorizationId =
+      `paid-work-${identity.assessmentId}-${eventNonce}`;
+
+    try {
+      const response =
+        await executePaidAssessment(
+          config,
+          {
+            intake: {
+              tenant_id:
+                identity.tenantId,
+
+              client_id:
+                identity.clientId,
+
+              engagement_id:
+                identity.engagementId,
+
+              assessment_id:
+                identity.assessmentId,
+
+              client_display_name:
+                executionBinding
+                  .client_display_name,
+
+              assessment_name:
+                executionBinding
+                  .assessment_name,
+
+              operator_name:
+                executionAuthorization
+                  .operatorName
+                  .trim(),
+
+              client_contact_name:
+                executionAuthorization
+                  .clientContactName
+                  .trim(),
+
+              assessment_scope_confirmed:
+                executionAuthorization
+                  .assessmentScopeConfirmed,
+
+              evidence_scope_confirmed:
+                executionAuthorization
+                  .evidenceScopeConfirmed,
+
+              client_data_use_confirmed:
+                executionAuthorization
+                  .clientDataUseConfirmed,
+
+              operator_readiness_confirmed:
+                executionAuthorization
+                  .operatorReadinessConfirmed,
+
+              evidence:
+                executionBinding.evidence.map(
+                  (item) => ({
+                    evidence_id:
+                      item.evidence_id,
+
+                    source_kind:
+                      item.source_kind,
+
+                    description:
+                      item.display_name,
+
+                    classification:
+                      executionAuthorization
+                        .classification
+                        .trim(),
+
+                    client_authorized_for_assessment:
+                      executionAuthorization
+                        .clientAuthorizedForAssessment,
+
+                    minimization_review_completed:
+                      executionAuthorization
+                        .minimizationReviewCompleted,
+
+                    direct_identifiers_removed:
+                      executionAuthorization
+                        .directIdentifiersRemoved
+                  })
+                ),
+
+              storage: {
+                operator_controlled_location:
+                  executionAuthorization
+                    .operatorControlledLocation,
+
+                access_restricted:
+                  executionAuthorization
+                    .accessRestricted,
+
+                storage_protection_confirmed:
+                  executionAuthorization
+                    .storageProtectionConfirmed,
+
+                backup_plan_recorded:
+                  executionAuthorization
+                    .backupPlanRecorded,
+
+                retention_period_recorded:
+                  executionAuthorization
+                    .retentionPeriodRecorded,
+
+                deletion_plan_recorded:
+                  executionAuthorization
+                    .deletionPlanRecorded
+              }
+            },
+
+            contract_execution_event: {
+              contract_execution_event_id:
+                contractExecutionEventId,
+
+              contract_executed:
+                executionAuthorization
+                  .contractExecuted,
+
+              contract_execution_review_ready:
+                executionAuthorization
+                  .contractExecutionReviewReady,
+
+              contract_execution_confirmed:
+                executionAuthorization
+                  .contractExecutionConfirmed,
+
+              executed_contract_reference_recorded:
+                executionAuthorization
+                  .executedContractReferenceRecorded,
+
+              executed_at_recorded:
+                executionAuthorization
+                  .executedAtRecorded,
+
+              all_required_signatures_recorded:
+                executionAuthorization
+                  .allRequiredSignaturesRecorded,
+
+              human_operator_confirmed_execution:
+                executionAuthorization
+                  .humanOperatorConfirmedExecution,
+
+              requires_final_paid_work_authorization:
+                true,
+
+              human_boundary_required:
+                true,
+
+              gagf_kernel_authoritative:
+                true,
+
+              ai_override_allowed:
+                false
+            },
+
+            paid_work_authorization: {
+              authorization_id:
+                authorizationId,
+
+              tenant_id:
+                identity.tenantId,
+
+              client_id:
+                identity.clientId,
+
+              engagement_id:
+                identity.engagementId,
+
+              assessment_id:
+                identity.assessmentId,
+
+              contract_execution_event_id:
+                contractExecutionEventId,
+
+              authorized_by:
+                config.actorId,
+
+              authorized_at:
+                authorizedAt,
+
+              paid_assessment_authorized:
+                executionAuthorization
+                  .paidAssessmentAuthorized
+            },
+
+            execution_evidence_approvals:
+              executionBinding.evidence.map(
+                (item) => ({
+                  evidence_id:
+                    item.evidence_id,
+
+                  approved_content_sha256:
+                    item.content_sha256,
+
+                  approved_by:
+                    config.actorId,
+
+                  approved_at:
+                    authorizedAt,
+
+                  execution_evidence_approved:
+                    executionAuthorization
+                      .executionEvidenceApproved
+                })
+              )
+          }
+        );
+
+      setDiagnosticDisposition(
+        response.result.disposition
+      );
+
+      await loadAssessment();
+
+    } catch (caught) {
+      if (
+        caught instanceof
+        GovernanceAssessmentApiError
+      ) {
+        setDiagnosticExecutionError(
+          `Governed diagnostic execution failed with backend status ${caught.status}.`
+        );
+      } else {
+        setDiagnosticExecutionError(
+          "Governed diagnostic execution failed."
+        );
+      }
+    } finally {
+      setDiagnosticRunning(
+        false
+      );
+    }
+  }
+
   return (
     <main className="console-shell">
       <ConsoleSidebar
@@ -1084,13 +1583,88 @@ const readinessItems: AssessmentReadinessItem[] = [
                 </div>
               </section>
 
+              {bindingError && (
+                <section
+                  className="error-panel"
+                  role="alert"
+                >
+                  <div>
+                    <p className="error-title">
+                      Paid execution unavailable
+                    </p>
+
+                    <p>
+                      {bindingError}
+                    </p>
+                  </div>
+                </section>
+              )}
+
+              {diagnosticExecutionError && (
+                <section
+                  className="error-panel"
+                  role="alert"
+                >
+                  <div>
+                    <p className="error-title">
+                      Diagnostic execution failed
+                    </p>
+
+                    <p>
+                      {diagnosticExecutionError}
+                    </p>
+                  </div>
+                </section>
+              )}
+
+              <PaidAssessmentExecutionAuthorization
+                binding={
+                  executionBinding
+                }
+                value={
+                  executionAuthorization
+                }
+                disabled={
+                  bindingLoading ||
+                  diagnosticRunning ||
+                  paidDiagnosticComplete
+                }
+                onChange={
+                  setExecutionAuthorization
+                }
+              />
+
               <AssessmentWorkflowShell
-                clientId={identity.clientId}
-                engagementId={identity.engagementId}
-                assessmentId={identity.assessmentId}
-                steps={workflowSteps}
-                evidenceHref={evidenceHref}
-                reportHref={reportHref}
+                clientId={
+                  identity.clientId
+                }
+                engagementId={
+                  identity.engagementId
+                }
+                assessmentId={
+                  identity.assessmentId
+                }
+                steps={
+                  workflowSteps
+                }
+                evidenceHref={
+                  evidenceHref
+                }
+                reportHref={
+                  reportHref
+                }
+                canRunDiagnostic={
+                  canRunDiagnostic
+                }
+                diagnosticRunning={
+                  diagnosticRunning
+                }
+                diagnosticDisposition={
+                  diagnosticDisposition
+                }
+                onRunDiagnostic={() =>
+                  void handleRunDiagnostic()
+                }
               />
               <section className="result-metrics-grid">
                 <ResultMetric
@@ -1347,7 +1921,7 @@ const readinessItems: AssessmentReadinessItem[] = [
                               priority,
                               "owner_role"
                             ) ?? "Unassigned owner"}
-                            {" • "}
+                            {" â€¢ "}
                             {textValue(
                               priority,
                               "target_horizon"

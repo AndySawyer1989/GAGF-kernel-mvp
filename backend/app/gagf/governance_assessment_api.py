@@ -29,6 +29,10 @@ from backend.app.gagf.governance_assessment_repository import (
 from backend.app.gagf.governance_assessment_scope_configuration import (
     EvidenceRequirement,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_execution_input_binding import (
+    CommercialPaidAssessmentExecutionInputBindingError,
+    GovernanceCommercialPaidAssessmentExecutionInputBindingService,
+)
 
 
 ASSESSMENT_APPLICATION_API_VERSION = "1.0.0"
@@ -158,6 +162,10 @@ def error_detail(
 def create_governance_assessment_router(
     *,
     service: GovernanceAssessmentApplicationService,
+    execution_input_binding_service: (
+        GovernanceCommercialPaidAssessmentExecutionInputBindingService
+        | None
+    ) = None,
     dependencies: list[Depends] | None = None,
 ) -> APIRouter:
     router = APIRouter(
@@ -174,10 +182,37 @@ def create_governance_assessment_router(
         request: AssessmentExecutionApiRequest,
     ) -> dict[str, Any]:
         try:
-            result = service.execute(
-                request=request.to_application_request()
+            application_request = (
+                request.to_application_request()
             )
+
+            if (
+                execution_input_binding_service
+                is not None
+            ):
+                execution_input_binding_service.bind(
+                    request=application_request
+                )
+
+            result = service.execute(
+                request=application_request
+            )
+
             return result.to_dict()
+
+        except (
+            CommercialPaidAssessmentExecutionInputBindingError
+        ) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=error_detail(
+                    code=(
+                        "ASSESSMENT_EXECUTION_INPUT_BINDING_ERROR"
+                    ),
+                    message=str(exc),
+                ),
+            ) from exc
+
         except AssessmentApplicationError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -186,6 +221,7 @@ def create_governance_assessment_router(
                     message=str(exc),
                 ),
             ) from exc
+
         except AssessmentRepositoryError as exc:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -334,5 +370,3 @@ def create_governance_assessment_router(
             ) from exc
 
     return router
-
-

@@ -11,6 +11,9 @@ from backend.app.gagf.governance_assessment_application import (
 from backend.app.gagf.governance_assessment_repository import (
     GovernanceAssessmentRepository,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_execution_input_binding import (
+    CommercialPaidAssessmentExecutionInputBindingError,
+)
 
 
 def build_payload(tenant_id="tenant-alpha"):
@@ -267,3 +270,158 @@ def test_two_tenants_remain_isolated(client):
     assert alpha.json()["application_hash"] != (
         beta.json()["application_hash"]
     )
+def test_execute_binds_execution_input_before_application(
+    repository,
+):
+    class RecordingBindingService:
+        def __init__(self):
+            self.requests = []
+
+        def bind(self, *, request):
+            self.requests.append(request)
+
+    binding_service = RecordingBindingService()
+
+    service = GovernanceAssessmentApplicationService(
+        repository=repository
+    )
+
+    app = FastAPI()
+    app.include_router(
+        create_governance_assessment_router(
+            service=service,
+            execution_input_binding_service=(
+                binding_service
+            ),
+        )
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/governance-assessments/execute",
+        json=build_payload(),
+    )
+
+    assert response.status_code == 201
+
+    assert len(
+        binding_service.requests
+    ) == 1
+
+    bound_request = (
+        binding_service.requests[0]
+    )
+
+    assert bound_request.context.hierarchy_key == (
+        "tenant-alpha/client-acme/"
+        "engagement-001/assessment-001"
+    )
+
+    assert len(
+        bound_request.evidence_inputs
+    ) == 1
+
+    assert (
+        bound_request.evidence_inputs[0].csv_text
+        == build_payload()[
+            "evidence_inputs"
+        ][0]["csv_text"]
+    )
+
+
+def test_execute_returns_binding_conflict(
+    repository,
+):
+    class RejectingBindingService:
+        def bind(self, *, request):
+            raise (
+                CommercialPaidAssessmentExecutionInputBindingError(
+                    "immutable execution-input binding already "
+                    "exists with a different execution input hash"
+                )
+            )
+
+    service = GovernanceAssessmentApplicationService(
+        repository=repository
+    )
+
+    app = FastAPI()
+    app.include_router(
+        create_governance_assessment_router(
+            service=service,
+            execution_input_binding_service=(
+                RejectingBindingService()
+            ),
+        )
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/governance-assessments/execute",
+        json=build_payload(),
+    )
+
+    assert response.status_code == 409
+
+    assert (
+        response.json()["detail"]["code"]
+        == "ASSESSMENT_EXECUTION_INPUT_BINDING_ERROR"
+    )
+
+    assert (
+        "different execution input hash"
+        in response.json()["detail"]["message"]
+    )
+
+
+def test_binding_conflict_prevents_application_execution(
+    repository,
+):
+    class RejectingBindingService:
+        def bind(self, *, request):
+            raise (
+                CommercialPaidAssessmentExecutionInputBindingError(
+                    "binding conflict"
+                )
+            )
+
+    class RecordingApplicationService(
+        GovernanceAssessmentApplicationService
+    ):
+        def __init__(self, *, repository):
+            super().__init__(
+                repository=repository
+            )
+            self.execute_called = False
+
+        def execute(self, *, request):
+            self.execute_called = True
+            return super().execute(
+                request=request
+            )
+
+    service = RecordingApplicationService(
+        repository=repository
+    )
+
+    app = FastAPI()
+    app.include_router(
+        create_governance_assessment_router(
+            service=service,
+            execution_input_binding_service=(
+                RejectingBindingService()
+            ),
+        )
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/governance-assessments/execute",
+        json=build_payload(),
+    )
+
+    assert response.status_code == 409
+    assert service.execute_called is False

@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from backend.app.gagf.governance_assessment_api import (
-    AssessmentExecutionApiRequest,
     error_detail,
 )
 from backend.app.gagf.governance_commercial_paid_assessment_adapter import (
@@ -23,25 +22,41 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution import (
     CommercialPaidAssessmentExecutionInput,
     GovernanceCommercialPaidAssessmentExecutionService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_execution_input_binding import (
+    CommercialPaidAssessmentExecutionInputBinding,
+    CommercialPaidAssessmentExecutionInputBindingError,
+    GovernanceCommercialPaidAssessmentExecutionInputBindingService,
+)
 
 
-COMMERCIAL_PAID_ASSESSMENT_API_VERSION = "0.2.0"
+COMMERCIAL_PAID_ASSESSMENT_API_VERSION = "0.4.0"
+
 COMMERCIAL_PAID_ASSESSMENT_API_PREFIX = (
     "/api/v1/governance-paid-assessments"
 )
 
 
 class CommercialEvidenceDeclarationRequest(BaseModel):
-    evidence_id: str = Field(min_length=1)
-    source_kind: str = Field(min_length=1)
-    description: str = Field(min_length=1)
-    classification: str = Field(min_length=1)
+    evidence_id: str = Field(
+        min_length=1
+    )
+    source_kind: str = Field(
+        min_length=1
+    )
+    description: str = Field(
+        min_length=1
+    )
+    classification: str = Field(
+        min_length=1
+    )
 
     client_authorized_for_assessment: bool
     minimization_review_completed: bool
     direct_identifiers_removed: bool
 
-    def to_domain(self) -> CommercialEvidenceDeclarationInput:
+    def to_domain(
+        self,
+    ) -> CommercialEvidenceDeclarationInput:
         return CommercialEvidenceDeclarationInput(
             evidence_id=self.evidence_id,
             source_kind=self.source_kind,
@@ -63,8 +78,8 @@ class CommercialStorageDeclarationRequest(BaseModel):
     """
     Operator storage-control attestations.
 
-    repository_path is intentionally absent. The server assigns the
-    governed paid-assessment execution database path.
+    repository_path is intentionally absent. The server
+    assigns the governed paid-assessment execution database.
     """
 
     operator_controlled_location: bool
@@ -88,25 +103,45 @@ class CommercialStorageDeclarationRequest(BaseModel):
             storage_protection_confirmed=(
                 self.storage_protection_confirmed
             ),
-            backup_plan_recorded=self.backup_plan_recorded,
+            backup_plan_recorded=(
+                self.backup_plan_recorded
+            ),
             retention_period_recorded=(
                 self.retention_period_recorded
             ),
-            deletion_plan_recorded=self.deletion_plan_recorded,
+            deletion_plan_recorded=(
+                self.deletion_plan_recorded
+            ),
         )
 
 
 class CommercialPaidAssessmentIntakeRequest(BaseModel):
-    tenant_id: str = Field(min_length=1)
-    client_id: str = Field(min_length=1)
-    engagement_id: str = Field(min_length=1)
-    assessment_id: str = Field(min_length=1)
+    tenant_id: str = Field(
+        min_length=1
+    )
+    client_id: str = Field(
+        min_length=1
+    )
+    engagement_id: str = Field(
+        min_length=1
+    )
+    assessment_id: str = Field(
+        min_length=1
+    )
 
-    client_display_name: str = Field(min_length=1)
-    assessment_name: str = Field(min_length=1)
+    client_display_name: str = Field(
+        min_length=1
+    )
+    assessment_name: str = Field(
+        min_length=1
+    )
 
-    operator_name: str = Field(min_length=1)
-    client_contact_name: str = Field(min_length=1)
+    operator_name: str = Field(
+        min_length=1
+    )
+    client_contact_name: str = Field(
+        min_length=1
+    )
 
     assessment_scope_confirmed: bool
     evidence_scope_confirmed: bool
@@ -115,9 +150,24 @@ class CommercialPaidAssessmentIntakeRequest(BaseModel):
 
     evidence: list[
         CommercialEvidenceDeclarationRequest
-    ] = Field(min_length=1)
+    ] = Field(
+        min_length=1
+    )
 
     storage: CommercialStorageDeclarationRequest
+
+    @property
+    def hierarchy_key(
+        self,
+    ) -> str:
+        return "/".join(
+            (
+                self.tenant_id,
+                self.client_id,
+                self.engagement_id,
+                self.assessment_id,
+            )
+        )
 
     def to_domain(
         self,
@@ -129,10 +179,18 @@ class CommercialPaidAssessmentIntakeRequest(BaseModel):
             client_id=self.client_id,
             engagement_id=self.engagement_id,
             assessment_id=self.assessment_id,
-            client_display_name=self.client_display_name,
-            assessment_name=self.assessment_name,
-            operator_name=self.operator_name,
-            client_contact_name=self.client_contact_name,
+            client_display_name=(
+                self.client_display_name
+            ),
+            assessment_name=(
+                self.assessment_name
+            ),
+            operator_name=(
+                self.operator_name
+            ),
+            client_contact_name=(
+                self.client_contact_name
+            ),
             assessment_scope_confirmed=(
                 self.assessment_scope_confirmed
             ),
@@ -155,8 +213,12 @@ class CommercialPaidAssessmentIntakeRequest(BaseModel):
         )
 
 
-class CommercialContractExecutionEventRequest(BaseModel):
-    contract_execution_event_id: str = Field(min_length=1)
+class CommercialContractExecutionEventRequest(
+    BaseModel
+):
+    contract_execution_event_id: str = Field(
+        min_length=1
+    )
 
     contract_executed: bool
     contract_execution_review_ready: bool
@@ -178,7 +240,9 @@ class CommercialContractExecutionEventRequest(BaseModel):
             contract_execution_event_id=(
                 self.contract_execution_event_id
             ),
-            contract_executed=self.contract_executed,
+            contract_executed=(
+                self.contract_executed
+            ),
             contract_execution_review_ready=(
                 self.contract_execution_review_ready
             ),
@@ -188,7 +252,9 @@ class CommercialContractExecutionEventRequest(BaseModel):
             executed_contract_reference_recorded=(
                 self.executed_contract_reference_recorded
             ),
-            executed_at_recorded=self.executed_at_recorded,
+            executed_at_recorded=(
+                self.executed_at_recorded
+            ),
             all_required_signatures_recorded=(
                 self.all_required_signatures_recorded
             ),
@@ -204,26 +270,48 @@ class CommercialContractExecutionEventRequest(BaseModel):
             gagf_kernel_authoritative=(
                 self.gagf_kernel_authoritative
             ),
-            ai_override_allowed=self.ai_override_allowed,
+            ai_override_allowed=(
+                self.ai_override_allowed
+            ),
         )
 
 
-class CommercialPaidWorkAuthorizationRequest(BaseModel):
-    authorization_id: str = Field(min_length=1)
-    tenant_id: str = Field(min_length=1)
-    client_id: str = Field(min_length=1)
-    engagement_id: str = Field(min_length=1)
-    assessment_id: str = Field(min_length=1)
-    contract_execution_event_id: str = Field(min_length=1)
-    authorized_by: str = Field(min_length=1)
-    authorized_at: str = Field(min_length=1)
+class CommercialPaidWorkAuthorizationRequest(
+    BaseModel
+):
+    authorization_id: str = Field(
+        min_length=1
+    )
+    tenant_id: str = Field(
+        min_length=1
+    )
+    client_id: str = Field(
+        min_length=1
+    )
+    engagement_id: str = Field(
+        min_length=1
+    )
+    assessment_id: str = Field(
+        min_length=1
+    )
+    contract_execution_event_id: str = Field(
+        min_length=1
+    )
+    authorized_by: str = Field(
+        min_length=1
+    )
+    authorized_at: str = Field(
+        min_length=1
+    )
     paid_assessment_authorized: bool
 
     def to_domain(
         self,
     ) -> CommercialPaidWorkAuthorizationInput:
         return CommercialPaidWorkAuthorizationInput(
-            authorization_id=self.authorization_id,
+            authorization_id=(
+                self.authorization_id
+            ),
             tenant_id=self.tenant_id,
             client_id=self.client_id,
             engagement_id=self.engagement_id,
@@ -231,19 +319,33 @@ class CommercialPaidWorkAuthorizationRequest(BaseModel):
             contract_execution_event_id=(
                 self.contract_execution_event_id
             ),
-            authorized_by=self.authorized_by,
-            authorized_at=self.authorized_at,
+            authorized_by=(
+                self.authorized_by
+            ),
+            authorized_at=(
+                self.authorized_at
+            ),
             paid_assessment_authorized=(
                 self.paid_assessment_authorized
             ),
         )
 
 
-class CommercialExecutionEvidenceApprovalRequest(BaseModel):
-    evidence_id: str = Field(min_length=1)
-    approved_content_sha256: str = Field(min_length=1)
-    approved_by: str = Field(min_length=1)
-    approved_at: str = Field(min_length=1)
+class CommercialExecutionEvidenceApprovalRequest(
+    BaseModel
+):
+    evidence_id: str = Field(
+        min_length=1
+    )
+    approved_content_sha256: str = Field(
+        min_length=1
+    )
+    approved_by: str = Field(
+        min_length=1
+    )
+    approved_at: str = Field(
+        min_length=1
+    )
     execution_evidence_approved: bool
 
     def to_domain(
@@ -262,23 +364,48 @@ class CommercialExecutionEvidenceApprovalRequest(BaseModel):
         )
 
 
-class CommercialPaidAssessmentExecutionApiRequest(BaseModel):
+class CommercialPaidAssessmentExecutionApiRequest(
+    BaseModel
+):
+    """
+    Browser-visible paid-assessment request.
+
+    The original AssessmentExecutionRequest and raw evidence
+    are intentionally absent. They are recovered from the
+    immutable server-side execution-input binding.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid"
+    )
+
     intake: CommercialPaidAssessmentIntakeRequest
-    contract_execution_event: CommercialContractExecutionEventRequest
-    paid_work_authorization: CommercialPaidWorkAuthorizationRequest
+
+    contract_execution_event: (
+        CommercialContractExecutionEventRequest
+    )
+
+    paid_work_authorization: (
+        CommercialPaidWorkAuthorizationRequest
+    )
+
     execution_evidence_approvals: list[
         CommercialExecutionEvidenceApprovalRequest
-    ] = Field(min_length=1)
-    assessment_execution_request: AssessmentExecutionApiRequest
+    ] = Field(
+        min_length=1
+    )
 
     def to_execution_input(
         self,
         *,
         repository_path: str,
+        assessment_execution_request: Any,
     ) -> CommercialPaidAssessmentExecutionInput:
         return CommercialPaidAssessmentExecutionInput(
             intake=self.intake.to_domain(
-                repository_path=repository_path
+                repository_path=(
+                    repository_path
+                )
             ),
             contract_execution_event=(
                 self.contract_execution_event.to_domain()
@@ -288,43 +415,259 @@ class CommercialPaidAssessmentExecutionApiRequest(BaseModel):
             ),
             execution_evidence_approvals=tuple(
                 item.to_domain()
-                for item in self.execution_evidence_approvals
+                for item
+                in self.execution_evidence_approvals
             ),
             assessment_execution_request=(
-                self.assessment_execution_request
-                .to_application_request()
+                assessment_execution_request
             ),
         )
+
+
+def safe_binding_metadata(
+    binding: CommercialPaidAssessmentExecutionInputBinding,
+) -> dict[str, Any]:
+    """
+    Return only browser-safe commitment metadata.
+
+    Raw CSV/evidence and reconstructable request material are
+    deliberately excluded.
+    """
+
+    material = (
+        binding.assessment_execution_request_material
+    )
+
+    assessment_name = material.get(
+        "assessment_name"
+    )
+
+    client_display_name = material.get(
+        "client_display_name"
+    )
+
+    if not isinstance(
+        assessment_name,
+        str,
+    ) or not assessment_name.strip():
+        raise (
+            CommercialPaidAssessmentExecutionInputBindingError(
+                "bound assessment_name is unavailable"
+            )
+        )
+
+    if not isinstance(
+        client_display_name,
+        str,
+    ) or not client_display_name.strip():
+        raise (
+            CommercialPaidAssessmentExecutionInputBindingError(
+                "bound client_display_name is unavailable"
+            )
+        )
+
+    return {
+        "hierarchy_key": (
+            binding.hierarchy_key
+        ),
+        "assessment_name": (
+            assessment_name
+        ),
+        "client_display_name": (
+            client_display_name
+        ),
+        "assessment_execution_request_hash": (
+            binding.assessment_execution_request_hash
+        ),
+        "execution_input_hash": (
+            binding.execution_input_hash
+        ),
+        "binding_hash": (
+            binding.binding_hash
+        ),
+        "schema_version": (
+            binding.schema_version
+        ),
+        "evidence": [
+            item.commitment_dict()
+            for item in binding.evidence_inputs
+        ],
+        "boundaries": {
+            "raw_evidence_not_exposed": True,
+            "binding_metadata_is_not_execution_authority": True,
+            "binding_metadata_is_not_evidence_approval": True,
+        },
+    }
 
 
 def create_governance_commercial_paid_assessment_router(
     *,
     service: GovernanceCommercialPaidAssessmentExecutionService,
+    execution_input_binding_service: (
+        GovernanceCommercialPaidAssessmentExecutionInputBindingService
+    ),
     dependencies: list[Any] | None = None,
 ) -> APIRouter:
     router = APIRouter(
-        prefix=COMMERCIAL_PAID_ASSESSMENT_API_PREFIX,
-        tags=["governance-paid-assessments"],
-        dependencies=dependencies or [],
+        prefix=(
+            COMMERCIAL_PAID_ASSESSMENT_API_PREFIX
+        ),
+        tags=[
+            "governance-paid-assessments"
+        ],
+        dependencies=(
+            dependencies
+            or []
+        ),
     )
+
+    @router.get(
+        (
+            "/{tenant_id}/{client_id}/"
+            "{engagement_id}/{assessment_id}/"
+            "execution-input-binding"
+        )
+    )
+    def get_execution_input_binding(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> dict[str, Any]:
+        hierarchy_key = "/".join(
+            (
+                tenant_id,
+                client_id,
+                engagement_id,
+                assessment_id,
+            )
+        )
+
+        try:
+            binding = (
+                execution_input_binding_service.get(
+                    hierarchy_key=(
+                        hierarchy_key
+                    )
+                )
+            )
+
+            if (
+                binding.hierarchy_key
+                != hierarchy_key
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionInputBindingError(
+                        "execution-input binding hierarchy mismatch"
+                    )
+                )
+
+            return safe_binding_metadata(
+                binding
+            )
+
+        except (
+            CommercialPaidAssessmentExecutionInputBindingError
+        ) as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_409_CONFLICT
+                ),
+                detail=error_detail(
+                    code=(
+                        "COMMERCIAL_PAID_ASSESSMENT_"
+                        "EXECUTION_INPUT_BINDING_ERROR"
+                    ),
+                    message=str(exc),
+                ),
+            ) from exc
 
     @router.post(
         "/execute",
-        status_code=status.HTTP_201_CREATED,
+        status_code=(
+            status.HTTP_201_CREATED
+        ),
     )
     def execute_paid_assessment(
         request: CommercialPaidAssessmentExecutionApiRequest,
     ) -> dict[str, Any]:
         try:
-            database_path = service.database_path_for_hierarchy(
-                tenant_id=request.intake.tenant_id,
-                client_id=request.intake.client_id,
-                engagement_id=request.intake.engagement_id,
-                assessment_id=request.intake.assessment_id,
+            binding = (
+                execution_input_binding_service.get(
+                    hierarchy_key=(
+                        request.intake.hierarchy_key
+                    )
+                )
             )
 
-            execution_input = request.to_execution_input(
-                repository_path=str(database_path)
+            assessment_execution_request = (
+                execution_input_binding_service
+                .reconstruct_request(
+                    binding=binding
+                )
+            )
+
+            if (
+                assessment_execution_request
+                .context
+                .hierarchy_key
+                != request.intake.hierarchy_key
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionInputBindingError(
+                        "paid-assessment intake hierarchy "
+                        "does not match bound execution input"
+                    )
+                )
+
+            if (
+                assessment_execution_request.assessment_name
+                != request.intake.assessment_name
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionInputBindingError(
+                        "paid-assessment intake assessment_name "
+                        "does not match bound execution input"
+                    )
+                )
+
+            if (
+                assessment_execution_request.client_display_name
+                != request.intake.client_display_name
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionInputBindingError(
+                        "paid-assessment intake client_display_name "
+                        "does not match bound execution input"
+                    )
+                )
+
+            database_path = (
+                service.database_path_for_hierarchy(
+                    tenant_id=(
+                        request.intake.tenant_id
+                    ),
+                    client_id=(
+                        request.intake.client_id
+                    ),
+                    engagement_id=(
+                        request.intake.engagement_id
+                    ),
+                    assessment_id=(
+                        request.intake.assessment_id
+                    ),
+                )
+            )
+
+            execution_input = (
+                request.to_execution_input(
+                    repository_path=str(
+                        database_path
+                    ),
+                    assessment_execution_request=(
+                        assessment_execution_request
+                    ),
+                )
             )
 
             result = service.execute(
@@ -334,21 +677,60 @@ def create_governance_commercial_paid_assessment_router(
             return {
                 "operator_run_passed": True,
                 "result": result.to_dict(),
+                "execution_input_binding": {
+                    "hierarchy_key": (
+                        binding.hierarchy_key
+                    ),
+                    "assessment_execution_request_hash": (
+                        binding.assessment_execution_request_hash
+                    ),
+                    "execution_input_hash": (
+                        binding.execution_input_hash
+                    ),
+                    "binding_hash": (
+                        binding.binding_hash
+                    ),
+                    "schema_version": (
+                        binding.schema_version
+                    ),
+                },
                 "boundaries": {
                     "api_request_is_not_paid_work_authorization": True,
                     "api_request_is_not_execution_authority": True,
                     "api_request_is_not_recovery_authority": True,
+                    "assessment_execution_request_is_server_bound": True,
+                    "raw_execution_evidence_is_not_browser_resubmitted": True,
+                    "browser_cannot_replace_bound_execution_input": True,
                     "repository_path_is_server_assigned": True,
                     "execution_database_is_hierarchy_scoped": True,
                     "recovery_service_remains_governed_authority_path": True,
                 },
             }
+
+        except (
+            CommercialPaidAssessmentExecutionInputBindingError
+        ) as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_409_CONFLICT
+                ),
+                detail=error_detail(
+                    code=(
+                        "COMMERCIAL_PAID_ASSESSMENT_"
+                        "EXECUTION_INPUT_BINDING_ERROR"
+                    ),
+                    message=str(exc),
+                ),
+            ) from exc
+
         except (
             CommercialPaidAssessmentAdapterError,
             CommercialPaidAssessmentExecutionError,
         ) as exc:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                status_code=(
+                    status.HTTP_422_UNPROCESSABLE_CONTENT
+                ),
                 detail=error_detail(
                     code=(
                         "COMMERCIAL_PAID_ASSESSMENT_EXECUTION_ERROR"

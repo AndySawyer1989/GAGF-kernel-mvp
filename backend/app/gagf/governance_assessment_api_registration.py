@@ -58,6 +58,9 @@ from backend.app.gagf.governance_commercial_paid_assessment_api import (
 from backend.app.gagf.governance_commercial_paid_assessment_execution import (
     GovernanceCommercialPaidAssessmentExecutionService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_execution_input_binding import (
+    GovernanceCommercialPaidAssessmentExecutionInputBindingService,
+)
 
 
 ASSESSMENT_API_REGISTRATION_VERSION = "1.1.0"
@@ -116,6 +119,7 @@ def register_governance_assessment_api(
             parents=True,
             exist_ok=True,
         )
+
         resolved_repository = GovernanceAssessmentRepository(
             resolved_path
         )
@@ -148,11 +152,30 @@ def register_governance_assessment_api(
         repository=resolved_repository
     )
 
+    execution_input_binding_directory = (
+        assessment_database_path.parent
+        / "governance_paid_assessment_execution_inputs"
+    )
+
+    execution_input_binding_service = (
+        GovernanceCommercialPaidAssessmentExecutionInputBindingService(
+            binding_directory=(
+                execution_input_binding_directory
+            )
+        )
+    )
+
     router = create_governance_assessment_router(
         service=service,
+        execution_input_binding_service=(
+            execution_input_binding_service
+        ),
         dependencies=[Depends(require_assessment_actor)],
     )
-    app.router.routes.extend(router.routes)
+
+    app.router.routes.extend(
+        router.routes
+    )
 
     paid_assessment_execution_directory = (
         assessment_database_path.parent
@@ -168,21 +191,31 @@ def register_governance_assessment_api(
     )
 
     paid_assessment_router = (
-        create_governance_commercial_paid_assessment_router(
-            service=paid_assessment_service,
-            dependencies=[Depends(require_assessment_actor)],
-        )
+    create_governance_commercial_paid_assessment_router(
+        service=paid_assessment_service,
+        execution_input_binding_service=(
+            execution_input_binding_service
+        ),
+        dependencies=[
+            Depends(require_assessment_actor)
+        ],
     )
+)
+
     app.router.routes.extend(
         paid_assessment_router.routes
     )
 
-    audit_database_path = assessment_database_path.with_name(
-        "governance_assessment_audit.sqlite3"
+    audit_database_path = (
+        assessment_database_path.with_name(
+            "governance_assessment_audit.sqlite3"
+        )
     )
+
     audit_ledger = AssessmentAuditLedger(
         audit_database_path
     )
+
     install_assessment_audit_middleware(
         app=app,
         ledger=audit_ledger,
@@ -193,6 +226,7 @@ def register_governance_assessment_api(
             "governance_assessment_audit_checkpoints.sqlite3"
         )
     )
+
     checkpoint_store = AssessmentAuditCheckpointStore(
         checkpoint_database_path
     )
@@ -202,6 +236,7 @@ def register_governance_assessment_api(
             "governance_assessment_signed_checkpoints.sqlite3"
         )
     )
+
     signed_checkpoint_store = (
         SignedAssessmentAuditCheckpointStore(
             signed_checkpoint_database_path
@@ -213,6 +248,7 @@ def register_governance_assessment_api(
             "governance_assessment_checkpoint_key_audit.sqlite3"
         )
     )
+
     checkpoint_key_audit_store = (
         AssessmentCheckpointKeyAuditStore(
             checkpoint_key_audit_database_path
@@ -225,7 +261,9 @@ def register_governance_assessment_api(
     try:
         production_key_config = (
             load_assessment_checkpoint_production_key_config(
-                assessment_database_path=assessment_database_path,
+                assessment_database_path=(
+                    assessment_database_path
+                ),
                 environment=resolved_environment,
             )
         )
@@ -233,52 +271,84 @@ def register_governance_assessment_api(
         if production_key_config.enabled:
             bootstrap_result = (
                 build_assessment_checkpoint_key_service(
-                    config=AssessmentCheckpointKeyBootstrapConfig(
-                        metadata_database_path=(
-                            production_key_config.metadata_database_path
-                        ),
-                        tenant_id=production_key_config.tenant_id,
-                        key_id=production_key_config.key_id,
-                        secret_reference=(
-                            production_key_config.secret_reference
-                        ),
-                        make_active=True,
+                    config=(
+                        AssessmentCheckpointKeyBootstrapConfig(
+                            metadata_database_path=(
+                                production_key_config
+                                .metadata_database_path
+                            ),
+                            tenant_id=(
+                                production_key_config.tenant_id
+                            ),
+                            key_id=(
+                                production_key_config.key_id
+                            ),
+                            secret_reference=(
+                                production_key_config
+                                .secret_reference
+                            ),
+                            make_active=True,
+                        )
                     ),
                     environment=resolved_environment,
                 )
             )
-            durable_key_service = bootstrap_result.service
+
+            durable_key_service = (
+                bootstrap_result.service
+            )
+
     except (KeyError, ValueError) as error:
         raise AssessmentApiRegistrationError(
             "assessment checkpoint signing configuration is invalid"
         ) from error
 
-    audit_router = create_governance_assessment_audit_router(
-        ledger=audit_ledger,
-        checkpoint_store=checkpoint_store,
-        signed_checkpoint_store=signed_checkpoint_store,
-        durable_checkpoint_key_service=durable_key_service,
+    audit_router = (
+        create_governance_assessment_audit_router(
+            ledger=audit_ledger,
+            checkpoint_store=checkpoint_store,
+            signed_checkpoint_store=(
+                signed_checkpoint_store
+            ),
+            durable_checkpoint_key_service=(
+                durable_key_service
+            ),
+        )
     )
-    app.router.routes.extend(audit_router.routes)
 
-    dashboard_service = GovernanceAssessmentDashboardService(
-        audit_ledger=audit_ledger,
-        checkpoint_store=checkpoint_store,
-        signed_checkpoint_store=signed_checkpoint_store,
-        key_metadata_store=(
-            bootstrap_result.metadata_store
-            if bootstrap_result is not None
-            else None
-        ),
-        key_audit_store=checkpoint_key_audit_store,
+    app.router.routes.extend(
+        audit_router.routes
+    )
+
+    dashboard_service = (
+        GovernanceAssessmentDashboardService(
+            audit_ledger=audit_ledger,
+            checkpoint_store=checkpoint_store,
+            signed_checkpoint_store=(
+                signed_checkpoint_store
+            ),
+            key_metadata_store=(
+                bootstrap_result.metadata_store
+                if bootstrap_result is not None
+                else None
+            ),
+            key_audit_store=(
+                checkpoint_key_audit_store
+            ),
+        )
     )
 
     dashboard_router = (
         create_governance_assessment_dashboard_router(
-            dashboard_service=dashboard_service
+            dashboard_service=(
+                dashboard_service
+            )
         )
     )
-    app.router.routes.extend(dashboard_router.routes)
+
+    app.router.routes.extend(
+        dashboard_router.routes
+    )
 
     if (
         durable_key_service is not None
@@ -286,11 +356,18 @@ def register_governance_assessment_api(
     ):
         checkpoint_key_admin_router = (
             create_assessment_checkpoint_key_admin_router(
-                metadata_store=bootstrap_result.metadata_store,
-                key_service=durable_key_service,
-                audit_store=checkpoint_key_audit_store,
+                metadata_store=(
+                    bootstrap_result.metadata_store
+                ),
+                key_service=(
+                    durable_key_service
+                ),
+                audit_store=(
+                    checkpoint_key_audit_store
+                ),
             )
         )
+
         app.router.routes.extend(
             checkpoint_key_admin_router.routes
         )
@@ -298,11 +375,23 @@ def register_governance_assessment_api(
     app.state.governance_assessment_repository = (
         resolved_repository
     )
-    app.state.governance_assessment_service = service
+
+    app.state.governance_assessment_service = (
+        service
+    )
+
+    app.state.governance_commercial_paid_assessment_execution_input_binding_service = (
+        execution_input_binding_service
+    )
+
+    app.state.governance_paid_assessment_execution_input_directory = (
+        execution_input_binding_directory
+    )
 
     app.state.governance_commercial_paid_assessment_service = (
         paid_assessment_service
     )
+
     app.state.governance_paid_assessment_execution_directory = (
         paid_assessment_execution_directory
     )
@@ -310,18 +399,23 @@ def register_governance_assessment_api(
     app.state.governance_assessment_audit_ledger = (
         audit_ledger
     )
+
     app.state.governance_assessment_checkpoint_store = (
         checkpoint_store
     )
+
     app.state.governance_assessment_signed_checkpoint_store = (
         signed_checkpoint_store
     )
+
     app.state.governance_assessment_checkpoint_key_audit_store = (
         checkpoint_key_audit_store
     )
+
     app.state.governance_assessment_dashboard_service = (
         dashboard_service
     )
+
     app.state.governance_assessment_checkpoint_key_service = (
         durable_key_service
     )

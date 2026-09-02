@@ -5901,3 +5901,61 @@ button:focus-visible {
     gap: 4px;
   }
 }
+/* FIP-WEB-002C-04C — Paid Assessment Execution Authorization */
+
+.paid-execution-confirmations {
+  margin-top: 22px;
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.paid-execution-confirmations h3 {
+  margin: 0 0 4px;
+  color: var(--purple);
+  font-size: 0.9rem;
+}
+
+.paid-execution-confirmations label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.paid-execution-confirmations input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  margin-top: 2px;
+  accent-color: var(--orange);
+}
+
+.paid-execution-evidence {
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.paid-execution-evidence strong {
+  color: var(--text);
+}
+
+.paid-execution-evidence span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.paid-execution-evidence code {
+  overflow-wrap: anywhere;
+  color: var(--purple);
+  font-size: 0.72rem;
+}
