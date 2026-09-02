@@ -50,10 +50,12 @@ import {
   fetchAssessmentSummary,
   fetchPaidAssessmentExecutionInputBinding,
   fetchPaidAssessmentExecutionStatus,
+  fetchPaidAssessmentResults,
   getGovernanceAssessmentApiConfig,
   GovernanceAssessmentApiError,
   type CommercialPaidAssessmentDisposition,
   type CommercialPaidAssessmentExecutionInputBindingMetadata,
+  type CommercialPaidAssessmentResultsResponse,
   type GovernanceAssessmentArtifact,
   type GovernanceAssessmentArtifactList,
   type GovernanceAssessmentIdentity,
@@ -143,10 +145,21 @@ function formatDate(value: string): string {
   });
 }
 
+type AssessmentArtifactProjection = {
+  artifact_type: string;
+  payload: Record<string, unknown>;
+  artifact_id?: string;
+  artifact_hash?: string;
+};
+
+type AssessmentArtifactProjectionList = {
+  items: AssessmentArtifactProjection[];
+};
+
 function findArtifact(
-  artifacts: GovernanceAssessmentArtifactList | null,
+  artifacts: AssessmentArtifactProjectionList | null,
   artifactType: string
-): GovernanceAssessmentArtifact | undefined {
+): AssessmentArtifactProjection | undefined {
   return artifacts?.items.find(
     (artifact) =>
       artifact.artifact_type === artifactType
@@ -321,6 +334,28 @@ export default function AssessmentDetailPage() {
   const [
     executionStatusError,
     setExecutionStatusError
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    paidResults,
+    setPaidResults
+  ] =
+    useState<
+      CommercialPaidAssessmentResultsResponse | null
+    >(null);
+
+  const [
+    paidResultsLoading,
+    setPaidResultsLoading
+  ] =
+    useState(false);
+
+  const [
+    paidResultsError,
+    setPaidResultsError
   ] =
     useState<string | null>(
       null
@@ -544,28 +579,132 @@ export default function AssessmentDetailPage() {
       controller.abort();
   }, [config, identity]);
 
-  const qualityArtifact = findArtifact(
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function loadPaidResults() {
+      if (
+        diagnosticDisposition === null
+      ) {
+        setPaidResults(null);
+        setPaidResultsError(null);
+        setPaidResultsLoading(false);
+        return;
+      }
+
+      setPaidResultsLoading(true);
+      setPaidResultsError(null);
+
+      try {
+        const result =
+          await fetchPaidAssessmentResults(
+            config,
+            identity,
+            controller.signal
+          );
+
+        if (
+          controller.signal.aborted
+        ) {
+          return;
+        }
+
+        if (
+          result.execution_disposition !==
+          diagnosticDisposition
+        ) {
+          setPaidResults(null);
+          setPaidResultsError(
+            "Paid diagnostic results do not match the durable execution status."
+          );
+          return;
+        }
+
+        setPaidResults(result);
+      } catch (caught) {
+        if (
+          caught instanceof DOMException &&
+          caught.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (
+          controller.signal.aborted
+        ) {
+          return;
+        }
+
+        setPaidResults(null);
+
+        if (
+          caught instanceof
+          GovernanceAssessmentApiError
+        ) {
+          setPaidResultsError(
+            `Paid diagnostic results unavailable. Backend returned ${caught.status}.`
+          );
+        } else {
+          setPaidResultsError(
+            "Paid diagnostic results could not be loaded."
+          );
+        }
+      } finally {
+        if (
+          !controller.signal.aborted
+        ) {
+          setPaidResultsLoading(false);
+        }
+      }
+    }
+
+    void loadPaidResults();
+
+    return () =>
+      controller.abort();
+  }, [
+    config,
+    identity,
+    diagnosticDisposition
+  ]);
+
+  const intakeQualityArtifact = findArtifact(
     artifacts,
     "evidence-quality"
   );
+
+  const paidArtifactProjection:
+    AssessmentArtifactProjectionList | null =
+    paidResults
+      ? {
+          items:
+            paidResults.result_artifacts
+        }
+      : null;
+
+  const qualityArtifact = findArtifact(
+    paidArtifactProjection,
+    "evidence-quality"
+  );
   const frictionArtifact = findArtifact(
-    artifacts,
+    paidArtifactProjection,
     "friction-summary"
   );
   const debtArtifact = findArtifact(
-    artifacts,
+    paidArtifactProjection,
     "governance-debt-score"
   );
   const interventionArtifact = findArtifact(
-    artifacts,
+    paidArtifactProjection,
     "intervention-plan"
   );
   const roadmapArtifact = findArtifact(
-    artifacts,
+    paidArtifactProjection,
     "assessment-roadmap"
   );
   const projectionArtifact = findArtifact(
-    artifacts,
+    paidArtifactProjection,
     "executive-projection"
   );
 
@@ -1019,6 +1158,12 @@ export default function AssessmentDetailPage() {
 
   const readyForAnalysis =
     booleanValue(
+      intakeQualityArtifact?.payload,
+      "ready_for_analysis"
+    ) ?? false;
+
+  const paidEvidenceQualityReady =
+    booleanValue(
       qualityArtifact?.payload,
       "ready_for_analysis"
     ) ?? false;
@@ -1033,11 +1178,12 @@ const interventionPrioritiesReady =
   priorities.length > 0;
 
 const repositoryIntegrityReady =
-  summary?.repository_chain_valid === true &&
-  summary.artifact_count === artifacts?.count;
+  paidResults?.repository_chain_valid === true &&
+  paidResults.artifact_count === 10 &&
+  paidResults.artifact_inventory.length === 10;
 
 const clientReportArtifact = findArtifact(
-  artifacts,
+  paidArtifactProjection,
   CLIENT_REPORT_ARTIFACT_TYPE
 );
 
@@ -1104,6 +1250,8 @@ const readinessItems: AssessmentReadinessItem[] = [
 ];
 
   const findingsReady =
+    !paidResultsLoading &&
+    paidEvidenceQualityReady &&
     Boolean(projectionArtifact) &&
     findings.length > 0;
 
@@ -1504,7 +1652,8 @@ const readinessItems: AssessmentReadinessItem[] = [
         response.result.disposition
       );
 
-      await loadAssessment();
+      // The paid-results effect now reloads the canonical PA015
+      // projection after the durable disposition changes.
 
     } catch (caught) {
       if (
@@ -1714,6 +1863,23 @@ const readinessItems: AssessmentReadinessItem[] = [
                 </section>
               )}
 
+              {paidResultsError && (
+                <section
+                  className="error-panel"
+                  role="alert"
+                >
+                  <div>
+                    <p className="error-title">
+                      Paid diagnostic results unavailable
+                    </p>
+
+                    <p>
+                      {paidResultsError}
+                    </p>
+                  </div>
+                </section>
+              )}
+
               {diagnosticExecutionError && (
                 <section
                   className="error-panel"
@@ -1802,8 +1968,10 @@ const readinessItems: AssessmentReadinessItem[] = [
 
                 <ResultMetric
                   label="Artifacts"
-                  value={summary.artifact_count}
-                  detail="Verified result records"
+                  value={
+                    paidResults?.artifact_count ?? 0
+                  }
+                  detail="Canonical paid artifacts"
                 />
               </section>
 
@@ -1867,7 +2035,7 @@ const readinessItems: AssessmentReadinessItem[] = [
     findings
   }
   readyForAnalysis={
-    readyForAnalysis
+    paidEvidenceQualityReady
   }
   evidenceHref={
     evidenceHref

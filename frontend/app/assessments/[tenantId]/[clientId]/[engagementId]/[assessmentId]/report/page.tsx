@@ -15,12 +15,11 @@ import {
   ReportDeliveryPanel
 } from "@/components/report-delivery-panel";
 import {
-  extractClientReport,
   fetchAssessment,
-  fetchAssessmentArtifacts,
+  fetchPaidAssessmentResults,
   getGovernanceAssessmentApiConfig,
   GovernanceAssessmentApiError,
-  type GovernanceAssessmentArtifactList,
+  type CommercialPaidAssessmentResultsResponse,
   type GovernanceAssessmentClientReport,
   type GovernanceAssessmentIdentity,
   type GovernanceAssessmentRecord,
@@ -46,6 +45,35 @@ function reportErrorMessage(
 
   return "The client report could not be loaded.";
 }
+
+function extractPaidClientReport(
+  results: CommercialPaidAssessmentResultsResponse
+): GovernanceAssessmentClientReport | null {
+  const artifact = results.result_artifacts.find(
+    (item) =>
+      item.artifact_type === "client-report-package"
+  );
+
+  if (!artifact) {
+    return null;
+  }
+
+  const payload = artifact.payload;
+
+  if (
+    typeof payload.title !== "string" ||
+    typeof payload.report_id !== "string" ||
+    typeof payload.markdown !== "string" ||
+    !Array.isArray(payload.sections) ||
+    typeof payload.manifest !== "object" ||
+    payload.manifest === null
+  ) {
+    return null;
+  }
+
+  return payload as GovernanceAssessmentClientReport;
+}
+
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -189,8 +217,8 @@ export default function ClientReportPage() {
       null
     );
 
-  const [artifacts, setArtifacts] =
-    useState<GovernanceAssessmentArtifactList | null>(
+  const [paidResults, setPaidResults] =
+    useState<CommercialPaidAssessmentResultsResponse | null>(
       null
     );
 
@@ -213,14 +241,14 @@ export default function ClientReportPage() {
       try {
         const [
           assessmentResult,
-          artifactResult
+          paidResultsResult
         ] = await Promise.all([
           fetchAssessment(
             config,
             identity,
             signal
           ),
-          fetchAssessmentArtifacts(
+          fetchPaidAssessmentResults(
             config,
             identity,
             signal
@@ -228,16 +256,18 @@ export default function ClientReportPage() {
         ]);
 
         const reportResult =
-          extractClientReport(artifactResult);
+          extractPaidClientReport(
+            paidResultsResult
+          );
 
         if (!reportResult) {
           throw new Error(
-            "Client report package missing"
+            "Governed paid client report package missing"
           );
         }
 
         setAssessment(assessmentResult);
-        setArtifacts(artifactResult);
+        setPaidResults(paidResultsResult);
         setReport(reportResult);
       } catch (caught) {
         if (
@@ -351,7 +381,7 @@ export default function ClientReportPage() {
         {!error &&
           !loading &&
           assessment &&
-          artifacts &&
+          paidResults &&
           report && (
             <article className="client-report">
               <header className="client-report-cover">
@@ -430,8 +460,8 @@ export default function ClientReportPage() {
                   </span>
 
                   <span>
-                    {artifacts.count} evidence-bound
-                    artifacts
+                    {paidResults.artifact_count} canonical
+                    paid artifacts
                   </span>
                 </div>
               </header>

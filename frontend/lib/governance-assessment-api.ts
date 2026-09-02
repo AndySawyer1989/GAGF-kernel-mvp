@@ -1793,3 +1793,531 @@ export async function fetchPaidAssessmentExecutionStatus(
   };
 }
 
+export type CommercialPaidAssessmentResultsInventoryItem = {
+  artifact_id: string;
+  artifact_type: string;
+  artifact_hash: string;
+  sequence_number: number;
+  chain_hash: string;
+  schema_version: string;
+};
+
+export type CommercialPaidAssessmentResultArtifact = {
+  artifact_id: string;
+  artifact_type: string;
+  artifact_hash: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  sequence_number: number;
+  previous_artifact_hash: string | null;
+  chain_hash: string;
+  schema_version: string;
+};
+
+export type CommercialPaidAssessmentResultsResponse = {
+  read_model_type: string;
+  version: string;
+  schema_version: string;
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  assessment_name: string;
+  hierarchy_key: string;
+  execution_disposition:
+    CommercialPaidAssessmentDisposition;
+  execution_status_hash: string;
+  execution_input_binding_hash: string;
+  assessment_execution_request_hash: string;
+  artifact_count: number;
+  repository_chain_valid: true;
+  artifact_inventory:
+    CommercialPaidAssessmentResultsInventoryItem[];
+  result_artifacts:
+    CommercialPaidAssessmentResultArtifact[];
+  boundaries: {
+    read_model_is_read_only: true;
+    read_model_is_not_execution_authority: true;
+    read_model_is_not_recovery_authority: true;
+    read_model_is_not_delivery_approval: true;
+    repository_path_not_exposed: true;
+    raw_evidence_payloads_not_exposed: true;
+    evidence_intake_payload_not_exposed: true;
+    scope_configuration_payload_not_exposed: true;
+    result_payloads_are_canonical_paid_artifacts: true;
+  };
+};
+
+const PAID_RESULT_ARTIFACT_TYPES = [
+  "evidence-quality",
+  "friction-summary",
+  "governance-debt-score",
+  "intervention-plan",
+  "assessment-roadmap",
+  "executive-projection",
+  "client-report-package",
+  "demonstration-manifest"
+] as const;
+
+const PAID_ARTIFACT_INVENTORY_TYPES = [
+  "scope-configuration",
+  "evidence-intake-batch",
+  ...PAID_RESULT_ARTIFACT_TYPES
+] as const;
+
+function paidResultsRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
+}
+
+function paidResultsString(
+  value: unknown,
+  field: string
+): string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0
+  ) {
+    throw new Error(
+      `Paid results ${field} is invalid`
+    );
+  }
+
+  return value;
+}
+
+function paidResultsInteger(
+  value: unknown,
+  field: string
+): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    throw new Error(
+      `Paid results ${field} is invalid`
+    );
+  }
+
+  return value;
+}
+
+function paidResultsDisposition(
+  value: unknown
+): CommercialPaidAssessmentDisposition {
+  if (
+    value !== "executed" &&
+    value !== "resumed" &&
+    value !== "reconciled"
+  ) {
+    throw new Error(
+      "Paid results execution disposition is invalid"
+    );
+  }
+
+  return value;
+}
+
+export async function fetchPaidAssessmentResults(
+  config: GovernanceAssessmentApiConfig,
+  identity: GovernanceAssessmentIdentity,
+  signal?: AbortSignal
+): Promise<CommercialPaidAssessmentResultsResponse> {
+  const hierarchySegments = [
+    identity.tenantId,
+    identity.clientId,
+    identity.engagementId,
+    identity.assessmentId
+  ];
+
+  const expectedHierarchy =
+    hierarchySegments.join("/");
+
+  const url = new URL(
+    (
+      "/api/v1/governance-paid-assessments/"
+      + hierarchySegments
+        .map(encodeURIComponent)
+        .join("/")
+      + "/results"
+    ),
+    config.baseUrl
+  );
+
+  const response = await fetch(
+    url,
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  const payload =
+    await readAssessmentResponse<
+      Record<string, unknown>
+    >(
+      response,
+      "Paid assessment results request"
+    );
+
+  const hierarchyKey =
+    paidResultsString(
+      payload.hierarchy_key,
+      "hierarchy_key"
+    );
+
+  if (
+    hierarchyKey !== expectedHierarchy
+  ) {
+    throw new Error(
+      "Paid results hierarchy mismatch"
+    );
+  }
+
+  if (
+    payload.tenant_id !==
+      identity.tenantId ||
+    payload.client_id !==
+      identity.clientId ||
+    payload.engagement_id !==
+      identity.engagementId ||
+    payload.assessment_id !==
+      identity.assessmentId
+  ) {
+    throw new Error(
+      "Paid results hierarchy fields mismatch"
+    );
+  }
+
+  if (
+    payload.repository_chain_valid !== true
+  ) {
+    throw new Error(
+      "Paid results repository chain is not valid"
+    );
+  }
+
+  const artifactCount =
+    paidResultsInteger(
+      payload.artifact_count,
+      "artifact_count"
+    );
+
+  if (
+    artifactCount !== 10
+  ) {
+    throw new Error(
+      "Paid results artifact count is invalid"
+    );
+  }
+
+  if (
+    !Array.isArray(
+      payload.artifact_inventory
+    ) ||
+    payload.artifact_inventory.length
+      !== 10
+  ) {
+    throw new Error(
+      "Paid results artifact inventory is invalid"
+    );
+  }
+
+  const inventory =
+    payload.artifact_inventory.map(
+      (item, index) => {
+        if (
+          !paidResultsRecord(item)
+        ) {
+          throw new Error(
+            "Paid results inventory item is invalid"
+          );
+        }
+
+        const artifactType =
+          paidResultsString(
+            item.artifact_type,
+            "artifact_inventory.artifact_type"
+          );
+
+        if (
+          artifactType !==
+          PAID_ARTIFACT_INVENTORY_TYPES[
+            index
+          ]
+        ) {
+          throw new Error(
+            "Paid results artifact inventory order is invalid"
+          );
+        }
+
+        const sequenceNumber =
+          paidResultsInteger(
+            item.sequence_number,
+            "artifact_inventory.sequence_number"
+          );
+
+        if (
+          sequenceNumber !==
+          index + 1
+        ) {
+          throw new Error(
+            "Paid results artifact sequence is invalid"
+          );
+        }
+
+        return {
+          artifact_id:
+            paidResultsString(
+              item.artifact_id,
+              "artifact_inventory.artifact_id"
+            ),
+          artifact_type:
+            artifactType,
+          artifact_hash:
+            paidResultsString(
+              item.artifact_hash,
+              "artifact_inventory.artifact_hash"
+            ),
+          sequence_number:
+            sequenceNumber,
+          chain_hash:
+            paidResultsString(
+              item.chain_hash,
+              "artifact_inventory.chain_hash"
+            ),
+          schema_version:
+            paidResultsString(
+              item.schema_version,
+              "artifact_inventory.schema_version"
+            )
+        };
+      }
+    );
+
+  if (
+    !Array.isArray(
+      payload.result_artifacts
+    ) ||
+    payload.result_artifacts.length
+      !==
+      PAID_RESULT_ARTIFACT_TYPES.length
+  ) {
+    throw new Error(
+      "Paid results artifact projection is invalid"
+    );
+  }
+
+  const resultArtifacts =
+    payload.result_artifacts.map(
+      (item, index) => {
+        if (
+          !paidResultsRecord(item)
+        ) {
+          throw new Error(
+            "Paid result artifact is invalid"
+          );
+        }
+
+        const artifactType =
+          paidResultsString(
+            item.artifact_type,
+            "result_artifacts.artifact_type"
+          );
+
+        if (
+          artifactType !==
+          PAID_RESULT_ARTIFACT_TYPES[
+            index
+          ]
+        ) {
+          throw new Error(
+            "Paid result artifact order is invalid"
+          );
+        }
+
+        if (
+          !paidResultsRecord(
+            item.payload
+          )
+        ) {
+          throw new Error(
+            "Paid result artifact payload is invalid"
+          );
+        }
+
+        const previousArtifactHash =
+          item.previous_artifact_hash;
+
+        if (
+          previousArtifactHash !== null &&
+          (
+            typeof previousArtifactHash
+              !== "string" ||
+            previousArtifactHash.length
+              === 0
+          )
+        ) {
+          throw new Error(
+            "Paid result previous artifact hash is invalid"
+          );
+        }
+
+        return {
+          artifact_id:
+            paidResultsString(
+              item.artifact_id,
+              "result_artifacts.artifact_id"
+            ),
+          artifact_type:
+            artifactType,
+          artifact_hash:
+            paidResultsString(
+              item.artifact_hash,
+              "result_artifacts.artifact_hash"
+            ),
+          payload:
+            item.payload,
+          created_at:
+            paidResultsString(
+              item.created_at,
+              "result_artifacts.created_at"
+            ),
+          sequence_number:
+            paidResultsInteger(
+              item.sequence_number,
+              "result_artifacts.sequence_number"
+            ),
+          previous_artifact_hash:
+            previousArtifactHash,
+          chain_hash:
+            paidResultsString(
+              item.chain_hash,
+              "result_artifacts.chain_hash"
+            ),
+          schema_version:
+            paidResultsString(
+              item.schema_version,
+              "result_artifacts.schema_version"
+            )
+        };
+      }
+    );
+
+  if (
+    !paidResultsRecord(
+      payload.boundaries
+    )
+  ) {
+    throw new Error(
+      "Paid results boundaries are invalid"
+    );
+  }
+
+  const requiredBoundaries = [
+    "read_model_is_read_only",
+    "read_model_is_not_execution_authority",
+    "read_model_is_not_recovery_authority",
+    "read_model_is_not_delivery_approval",
+    "repository_path_not_exposed",
+    "raw_evidence_payloads_not_exposed",
+    "evidence_intake_payload_not_exposed",
+    "scope_configuration_payload_not_exposed",
+    "result_payloads_are_canonical_paid_artifacts"
+  ] as const;
+
+  for (
+    const boundary
+    of requiredBoundaries
+  ) {
+    if (
+      payload.boundaries[
+        boundary
+      ] !== true
+    ) {
+      throw new Error(
+        `Paid results boundary ${boundary} is invalid`
+      );
+    }
+  }
+
+  return {
+    read_model_type:
+      paidResultsString(
+        payload.read_model_type,
+        "read_model_type"
+      ),
+    version:
+      paidResultsString(
+        payload.version,
+        "version"
+      ),
+    schema_version:
+      paidResultsString(
+        payload.schema_version,
+        "schema_version"
+      ),
+    tenant_id:
+      identity.tenantId,
+    client_id:
+      identity.clientId,
+    engagement_id:
+      identity.engagementId,
+    assessment_id:
+      identity.assessmentId,
+    assessment_name:
+      paidResultsString(
+        payload.assessment_name,
+        "assessment_name"
+      ),
+    hierarchy_key:
+      hierarchyKey,
+    execution_disposition:
+      paidResultsDisposition(
+        payload.execution_disposition
+      ),
+    execution_status_hash:
+      paidResultsString(
+        payload.execution_status_hash,
+        "execution_status_hash"
+      ),
+    execution_input_binding_hash:
+      paidResultsString(
+        payload.execution_input_binding_hash,
+        "execution_input_binding_hash"
+      ),
+    assessment_execution_request_hash:
+      paidResultsString(
+        payload.assessment_execution_request_hash,
+        "assessment_execution_request_hash"
+      ),
+    artifact_count:
+      artifactCount,
+    repository_chain_valid:
+      true,
+    artifact_inventory:
+      inventory,
+    result_artifacts:
+      resultArtifacts,
+    boundaries: {
+      read_model_is_read_only: true,
+      read_model_is_not_execution_authority: true,
+      read_model_is_not_recovery_authority: true,
+      read_model_is_not_delivery_approval: true,
+      repository_path_not_exposed: true,
+      raw_evidence_payloads_not_exposed: true,
+      evidence_intake_payload_not_exposed: true,
+      scope_configuration_payload_not_exposed: true,
+      result_payloads_are_canonical_paid_artifacts: true
+    }
+  };
+}
+

@@ -30,9 +30,13 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution_input_bind
 from backend.app.gagf.governance_commercial_paid_assessment_execution_status import (
     CommercialPaidAssessmentExecutionStatusError,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_results_read_model import (
+    CommercialPaidAssessmentResultsReadModelError,
+    GovernanceCommercialPaidAssessmentResultsReadModelService,
+)
 
 
-COMMERCIAL_PAID_ASSESSMENT_API_VERSION = "0.5.0"
+COMMERCIAL_PAID_ASSESSMENT_API_VERSION = "0.6.0"
 
 COMMERCIAL_PAID_ASSESSMENT_API_PREFIX = (
     "/api/v1/governance-paid-assessments"
@@ -509,8 +513,19 @@ def create_governance_commercial_paid_assessment_router(
     execution_input_binding_service: (
         GovernanceCommercialPaidAssessmentExecutionInputBindingService
     ),
+    results_read_model_service: (
+        GovernanceCommercialPaidAssessmentResultsReadModelService | None
+    ) = None,
     dependencies: list[Any] | None = None,
 ) -> APIRouter:
+    resolved_results_read_model_service = (
+        results_read_model_service
+        if results_read_model_service is not None
+        else GovernanceCommercialPaidAssessmentResultsReadModelService(
+            execution_service=service
+        )
+    )
+
     router = APIRouter(
         prefix=(
             COMMERCIAL_PAID_ASSESSMENT_API_PREFIX
@@ -735,6 +750,47 @@ def create_governance_commercial_paid_assessment_router(
                     code=(
                         "COMMERCIAL_PAID_ASSESSMENT_"
                         "EXECUTION_STATUS_ERROR"
+                    ),
+                    message=str(exc),
+                ),
+            ) from exc
+
+    @router.get(
+        (
+            "/{tenant_id}/{client_id}/"
+            "{engagement_id}/{assessment_id}/"
+            "results"
+        )
+    )
+    def get_paid_assessment_results(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> dict[str, Any]:
+        try:
+            read_model = (
+                resolved_results_read_model_service.read(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    engagement_id=engagement_id,
+                    assessment_id=assessment_id,
+                )
+            )
+
+            return read_model.to_dict()
+
+        except (
+            CommercialPaidAssessmentResultsReadModelError
+        ) as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_409_CONFLICT
+                ),
+                detail=error_detail(
+                    code=(
+                        "COMMERCIAL_PAID_ASSESSMENT_"
+                        "RESULTS_READ_MODEL_ERROR"
                     ),
                     message=str(exc),
                 ),
