@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import hashlib
 from datetime import date
@@ -551,4 +551,3 @@ def test_changed_binding_hash_cannot_replace_existing_status(
                 "different-binding-hash"
             ),
         )
-
