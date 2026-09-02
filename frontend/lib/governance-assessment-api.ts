@@ -1483,4 +1483,313 @@ export async function fetchSignedAuditCheckpointVerificationRecords(
     GovernanceAssessmentSignedCheckpointVerificationList
   >(response, "Signed audit checkpoint verification request");
 }
+export type CommercialPaidAssessmentExecutionStatusMetadata = {
+  disposition: CommercialPaidAssessmentDisposition;
+  artifact_count_before: number;
+  artifact_count_after: number;
+  attempt_hash: string;
+  attempt_record_hash: string;
+  assessment_execution_request_hash: string;
+  execution_input_binding_hash: string;
+  status_recorded_at: string;
+  schema_version: string;
+};
+
+export type CommercialPaidAssessmentExecutionStatusResponse = {
+  found: boolean;
+  hierarchy_key: string;
+  status:
+    | CommercialPaidAssessmentExecutionStatusMetadata
+    | null;
+  boundaries: {
+    status_is_read_only: boolean;
+    status_is_not_execution_authority: boolean;
+    status_is_not_recovery_authority: boolean;
+    raw_execution_evidence_not_exposed: boolean;
+    browser_cannot_select_execution_repository: boolean;
+  };
+};
+
+function paidExecutionStatusRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
+}
+
+function paidExecutionStatusString(
+  value: unknown,
+  field: string
+): string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0
+  ) {
+    throw new Error(
+      `Paid execution status ${field} is invalid`
+    );
+  }
+
+  return value;
+}
+
+function paidExecutionStatusNumber(
+  value: unknown,
+  field: string
+): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    throw new Error(
+      `Paid execution status ${field} is invalid`
+    );
+  }
+
+  return value;
+}
+
+function paidExecutionDisposition(
+  value: unknown
+): CommercialPaidAssessmentDisposition {
+  if (
+    value !== "executed" &&
+    value !== "resumed" &&
+    value !== "reconciled"
+  ) {
+    throw new Error(
+      "Paid execution status disposition is invalid"
+    );
+  }
+
+  return value;
+}
+
+export async function fetchPaidAssessmentExecutionStatus(
+  config: GovernanceAssessmentApiConfig,
+  identity: GovernanceAssessmentIdentity,
+  signal?: AbortSignal
+): Promise<CommercialPaidAssessmentExecutionStatusResponse> {
+  const hierarchySegments = [
+    identity.tenantId,
+    identity.clientId,
+    identity.engagementId,
+    identity.assessmentId
+  ];
+
+  const expectedHierarchy =
+    hierarchySegments.join("/");
+
+  const encodedSegments =
+    hierarchySegments.map(
+      encodeURIComponent
+    );
+
+  const url = new URL(
+    (
+      "/api/v1/governance-paid-assessments/"
+      + encodedSegments.join("/")
+      + "/execution-status"
+    ),
+    config.baseUrl
+  );
+
+  const response = await fetch(
+    url,
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  const payload =
+    await readAssessmentResponse<
+      Record<string, unknown>
+    >(
+      response,
+      "Paid assessment execution status request"
+    );
+
+  if (
+    typeof payload.found !== "boolean"
+  ) {
+    throw new Error(
+      "Paid execution status found flag is invalid"
+    );
+  }
+
+  const hierarchyKey =
+    paidExecutionStatusString(
+      payload.hierarchy_key,
+      "hierarchy_key"
+    );
+
+  if (
+    hierarchyKey !== expectedHierarchy
+  ) {
+    throw new Error(
+      "Paid execution status hierarchy mismatch"
+    );
+  }
+
+  if (
+    !paidExecutionStatusRecord(
+      payload.boundaries
+    )
+  ) {
+    throw new Error(
+      "Paid execution status boundaries are invalid"
+    );
+  }
+
+  const boundaries =
+    payload.boundaries;
+
+  const requiredBoundaries = [
+    "status_is_read_only",
+    "status_is_not_execution_authority",
+    "status_is_not_recovery_authority",
+    "raw_execution_evidence_not_exposed",
+    "browser_cannot_select_execution_repository"
+  ] as const;
+
+  for (
+    const boundary
+    of requiredBoundaries
+  ) {
+    if (
+      boundaries[boundary] !== true
+    ) {
+      throw new Error(
+        `Paid execution status boundary ${boundary} is invalid`
+      );
+    }
+  }
+
+  const validatedBoundaries = {
+    status_is_read_only: true,
+    status_is_not_execution_authority: true,
+    status_is_not_recovery_authority: true,
+    raw_execution_evidence_not_exposed: true,
+    browser_cannot_select_execution_repository: true
+  };
+
+  if (
+    payload.found === false
+  ) {
+    if (
+      payload.status !== null
+    ) {
+      throw new Error(
+        "Missing paid execution status must return null status"
+      );
+    }
+
+    return {
+      found: false,
+      hierarchy_key: hierarchyKey,
+      status: null,
+      boundaries: validatedBoundaries
+    };
+  }
+
+  if (
+    !paidExecutionStatusRecord(
+      payload.status
+    )
+  ) {
+    throw new Error(
+      "Paid execution status payload is invalid"
+    );
+  }
+
+  const statusPayload =
+    payload.status;
+
+  const artifactCountBefore =
+    paidExecutionStatusNumber(
+      statusPayload.artifact_count_before,
+      "artifact_count_before"
+    );
+
+  const artifactCountAfter =
+    paidExecutionStatusNumber(
+      statusPayload.artifact_count_after,
+      "artifact_count_after"
+    );
+
+  if (
+    artifactCountAfter <
+    artifactCountBefore
+  ) {
+    throw new Error(
+      "Paid execution status artifact count regressed"
+    );
+  }
+
+  const statusMetadata:
+    CommercialPaidAssessmentExecutionStatusMetadata = {
+      disposition:
+        paidExecutionDisposition(
+          statusPayload.disposition
+        ),
+
+      artifact_count_before:
+        artifactCountBefore,
+
+      artifact_count_after:
+        artifactCountAfter,
+
+      attempt_hash:
+        paidExecutionStatusString(
+          statusPayload.attempt_hash,
+          "attempt_hash"
+        ),
+
+      attempt_record_hash:
+        paidExecutionStatusString(
+          statusPayload.attempt_record_hash,
+          "attempt_record_hash"
+        ),
+
+      assessment_execution_request_hash:
+        paidExecutionStatusString(
+          statusPayload
+            .assessment_execution_request_hash,
+          "assessment_execution_request_hash"
+        ),
+
+      execution_input_binding_hash:
+        paidExecutionStatusString(
+          statusPayload
+            .execution_input_binding_hash,
+          "execution_input_binding_hash"
+        ),
+
+      status_recorded_at:
+        paidExecutionStatusString(
+          statusPayload.status_recorded_at,
+          "status_recorded_at"
+        ),
+
+      schema_version:
+        paidExecutionStatusString(
+          statusPayload.schema_version,
+          "schema_version"
+        )
+    };
+
+  return {
+    found: true,
+    hierarchy_key: hierarchyKey,
+    status: statusMetadata,
+    boundaries: validatedBoundaries
+  };
+}
 

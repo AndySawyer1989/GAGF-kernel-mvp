@@ -49,6 +49,7 @@ import {
   fetchAssessmentArtifacts,
   fetchAssessmentSummary,
   fetchPaidAssessmentExecutionInputBinding,
+  fetchPaidAssessmentExecutionStatus,
   getGovernanceAssessmentApiConfig,
   GovernanceAssessmentApiError,
   type CommercialPaidAssessmentDisposition,
@@ -311,6 +312,20 @@ export default function AssessmentDetailPage() {
       null
     );
 
+  const [
+    executionStatusLoading,
+    setExecutionStatusLoading
+  ] =
+    useState(true);
+
+  const [
+    executionStatusError,
+    setExecutionStatusError
+  ] =
+    useState<string | null>(
+      null
+    );
+
   const loadAssessment = useCallback(
     async (signal?: AbortSignal) => {
       setLoading(true);
@@ -443,6 +458,87 @@ export default function AssessmentDetailPage() {
     }
 
     void loadExecutionBinding();
+
+    return () =>
+      controller.abort();
+  }, [config, identity]);
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function loadExecutionStatus() {
+      setExecutionStatusLoading(true);
+      setExecutionStatusError(null);
+
+      try {
+        const result =
+          await fetchPaidAssessmentExecutionStatus(
+            config,
+            identity,
+            controller.signal
+          );
+
+        if (
+          controller.signal.aborted
+        ) {
+          return;
+        }
+
+        if (
+          result.found &&
+          result.status !== null
+        ) {
+          setDiagnosticDisposition(
+            result.status.disposition
+          );
+        } else {
+          setDiagnosticDisposition(
+            null
+          );
+        }
+      } catch (caught) {
+        if (
+          caught instanceof DOMException &&
+          caught.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (
+          controller.signal.aborted
+        ) {
+          return;
+        }
+
+        setDiagnosticDisposition(
+          null
+        );
+
+        if (
+          caught instanceof
+          GovernanceAssessmentApiError
+        ) {
+          setExecutionStatusError(
+            `Paid execution status unavailable. Backend returned ${caught.status}.`
+          );
+        } else {
+          setExecutionStatusError(
+            "Paid execution status could not be loaded."
+          );
+        }
+      } finally {
+        if (
+          !controller.signal.aborted
+        ) {
+          setExecutionStatusLoading(
+            false
+          );
+        }
+      }
+    }
+
+    void loadExecutionStatus();
 
     return () =>
       controller.abort();
@@ -1164,6 +1260,7 @@ const readinessItems: AssessmentReadinessItem[] = [
     readyForAnalysis &&
     executionAuthorizationComplete &&
     !bindingLoading &&
+    !executionStatusLoading &&
     !diagnosticRunning &&
     !paidDiagnosticComplete;
 
@@ -1600,6 +1697,23 @@ const readinessItems: AssessmentReadinessItem[] = [
                 </section>
               )}
 
+              {executionStatusError && (
+                <section
+                  className="error-panel"
+                  role="alert"
+                >
+                  <div>
+                    <p className="error-title">
+                      Paid execution status unavailable
+                    </p>
+
+                    <p>
+                      {executionStatusError}
+                    </p>
+                  </div>
+                </section>
+              )}
+
               {diagnosticExecutionError && (
                 <section
                   className="error-panel"
@@ -1626,6 +1740,7 @@ const readinessItems: AssessmentReadinessItem[] = [
                 }
                 disabled={
                   bindingLoading ||
+                  executionStatusLoading ||
                   diagnosticRunning ||
                   paidDiagnosticComplete
                 }

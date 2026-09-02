@@ -27,9 +27,12 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution_input_bind
     CommercialPaidAssessmentExecutionInputBindingError,
     GovernanceCommercialPaidAssessmentExecutionInputBindingService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_execution_status import (
+    CommercialPaidAssessmentExecutionStatusError,
+)
 
 
-COMMERCIAL_PAID_ASSESSMENT_API_VERSION = "0.4.0"
+COMMERCIAL_PAID_ASSESSMENT_API_VERSION = "0.5.0"
 
 COMMERCIAL_PAID_ASSESSMENT_API_PREFIX = (
     "/api/v1/governance-paid-assessments"
@@ -582,6 +585,161 @@ def create_governance_commercial_paid_assessment_router(
                 ),
             ) from exc
 
+    @router.get(
+        (
+            "/{tenant_id}/{client_id}/"
+            "{engagement_id}/{assessment_id}/"
+            "execution-status"
+        )
+    )
+    def get_execution_status(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> dict[str, Any]:
+        hierarchy_key = "/".join(
+            (
+                tenant_id,
+                client_id,
+                engagement_id,
+                assessment_id,
+            )
+        )
+
+        boundaries = {
+            "status_is_read_only": True,
+            "status_is_not_execution_authority": True,
+            "status_is_not_recovery_authority": True,
+            "raw_execution_evidence_not_exposed": True,
+            "browser_cannot_select_execution_repository": True,
+        }
+
+        try:
+            execution_status = (
+                service.status_store.get_status(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    engagement_id=engagement_id,
+                    assessment_id=assessment_id,
+                )
+            )
+
+            if execution_status is None:
+                return {
+                    "found": False,
+                    "hierarchy_key": hierarchy_key,
+                    "status": None,
+                    "boundaries": boundaries,
+                }
+
+            if (
+                execution_status.hierarchy_key
+                != hierarchy_key
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionStatusError(
+                        "stored execution-status hierarchy mismatch"
+                    )
+                )
+
+            binding = (
+                execution_input_binding_service.get(
+                    hierarchy_key=hierarchy_key
+                )
+            )
+
+            if (
+                binding.hierarchy_key
+                != hierarchy_key
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionStatusError(
+                        "execution-input binding hierarchy mismatch "
+                        "for stored execution status"
+                    )
+                )
+
+            if (
+                execution_status.execution_input_binding_hash
+                != binding.binding_hash
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionStatusError(
+                        "stored execution-status binding hash "
+                        "does not match immutable execution input"
+                    )
+                )
+
+            if (
+                execution_status.assessment_execution_request_hash
+                != binding.assessment_execution_request_hash
+            ):
+                raise (
+                    CommercialPaidAssessmentExecutionStatusError(
+                        "stored execution-status request hash "
+                        "does not match immutable execution input"
+                    )
+                )
+
+            status_payload = execution_status.to_dict()
+
+            return {
+                "found": True,
+                "hierarchy_key": hierarchy_key,
+                "status": {
+                    "disposition": (
+                        status_payload["disposition"]
+                    ),
+                    "artifact_count_before": (
+                        status_payload["artifact_count_before"]
+                    ),
+                    "artifact_count_after": (
+                        status_payload["artifact_count_after"]
+                    ),
+                    "attempt_hash": (
+                        status_payload["attempt_hash"]
+                    ),
+                    "attempt_record_hash": (
+                        status_payload["attempt_record_hash"]
+                    ),
+                    "assessment_execution_request_hash": (
+                        status_payload[
+                            "assessment_execution_request_hash"
+                        ]
+                    ),
+                    "execution_input_binding_hash": (
+                        status_payload[
+                            "execution_input_binding_hash"
+                        ]
+                    ),
+                    "status_recorded_at": (
+                        status_payload["status_recorded_at"]
+                    ),
+                    "schema_version": (
+                        status_payload["schema_version"]
+                    ),
+                },
+                "boundaries": boundaries,
+            }
+
+        except (
+            CommercialPaidAssessmentExecutionInputBindingError,
+            CommercialPaidAssessmentExecutionStatusError,
+        ) as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_409_CONFLICT
+                ),
+                detail=error_detail(
+                    code=(
+                        "COMMERCIAL_PAID_ASSESSMENT_"
+                        "EXECUTION_STATUS_ERROR"
+                    ),
+                    message=str(exc),
+                ),
+            ) from exc
+
     @router.post(
         "/execute",
         status_code=(
@@ -671,7 +829,10 @@ def create_governance_commercial_paid_assessment_router(
             )
 
             result = service.execute(
-                execution_input=execution_input
+                execution_input=execution_input,
+                execution_input_binding_hash=(
+                    binding.binding_hash
+                ),
             )
 
             return {

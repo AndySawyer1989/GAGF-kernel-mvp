@@ -15,6 +15,10 @@ from backend.app.gagf.governance_commercial_paid_assessment_adapter import (
     CommercialPaidWorkAuthorizationInput,
     GovernanceCommercialPaidAssessmentAdapter,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_execution_status import (
+    CommercialPaidAssessmentExecutionStatusError,
+    GovernanceCommercialPaidAssessmentExecutionStatusStore,
+)
 from backend.app.gagf.governance_real_paid_assessment_authorization_bridge import (
     GovernanceRealPaidAssessmentAuthorizationBridgeService,
 )
@@ -30,7 +34,11 @@ from backend.app.gagf.governance_real_paid_assessment_readiness import (
 )
 
 
-COMMERCIAL_PAID_ASSESSMENT_EXECUTION_VERSION = "0.2.0"
+COMMERCIAL_PAID_ASSESSMENT_EXECUTION_VERSION = "0.3.0"
+
+COMMERCIAL_PAID_ASSESSMENT_EXECUTION_STATUS_DATABASE = (
+    "commercial-paid-assessment-execution-status.sqlite3"
+)
 
 
 class CommercialPaidAssessmentExecutionError(RuntimeError):
@@ -110,6 +118,9 @@ class GovernanceCommercialPaidAssessmentExecutionService:
     inside that directory so a fresh assessment is not mistaken for a
     recovery attempt belonging to another hierarchy.
 
+    Durable commercial execution status is recorded only after PA015
+    successfully returns.
+
     This service does not:
     - create paid-work authorization,
     - infer contract execution,
@@ -133,6 +144,10 @@ class GovernanceCommercialPaidAssessmentExecutionService:
         *,
         execution_directory: str | Path,
         adapter: GovernanceCommercialPaidAssessmentAdapter | None = None,
+        status_store: (
+            GovernanceCommercialPaidAssessmentExecutionStatusStore
+            | None
+        ) = None,
     ) -> None:
         directory = Path(execution_directory)
 
@@ -142,11 +157,27 @@ class GovernanceCommercialPaidAssessmentExecutionService:
             )
 
         self.execution_directory = directory
+
         self._adapter = (
             adapter
             if adapter is not None
             else GovernanceCommercialPaidAssessmentAdapter()
         )
+
+        self._status_store = (
+            status_store
+            if status_store is not None
+            else GovernanceCommercialPaidAssessmentExecutionStatusStore(
+                directory.parent
+                / COMMERCIAL_PAID_ASSESSMENT_EXECUTION_STATUS_DATABASE
+            )
+        )
+
+    @property
+    def status_store(
+        self,
+    ) -> GovernanceCommercialPaidAssessmentExecutionStatusStore:
+        return self._status_store
 
     def database_path_for_hierarchy(
         self,
@@ -165,7 +196,10 @@ class GovernanceCommercialPaidAssessmentExecutionService:
             )
         )
 
-        if "//" in hierarchy_key or hierarchy_key.startswith("/"):
+        if (
+            "//" in hierarchy_key
+            or hierarchy_key.startswith("/")
+        ):
             raise CommercialPaidAssessmentExecutionError(
                 "assessment hierarchy contains an empty identifier"
             )
@@ -206,6 +240,7 @@ class GovernanceCommercialPaidAssessmentExecutionService:
         self,
         *,
         execution_input: CommercialPaidAssessmentExecutionInput,
+        execution_input_binding_hash: str,
     ) -> RealPaidAssessmentExecutionRecoveryResult:
         if not isinstance(
             execution_input,
@@ -214,6 +249,17 @@ class GovernanceCommercialPaidAssessmentExecutionService:
             raise CommercialPaidAssessmentExecutionError(
                 "execution_input must be a "
                 "CommercialPaidAssessmentExecutionInput"
+            )
+
+        if (
+            not isinstance(
+                execution_input_binding_hash,
+                str,
+            )
+            or not execution_input_binding_hash.strip()
+        ):
+            raise CommercialPaidAssessmentExecutionError(
+                "execution_input_binding_hash must be non-empty"
             )
 
         try:
@@ -231,7 +277,9 @@ class GovernanceCommercialPaidAssessmentExecutionService:
             )
 
             if (
-                Path(intake.storage.repository_path)
+                Path(
+                    intake.storage.repository_path
+                )
                 != database_path
             ):
                 raise CommercialPaidAssessmentExecutionError(
@@ -277,9 +325,8 @@ class GovernanceCommercialPaidAssessmentExecutionService:
                 self._adapter.build_execution_evidence_approval(
                     payload=approval
                 )
-                for approval in (
-                    execution_input.execution_evidence_approvals
-                )
+                for approval
+                in execution_input.execution_evidence_approvals
             )
 
             evidence_binding = (
@@ -293,7 +340,7 @@ class GovernanceCommercialPaidAssessmentExecutionService:
                 )
             )
 
-            return (
+            result = (
                 GovernanceRealPaidAssessmentExecutionRecoveryService()
                 .execute(
                     database_path=database_path,
@@ -311,12 +358,66 @@ class GovernanceCommercialPaidAssessmentExecutionService:
                     ),
                 )
             )
+
+            status_record = (
+                self._status_store.build_status(
+                    tenant_id=(
+                        result.attempt.tenant_id
+                    ),
+                    client_id=(
+                        result.attempt.client_id
+                    ),
+                    engagement_id=(
+                        result.attempt.engagement_id
+                    ),
+                    assessment_id=(
+                        result.attempt.assessment_id
+                    ),
+                    disposition=(
+                        result.disposition
+                    ),
+                    attempt_hash=(
+                        result.attempt.attempt_hash
+                    ),
+                    attempt_record_hash=(
+                        result.attempt.record_hash
+                    ),
+                    assessment_execution_request_hash=(
+                        result.attempt
+                        .assessment_execution_request_hash
+                    ),
+                    execution_input_binding_hash=(
+                        execution_input_binding_hash
+                    ),
+                    artifact_count_before=(
+                        result.artifact_count_before
+                    ),
+                    artifact_count_after=(
+                        result.artifact_count_after
+                    ),
+                )
+            )
+
+            self._status_store.record_status(
+                status=status_record
+            )
+
+            return result
+
         except CommercialPaidAssessmentExecutionError:
             raise
+
         except CommercialPaidAssessmentAdapterError as exc:
             raise CommercialPaidAssessmentExecutionError(
                 f"commercial paid-assessment input is invalid: {exc}"
             ) from exc
+
+        except CommercialPaidAssessmentExecutionStatusError as exc:
+            raise CommercialPaidAssessmentExecutionError(
+                "governed paid-assessment execution completed but "
+                f"durable execution status failed: {exc}"
+            ) from exc
+
         except Exception as exc:
             raise CommercialPaidAssessmentExecutionError(
                 "governed commercial paid-assessment execution failed: "
