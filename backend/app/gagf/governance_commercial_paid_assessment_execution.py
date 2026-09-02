@@ -32,9 +32,12 @@ from backend.app.gagf.governance_real_paid_assessment_execution_recovery import 
 from backend.app.gagf.governance_real_paid_assessment_readiness import (
     GovernanceRealPaidAssessmentReadinessService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_execution_snapshot_bridge import (
+    CommercialPaidAssessmentExecutionSnapshotBridgeError,
+    GovernanceCommercialPaidAssessmentExecutionSnapshotBridgeService,
+)
 
-
-COMMERCIAL_PAID_ASSESSMENT_EXECUTION_VERSION = "0.3.0"
+COMMERCIAL_PAID_ASSESSMENT_EXECUTION_VERSION = "0.4.0"
 
 COMMERCIAL_PAID_ASSESSMENT_EXECUTION_STATUS_DATABASE = (
     "commercial-paid-assessment-execution-status.sqlite3"
@@ -397,9 +400,17 @@ class GovernanceCommercialPaidAssessmentExecutionService:
                     ),
                 )
             )
-
             self._status_store.record_status(
                 status=status_record
+            )
+
+            (
+                GovernanceCommercialPaidAssessmentExecutionSnapshotBridgeService(
+                    execution_service=self
+                )
+                .capture(
+                    result=result
+                )
             )
 
             return result
@@ -416,6 +427,15 @@ class GovernanceCommercialPaidAssessmentExecutionService:
             raise CommercialPaidAssessmentExecutionError(
                 "governed paid-assessment execution completed but "
                 f"durable execution status failed: {exc}"
+            ) from exc
+
+        except (
+            CommercialPaidAssessmentExecutionSnapshotBridgeError
+        ) as exc:
+            raise CommercialPaidAssessmentExecutionError(
+                "governed paid-assessment execution completed but "
+                "durable operator-result snapshot failed: "
+                f"{exc}"
             ) from exc
 
         except Exception as exc:

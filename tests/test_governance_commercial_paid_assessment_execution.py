@@ -45,6 +45,9 @@ CSV_TEXT = (
     "APPROVAL_DELAYED,120,Change Management,Operations\n"
 )
 
+BINDING_HASH = "b" * 64
+DIFFERENT_BINDING_HASH = "c" * 64
+
 
 def build_request() -> AssessmentExecutionRequest:
     context = CommercialHierarchyContext(
@@ -239,7 +242,7 @@ def test_service_rejects_wrong_execution_input_type(
     ):
         service.execute(
             execution_input=object(),  # type: ignore[arg-type]
-            execution_input_binding_hash="binding-hash-001",
+            execution_input_binding_hash=BINDING_HASH,
         )
 
 
@@ -267,7 +270,7 @@ def test_service_executes_new_governed_paid_assessment(
 
     result = service.execute(
         execution_input=execution_input,
-        execution_input_binding_hash="binding-hash-001",
+        execution_input_binding_hash=BINDING_HASH,
     )
 
     payload = result.to_dict()
@@ -310,11 +313,11 @@ def test_service_reconciles_exact_repeat(
 
     first = service.execute(
         execution_input=execution_input,
-        execution_input_binding_hash="binding-hash-001",
+        execution_input_binding_hash=BINDING_HASH,
     )
     second = service.execute(
         execution_input=execution_input,
-        execution_input_binding_hash="binding-hash-001",
+        execution_input_binding_hash=BINDING_HASH,
     )
 
     assert first.disposition == "executed"
@@ -394,7 +397,7 @@ def test_successful_execution_records_durable_status(
     result = service.execute(
         execution_input=execution_input,
         execution_input_binding_hash=(
-            "binding-hash-001"
+            BINDING_HASH
         ),
     )
 
@@ -429,7 +432,7 @@ def test_successful_execution_records_durable_status(
 
     assert (
         stored.execution_input_binding_hash
-        == "binding-hash-001"
+        == BINDING_HASH
     )
 
     assert stored.artifact_count_before == 0
@@ -466,14 +469,14 @@ def test_exact_repeat_updates_status_to_reconciled(
     service.execute(
         execution_input=execution_input,
         execution_input_binding_hash=(
-            "binding-hash-001"
+            BINDING_HASH
         ),
     )
 
     second = service.execute(
         execution_input=execution_input,
         execution_input_binding_hash=(
-            "binding-hash-001"
+            BINDING_HASH
         ),
     )
 
@@ -537,7 +540,7 @@ def test_changed_binding_hash_cannot_replace_existing_status(
     service.execute(
         execution_input=execution_input,
         execution_input_binding_hash=(
-            "binding-hash-001"
+            BINDING_HASH
         ),
     )
 
@@ -548,6 +551,7 @@ def test_changed_binding_hash_cannot_replace_existing_status(
         service.execute(
             execution_input=execution_input,
             execution_input_binding_hash=(
-                "different-binding-hash"
+                DIFFERENT_BINDING_HASH
             ),
         )
+

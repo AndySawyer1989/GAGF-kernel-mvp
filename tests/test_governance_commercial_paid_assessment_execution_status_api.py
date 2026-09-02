@@ -53,6 +53,13 @@ class FakePaidExecutionService:
         self.status_store = status_store
 
 
+class FakeResultsReadModelService:
+    def read(self, **_: object) -> object:
+        raise AssertionError(
+            "results read model must not be called by execution-status tests"
+        )
+
+
 HIERARCHY = (
     "tenant-001/"
     "client-001/"
@@ -107,6 +114,9 @@ def build_client(
             service=service,  # type: ignore[arg-type]
             execution_input_binding_service=(
                 binding_service  # type: ignore[arg-type]
+            ),
+            results_read_model_service=(
+                FakeResultsReadModelService()  # type: ignore[arg-type]
             ),
         )
     )
