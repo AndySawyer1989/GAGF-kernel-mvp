@@ -17,6 +17,10 @@ from backend.app.gagf.governance_commercial_paid_assessment_delivery_recording i
     CommercialPaidAssessmentDeliveryRecordingError,
     GovernanceCommercialPaidAssessmentDeliveryRecordingService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_delivery_status import (
+    CommercialPaidAssessmentDeliveryStatusError,
+    GovernanceCommercialPaidAssessmentDeliveryStatusService,
+)
 
 
 COMMERCIAL_PAID_ASSESSMENT_DELIVERY_API_ID = (
@@ -30,6 +34,18 @@ DELIVERY_API_PREFIX = "/api/v1/governance-paid-assessments"
 
 class DeliveryReadinessService(Protocol):
     def verify(
+        self,
+        *,
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> Any:
+        ...
+
+
+class DeliveryStatusService(Protocol):
+    def get_status(
         self,
         *,
         tenant_id: str,
@@ -104,6 +120,7 @@ def create_governance_commercial_paid_assessment_delivery_router(
     readiness_service: DeliveryReadinessService,
     approval_service: DeliveryApprovalService,
     recording_service: DeliveryRecordingService,
+    status_service: DeliveryStatusService,
 ) -> APIRouter:
     """
     Thin HTTP adapter over the already-authoritative 04F services.
@@ -120,6 +137,30 @@ def create_governance_commercial_paid_assessment_delivery_router(
     hierarchy_path = (
         "/{tenant_id}/{client_id}/{engagement_id}/{assessment_id}"
     )
+
+    @router.get(
+        hierarchy_path + "/delivery-status",
+    )
+    def get_delivery_status(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> dict[str, Any]:
+        try:
+            result = status_service.get_status(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                engagement_id=engagement_id,
+                assessment_id=assessment_id,
+            )
+        except CommercialPaidAssessmentDeliveryStatusError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=str(exc),
+            ) from exc
+
+        return _safe_result_dict(result)
 
     @router.get(
         hierarchy_path + "/delivery-readiness",
@@ -246,6 +287,7 @@ def build_governance_commercial_paid_assessment_delivery_router(
     readiness_service: GovernanceCommercialPaidAssessmentDeliveryReadinessService,
     approval_service: GovernanceCommercialPaidAssessmentDeliveryApprovalHandoffService,
     recording_service: GovernanceCommercialPaidAssessmentDeliveryRecordingService,
+    status_service: GovernanceCommercialPaidAssessmentDeliveryStatusService,
 ) -> APIRouter:
     """
     Production-typed wrapper used by application registration.
@@ -269,6 +311,15 @@ def build_governance_commercial_paid_assessment_delivery_router(
         )
 
     if not isinstance(
+        status_service,
+        GovernanceCommercialPaidAssessmentDeliveryStatusService,
+    ):
+        raise TypeError(
+            "status_service must be a "
+            "GovernanceCommercialPaidAssessmentDeliveryStatusService"
+        )
+
+    if not isinstance(
         recording_service,
         GovernanceCommercialPaidAssessmentDeliveryRecordingService,
     ):
@@ -281,6 +332,7 @@ def build_governance_commercial_paid_assessment_delivery_router(
         readiness_service=readiness_service,
         approval_service=approval_service,
         recording_service=recording_service,
+        status_service=status_service,
     )
 
 

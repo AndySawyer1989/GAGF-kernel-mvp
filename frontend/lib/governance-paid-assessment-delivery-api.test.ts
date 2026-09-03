@@ -12,6 +12,8 @@ import {
 
 import {
   approvePaidAssessmentDelivery,
+  fetchPaidAssessmentDeliveryStatus,
+  projectPaidAssessmentRecordedDelivery,
   fetchPaidAssessmentDeliveryReadiness,
   recordPaidAssessmentDelivery,
   type PaidAssessmentDeliveryApprovalRequest,
@@ -112,6 +114,170 @@ afterEach(() => {
 describe(
   "governance paid assessment delivery api",
   () => {
+    it(
+      "projects governed persisted delivery into restart-safe UI state",
+      () => {
+        const result =
+          projectPaidAssessmentRecordedDelivery({
+            found: true,
+            delivery_recorded: true,
+            delivery_status: "delivered",
+            report_id: "report-001",
+            delivered_by: "operator-001",
+            delivered_at:
+              "2026-09-03T12:00:00Z",
+            delivery_method: "email",
+            delivery_reference: "message-001",
+            repository_chain_valid: true
+          });
+
+        expect(result).toEqual({
+          deliveredAt:
+            "2026-09-03T12:00:00Z",
+          deliveredBy: "operator-001"
+        });
+      }
+    );
+
+    it(
+      "does not restore UI delivery state without governed delivery",
+      () => {
+        const result =
+          projectPaidAssessmentRecordedDelivery({
+            found: false,
+            delivery_recorded: false,
+            delivery_status: null,
+            report_id: null,
+            delivered_by: null,
+            delivered_at: null,
+            delivery_method: null,
+            delivery_reference: null,
+            repository_chain_valid: true
+          });
+
+        expect(result).toBeNull();
+      }
+    );
+
+    it(
+      "fetches restart-safe delivery status with governed actor headers",
+      async () => {
+        const fetchMock = vi.fn<
+          (
+            input: RequestInfo | URL,
+            init?: RequestInit
+          ) => Promise<Response>
+        >(
+          async () =>
+            jsonResponse({
+              found: true,
+              delivery_recorded: true,
+              delivery_status: "delivered",
+              report_id: "report-001",
+              delivered_by: "operator-001",
+              delivered_at:
+                "2026-09-03T12:00:00Z",
+              delivery_method: "email",
+              delivery_reference:
+                "message-001",
+              repository_chain_valid: true,
+              boundaries: {
+                delivery_is_not_client_receipt: true
+              }
+            })
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const result =
+          await fetchPaidAssessmentDeliveryStatus(
+            CONFIG,
+            HIERARCHY
+          );
+
+        expect(result.delivery_recorded).toBe(true);
+        expect(result.delivery_status).toBe(
+          "delivered"
+        );
+        expect(result.report_id).toBe("report-001");
+        expect(result.delivered_by).toBe(
+          "operator-001"
+        );
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        const [
+          input,
+          init
+        ] = fetchMock.mock.calls[0];
+
+        expect(requestUrl(input)).toBe(
+          (
+            "http://127.0.0.1:8000/" +
+            "api/v1/governance-paid-assessments/" +
+            "tenant-alpha/client-acme/" +
+            "engagement-001/assessment-001/" +
+            "delivery-status"
+          )
+        );
+
+        expect(init).toMatchObject({
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "console-admin",
+            "X-Actor-Roles": "assessment:admin"
+          }
+        });
+      }
+    );
+
+    it(
+      "preserves not-recorded delivery status",
+      async () => {
+        const fetchMock = vi.fn<
+          (
+            input: RequestInfo | URL,
+            init?: RequestInit
+          ) => Promise<Response>
+        >(
+          async () =>
+            jsonResponse({
+              found: false,
+              delivery_recorded: false,
+              delivery_status: null,
+              report_id: null,
+              delivered_by: null,
+              delivered_at: null,
+              delivery_method: null,
+              delivery_reference: null,
+              repository_chain_valid: true,
+              boundaries: {
+                delivery_status_is_read_only_projection:
+                  true
+              }
+            })
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const result =
+          await fetchPaidAssessmentDeliveryStatus(
+            CONFIG,
+            HIERARCHY
+          );
+
+        expect(result.found).toBe(false);
+        expect(result.delivery_recorded).toBe(
+          false
+        );
+        expect(result.delivery_status).toBeNull();
+        expect(result.delivered_at).toBeNull();
+        expect(result.delivered_by).toBeNull();
+      }
+    );
+
     it(
       "fetches delivery readiness with governed actor headers",
       async () => {

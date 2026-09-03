@@ -87,6 +87,33 @@ class FakeApprovalService:
         )
 
 
+class FakeStatusService:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, str]] = []
+
+    def get_status(
+        self,
+        *,
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> Any:
+        self.calls.append(
+            {
+                "tenant_id": tenant_id,
+                "client_id": client_id,
+                "engagement_id": engagement_id,
+                "assessment_id": assessment_id,
+            }
+        )
+
+        raise AssertionError(
+            "delivery status service must not be called "
+            "by legacy readiness/approval/recording tests"
+        )
+
+
 class FakeRecordingService:
     def __init__(
         self,
@@ -118,6 +145,7 @@ def build_client(
     readiness: FakeReadinessService | None = None,
     approval: FakeApprovalService | None = None,
     recording: FakeRecordingService | None = None,
+    status: FakeStatusService | None = None,
 ) -> tuple[
     TestClient,
     FakeReadinessService,
@@ -127,6 +155,7 @@ def build_client(
     readiness = readiness or FakeReadinessService()
     approval = approval or FakeApprovalService()
     recording = recording or FakeRecordingService()
+    status = status or FakeStatusService()
 
     app = FastAPI()
     app.include_router(
@@ -134,6 +163,7 @@ def build_client(
             readiness_service=readiness,
             approval_service=approval,
             recording_service=recording,
+            status_service=status,
         )
     )
 

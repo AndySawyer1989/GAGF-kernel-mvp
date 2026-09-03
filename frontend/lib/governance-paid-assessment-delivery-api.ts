@@ -15,6 +15,44 @@ export type PaidAssessmentDeliveryReadinessResponse = {
   boundaries?: Record<string, boolean>;
 };
 
+export type PaidAssessmentDeliveryStatusResponse = {
+  found: boolean;
+  delivery_recorded: boolean;
+  delivery_status: string | null;
+  report_id: string | null;
+  delivered_by: string | null;
+  delivered_at: string | null;
+  delivery_method: string | null;
+  delivery_reference: string | null;
+  repository_chain_valid: boolean;
+  boundaries?: Record<string, boolean>;
+};
+
+export type PaidAssessmentRecordedDeliveryProjection = {
+  deliveredAt: string;
+  deliveredBy: string;
+};
+
+export function projectPaidAssessmentRecordedDelivery(
+  status: PaidAssessmentDeliveryStatusResponse
+): PaidAssessmentRecordedDeliveryProjection | null {
+  if (
+    !status.found ||
+    !status.delivery_recorded ||
+    status.delivery_status !== "delivered" ||
+    status.repository_chain_valid !== true ||
+    status.delivered_at === null ||
+    status.delivered_by === null
+  ) {
+    return null;
+  }
+
+  return {
+    deliveredAt: status.delivered_at,
+    deliveredBy: status.delivered_by
+  };
+}
+
 export type PaidAssessmentDeliveryApprovalRequest = {
   approval_id: string;
   tenant_id: string;
@@ -76,6 +114,7 @@ function buildDeliveryUrl(
   config: GovernanceAssessmentApiConfig,
   hierarchy: PaidAssessmentHierarchy,
   action:
+    | "delivery-status"
     | "delivery-readiness"
     | "delivery-approval"
     | "delivery-recording"
@@ -121,6 +160,31 @@ async function parseResponse<T>(
   }
 
   return payload as T;
+}
+
+export async function fetchPaidAssessmentDeliveryStatus(
+  config: GovernanceAssessmentApiConfig,
+  hierarchy: PaidAssessmentHierarchy,
+  signal?: AbortSignal
+): Promise<PaidAssessmentDeliveryStatusResponse> {
+  const response = await fetch(
+    buildDeliveryUrl(
+      config,
+      hierarchy,
+      "delivery-status"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return parseResponse<PaidAssessmentDeliveryStatusResponse>(
+    response,
+    "Failed to fetch paid assessment delivery status"
+  );
 }
 
 export async function fetchPaidAssessmentDeliveryReadiness(

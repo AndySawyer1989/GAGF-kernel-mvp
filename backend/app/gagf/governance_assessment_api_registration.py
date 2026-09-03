@@ -73,6 +73,9 @@ from backend.app.gagf.governance_commercial_paid_assessment_delivery_readiness i
 from backend.app.gagf.governance_commercial_paid_assessment_delivery_recording import (
     GovernanceCommercialPaidAssessmentDeliveryRecordingService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_delivery_status import (
+    GovernanceCommercialPaidAssessmentDeliveryStatusService,
+)
 
 
 ASSESSMENT_API_REGISTRATION_VERSION = "1.2.0"
@@ -238,6 +241,12 @@ def register_governance_assessment_api(
         )
     )
 
+    paid_assessment_delivery_status_service = (
+        GovernanceCommercialPaidAssessmentDeliveryStatusService(
+            execution_service=paid_assessment_service
+        )
+    )
+
     paid_assessment_delivery_router = (
         build_governance_commercial_paid_assessment_delivery_router(
             readiness_service=(
@@ -248,6 +257,9 @@ def register_governance_assessment_api(
             ),
             recording_service=(
                 paid_assessment_delivery_recording_service
+            ),
+            status_service=(
+                paid_assessment_delivery_status_service
             ),
         )
     )
@@ -455,6 +467,10 @@ def register_governance_assessment_api(
 
     app.state.governance_commercial_paid_assessment_delivery_recording_service = (
         paid_assessment_delivery_recording_service
+    )
+
+    app.state.governance_commercial_paid_assessment_delivery_status_service = (
+        paid_assessment_delivery_status_service
     )
 
     app.state.governance_paid_assessment_execution_directory = (

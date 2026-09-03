@@ -66,6 +66,10 @@ import {
   type GovernanceAssessmentRecord,
   type GovernanceAssessmentSummary
 } from "@/lib/governance-assessment-api";
+import {
+  fetchPaidAssessmentDeliveryStatus,
+  projectPaidAssessmentRecordedDelivery
+} from "@/lib/governance-paid-assessment-delivery-api";
 
 function textValue(
   payload: Record<string, unknown> | undefined,
@@ -372,6 +376,56 @@ export default function AssessmentDetailPage() {
     useState<
       PaidAssessmentDeliveryRecordedValue | null
     >(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function restoreRecordedDelivery() {
+      try {
+        const status =
+          await fetchPaidAssessmentDeliveryStatus(
+            config,
+            {
+              tenantId: identity.tenantId,
+              clientId: identity.clientId,
+              engagementId: identity.engagementId,
+              assessmentId: identity.assessmentId
+            },
+            controller.signal
+          );
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const restoredDelivery =
+          projectPaidAssessmentRecordedDelivery(
+            status
+          );
+
+        if (restoredDelivery !== null) {
+          setRecordedDelivery(restoredDelivery);
+        }
+      } catch (caughtError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        /*
+         * Delivery restoration is read-only.
+         *
+         * A failed status read must not infer delivery,
+         * receipt, acknowledgment, response, or closeout.
+         * Existing live delivery controls remain available
+         * to the operator.
+         */
+      }
+    }
+
+    void restoreRecordedDelivery();
+
+    return () => controller.abort();
+  }, [config, identity]);
 
   const loadAssessment = useCallback(
     async (signal?: AbortSignal) => {
