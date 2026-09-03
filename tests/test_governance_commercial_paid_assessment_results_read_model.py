@@ -197,7 +197,7 @@ def build_executed_service(
 
     service.execute(
         execution_input=build_execution_input(database_path),
-        execution_input_binding_hash="binding-hash-001",
+        execution_input_binding_hash="a" * 64,
     )
 
     return service
@@ -360,7 +360,7 @@ def test_read_model_restores_reconciled_disposition(
 
     second = service.execute(
         execution_input=build_execution_input(database_path),
-        execution_input_binding_hash="binding-hash-001",
+        execution_input_binding_hash="a" * 64,
     )
 
     assert second.disposition == "reconciled"

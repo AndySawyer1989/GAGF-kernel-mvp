@@ -61,9 +61,21 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution import (
 from backend.app.gagf.governance_commercial_paid_assessment_execution_input_binding import (
     GovernanceCommercialPaidAssessmentExecutionInputBindingService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_delivery_api import (
+    build_governance_commercial_paid_assessment_delivery_router,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_delivery_approval_handoff import (
+    GovernanceCommercialPaidAssessmentDeliveryApprovalHandoffService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_delivery_readiness import (
+    GovernanceCommercialPaidAssessmentDeliveryReadinessService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_delivery_recording import (
+    GovernanceCommercialPaidAssessmentDeliveryRecordingService,
+)
 
 
-ASSESSMENT_API_REGISTRATION_VERSION = "1.1.0"
+ASSESSMENT_API_REGISTRATION_VERSION = "1.2.0"
 ASSESSMENT_API_REGISTERED_STATE_KEY = (
     "governance_assessment_api_registered"
 )
@@ -191,19 +203,60 @@ def register_governance_assessment_api(
     )
 
     paid_assessment_router = (
-    create_governance_commercial_paid_assessment_router(
-        service=paid_assessment_service,
-        execution_input_binding_service=(
-            execution_input_binding_service
-        ),
-        dependencies=[
-            Depends(require_assessment_actor)
-        ],
+        create_governance_commercial_paid_assessment_router(
+            service=paid_assessment_service,
+            execution_input_binding_service=(
+                execution_input_binding_service
+            ),
+            dependencies=[
+                Depends(require_assessment_actor)
+            ],
+        )
     )
-)
 
     app.router.routes.extend(
         paid_assessment_router.routes
+    )
+
+    paid_assessment_delivery_readiness_service = (
+        GovernanceCommercialPaidAssessmentDeliveryReadinessService(
+            execution_service=paid_assessment_service
+        )
+    )
+
+    paid_assessment_delivery_approval_service = (
+        GovernanceCommercialPaidAssessmentDeliveryApprovalHandoffService(
+            readiness_service=(
+                paid_assessment_delivery_readiness_service
+            )
+        )
+    )
+
+    paid_assessment_delivery_recording_service = (
+        GovernanceCommercialPaidAssessmentDeliveryRecordingService(
+            execution_service=paid_assessment_service
+        )
+    )
+
+    paid_assessment_delivery_router = (
+        build_governance_commercial_paid_assessment_delivery_router(
+            readiness_service=(
+                paid_assessment_delivery_readiness_service
+            ),
+            approval_service=(
+                paid_assessment_delivery_approval_service
+            ),
+            recording_service=(
+                paid_assessment_delivery_recording_service
+            ),
+        )
+    )
+
+    app.include_router(
+        paid_assessment_delivery_router,
+        dependencies=[
+            Depends(require_assessment_actor)
+        ],
     )
 
     audit_database_path = (
@@ -390,6 +443,18 @@ def register_governance_assessment_api(
 
     app.state.governance_commercial_paid_assessment_service = (
         paid_assessment_service
+    )
+
+    app.state.governance_commercial_paid_assessment_delivery_readiness_service = (
+        paid_assessment_delivery_readiness_service
+    )
+
+    app.state.governance_commercial_paid_assessment_delivery_approval_service = (
+        paid_assessment_delivery_approval_service
+    )
+
+    app.state.governance_commercial_paid_assessment_delivery_recording_service = (
+        paid_assessment_delivery_recording_service
     )
 
     app.state.governance_paid_assessment_execution_directory = (

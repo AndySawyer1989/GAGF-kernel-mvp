@@ -23,8 +23,9 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution_input_bind
 
 def route_paths(app: FastAPI) -> tuple[str, ...]:
     return tuple(
-        route.path
+        path
         for route in app.routes
+        if (path := getattr(route, "path", None)) is not None
     )
 
 
