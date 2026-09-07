@@ -76,6 +76,15 @@ from backend.app.gagf.governance_commercial_paid_assessment_delivery_recording i
 from backend.app.gagf.governance_commercial_paid_assessment_delivery_status import (
     GovernanceCommercialPaidAssessmentDeliveryStatusService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_lifecycle_status import (
+    GovernanceCommercialPaidAssessmentLifecycleStatusService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_client_acknowledgment import (
+    GovernanceCommercialPaidAssessmentClientAcknowledgmentService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_client_response import (
+    GovernanceCommercialPaidAssessmentClientResponseService,
+)
 
 
 ASSESSMENT_API_REGISTRATION_VERSION = "1.2.0"
@@ -247,6 +256,24 @@ def register_governance_assessment_api(
         )
     )
 
+    paid_assessment_lifecycle_status_service = (
+        GovernanceCommercialPaidAssessmentLifecycleStatusService(
+            execution_service=paid_assessment_service
+        )
+    )
+
+    paid_assessment_client_acknowledgment_service = (
+        GovernanceCommercialPaidAssessmentClientAcknowledgmentService(
+            execution_service=paid_assessment_service
+        )
+    )
+
+    paid_assessment_client_response_service = (
+        GovernanceCommercialPaidAssessmentClientResponseService(
+            execution_service=paid_assessment_service
+        )
+    )
+
     paid_assessment_delivery_router = (
         build_governance_commercial_paid_assessment_delivery_router(
             readiness_service=(
@@ -260,6 +287,15 @@ def register_governance_assessment_api(
             ),
             status_service=(
                 paid_assessment_delivery_status_service
+            ),
+            lifecycle_status_service=(
+                paid_assessment_lifecycle_status_service
+            ),
+            client_acknowledgment_service=(
+                paid_assessment_client_acknowledgment_service
+            ),
+            client_response_service=(
+                paid_assessment_client_response_service
             ),
         )
     )
@@ -471,6 +507,18 @@ def register_governance_assessment_api(
 
     app.state.governance_commercial_paid_assessment_delivery_status_service = (
         paid_assessment_delivery_status_service
+    )
+
+    app.state.governance_commercial_paid_assessment_lifecycle_status_service = (
+        paid_assessment_lifecycle_status_service
+    )
+
+    app.state.governance_commercial_paid_assessment_client_acknowledgment_service = (
+        paid_assessment_client_acknowledgment_service
+    )
+
+    app.state.governance_commercial_paid_assessment_client_response_service = (
+        paid_assessment_client_response_service
     )
 
     app.state.governance_paid_assessment_execution_directory = (

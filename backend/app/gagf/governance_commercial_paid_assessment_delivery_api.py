@@ -21,6 +21,18 @@ from backend.app.gagf.governance_commercial_paid_assessment_delivery_status impo
     CommercialPaidAssessmentDeliveryStatusError,
     GovernanceCommercialPaidAssessmentDeliveryStatusService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_lifecycle_status import (
+    CommercialPaidAssessmentLifecycleStatusError,
+    GovernanceCommercialPaidAssessmentLifecycleStatusService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_client_acknowledgment import (
+    CommercialPaidAssessmentClientAcknowledgmentError,
+    GovernanceCommercialPaidAssessmentClientAcknowledgmentService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_client_response import (
+    CommercialPaidAssessmentClientResponseError,
+    GovernanceCommercialPaidAssessmentClientResponseService,
+)
 
 
 COMMERCIAL_PAID_ASSESSMENT_DELIVERY_API_ID = (
@@ -56,6 +68,44 @@ class DeliveryStatusService(Protocol):
         ...
 
 
+class LifecycleStatusService(Protocol):
+    def get_status(
+        self,
+        *,
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> Any:
+        ...
+
+
+class ClientResponseService(Protocol):
+    def record(
+        self,
+        *,
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+        response_payload: dict[str, Any],
+    ) -> Any:
+        ...
+
+
+class ClientAcknowledgmentService(Protocol):
+    def record(
+        self,
+        *,
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+        acknowledgment_payload: dict[str, Any],
+    ) -> Any:
+        ...
+
+
 class DeliveryApprovalService(Protocol):
     def handoff(
         self,
@@ -80,6 +130,30 @@ class DeliveryRecordingService(Protocol):
         human_confirmation_payload: dict[str, Any],
     ) -> Any:
         ...
+
+
+class ClientResponseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    response_id: str
+    responded_by: str
+    responded_at: str
+    response_method: str
+    response_reference: str
+    findings_disposition: str
+    recommendations_disposition: str
+    response_note: str = ""
+
+
+class ClientAcknowledgmentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    acknowledgment_id: str
+    acknowledged_by: str
+    acknowledged_at: str
+    acknowledgment_method: str
+    acknowledgment_reference: str
+    client_acknowledged_receipt: bool
 
 
 class DeliveryApprovalRequest(BaseModel):
@@ -121,6 +195,9 @@ def create_governance_commercial_paid_assessment_delivery_router(
     approval_service: DeliveryApprovalService,
     recording_service: DeliveryRecordingService,
     status_service: DeliveryStatusService,
+    lifecycle_status_service: LifecycleStatusService,
+    client_acknowledgment_service: ClientAcknowledgmentService,
+    client_response_service: ClientResponseService,
 ) -> APIRouter:
     """
     Thin HTTP adapter over the already-authoritative 04F services.
@@ -155,6 +232,84 @@ def create_governance_commercial_paid_assessment_delivery_router(
                 assessment_id=assessment_id,
             )
         except CommercialPaidAssessmentDeliveryStatusError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=str(exc),
+            ) from exc
+
+        return _safe_result_dict(result)
+
+    @router.get(
+        hierarchy_path + "/lifecycle-status",
+    )
+    def get_lifecycle_status(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> dict[str, Any]:
+        try:
+            result = lifecycle_status_service.get_status(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                engagement_id=engagement_id,
+                assessment_id=assessment_id,
+            )
+        except CommercialPaidAssessmentLifecycleStatusError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=str(exc),
+            ) from exc
+
+        return _safe_result_dict(result)
+
+    @router.post(
+        hierarchy_path + "/client-acknowledgment",
+    )
+    def post_client_acknowledgment(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+        request: ClientAcknowledgmentRequest,
+    ) -> dict[str, Any]:
+        payload = request.model_dump()
+
+        try:
+            result = client_acknowledgment_service.record(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                engagement_id=engagement_id,
+                assessment_id=assessment_id,
+                acknowledgment_payload=payload,
+            )
+        except CommercialPaidAssessmentClientAcknowledgmentError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=str(exc),
+            ) from exc
+
+        return _safe_result_dict(result)
+
+    @router.post(
+        hierarchy_path + "/client-response",
+    )
+    def post_client_response(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+        request: ClientResponseRequest,
+    ) -> dict[str, Any]:
+        try:
+            result = client_response_service.record(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                engagement_id=engagement_id,
+                assessment_id=assessment_id,
+                response_payload=request.model_dump(),
+            )
+        except CommercialPaidAssessmentClientResponseError as exc:
             raise HTTPException(
                 status_code=409,
                 detail=str(exc),
@@ -288,6 +443,9 @@ def build_governance_commercial_paid_assessment_delivery_router(
     approval_service: GovernanceCommercialPaidAssessmentDeliveryApprovalHandoffService,
     recording_service: GovernanceCommercialPaidAssessmentDeliveryRecordingService,
     status_service: GovernanceCommercialPaidAssessmentDeliveryStatusService,
+    lifecycle_status_service: GovernanceCommercialPaidAssessmentLifecycleStatusService,
+    client_acknowledgment_service: GovernanceCommercialPaidAssessmentClientAcknowledgmentService,
+    client_response_service: GovernanceCommercialPaidAssessmentClientResponseService,
 ) -> APIRouter:
     """
     Production-typed wrapper used by application registration.
@@ -320,6 +478,33 @@ def build_governance_commercial_paid_assessment_delivery_router(
         )
 
     if not isinstance(
+        lifecycle_status_service,
+        GovernanceCommercialPaidAssessmentLifecycleStatusService,
+    ):
+        raise TypeError(
+            "lifecycle_status_service must be a "
+            "GovernanceCommercialPaidAssessmentLifecycleStatusService"
+        )
+
+    if not isinstance(
+        client_response_service,
+        GovernanceCommercialPaidAssessmentClientResponseService,
+    ):
+        raise TypeError(
+            "client_response_service must be a "
+            "GovernanceCommercialPaidAssessmentClientResponseService"
+        )
+
+    if not isinstance(
+        client_acknowledgment_service,
+        GovernanceCommercialPaidAssessmentClientAcknowledgmentService,
+    ):
+        raise TypeError(
+            "client_acknowledgment_service must be a "
+            "GovernanceCommercialPaidAssessmentClientAcknowledgmentService"
+        )
+
+    if not isinstance(
         recording_service,
         GovernanceCommercialPaidAssessmentDeliveryRecordingService,
     ):
@@ -333,6 +518,9 @@ def build_governance_commercial_paid_assessment_delivery_router(
         approval_service=approval_service,
         recording_service=recording_service,
         status_service=status_service,
+        lifecycle_status_service=lifecycle_status_service,
+        client_acknowledgment_service=client_acknowledgment_service,
+        client_response_service=client_response_service,
     )
 
 

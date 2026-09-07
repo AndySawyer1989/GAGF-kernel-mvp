@@ -140,6 +140,29 @@ class FakeRecordingService:
         )
 
 
+class UnusedLifecycleStatusService:
+    def get_status(self, **kwargs: Any):
+        raise AssertionError(
+            "lifecycle status service must not be called"
+        )
+
+
+
+class UnusedClientAcknowledgmentService:
+    def record(self, **kwargs: Any):
+        raise AssertionError(
+            "client acknowledgment service must not be called"
+        )
+
+
+
+class UnusedClientResponseService:
+    def record(self, **kwargs: Any):
+        raise AssertionError(
+            "client response service must not be called"
+        )
+
+
 def build_client(
     *,
     readiness: FakeReadinessService | None = None,
@@ -164,6 +187,9 @@ def build_client(
             approval_service=approval,
             recording_service=recording,
             status_service=status,
+            lifecycle_status_service=UnusedLifecycleStatusService(),
+            client_acknowledgment_service=UnusedClientAcknowledgmentService(),
+            client_response_service=UnusedClientResponseService(),
         )
     )
 

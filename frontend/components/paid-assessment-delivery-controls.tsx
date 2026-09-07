@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useState
 } from "react";
 
@@ -12,6 +13,9 @@ import {
 import {
   approvePaidAssessmentDelivery,
   fetchPaidAssessmentDeliveryReadiness,
+  fetchPaidAssessmentLifecycleStatus,
+  recordPaidAssessmentClientAcknowledgment,
+  recordPaidAssessmentClientResponse,
   recordPaidAssessmentDelivery,
   type PaidAssessmentHierarchy
 } from "@/lib/governance-paid-assessment-delivery-api";
@@ -152,6 +156,174 @@ export function PaidAssessmentDeliveryControls({
   ] = useState<string | null>(null);
 
 
+  const [
+    lifecycleStage,
+    setLifecycleStage
+  ] = useState<string | null>(null);
+
+  const [
+    lifecycleLoading,
+    setLifecycleLoading
+  ] = useState(true);
+
+  const [
+    lifecycleError,
+    setLifecycleError
+  ] = useState<string | null>(null);
+
+  const [
+    receiptAcknowledged,
+    setReceiptAcknowledged
+  ] = useState(false);
+
+  const [
+    clientResponseRecorded,
+    setClientResponseRecorded
+  ] = useState(false);
+
+  const [
+    acknowledgmentMethod,
+    setAcknowledgmentMethod
+  ] = useState("email_reply");
+
+  const [
+    acknowledgmentReference,
+    setAcknowledgmentReference
+  ] = useState("");
+
+  const [
+    clientConfirmedReceipt,
+    setClientConfirmedReceipt
+  ] = useState(false);
+
+  const [
+    acknowledgmentRecording,
+    setAcknowledgmentRecording
+  ] = useState(false);
+
+  const [
+    acknowledgmentError,
+    setAcknowledgmentError
+  ] = useState<string | null>(null);
+
+
+  const [
+    responseMethod,
+    setResponseMethod
+  ] = useState("email_reply");
+
+  const [
+    responseReference,
+    setResponseReference
+  ] = useState("");
+
+  const [
+    findingsDisposition,
+    setFindingsDisposition
+  ] = useState("acknowledged");
+
+  const [
+    recommendationsDisposition,
+    setRecommendationsDisposition
+  ] = useState("under_review");
+
+  const [
+    responseNote,
+    setResponseNote
+  ] = useState("");
+
+  const [
+    responseRecording,
+    setResponseRecording
+  ] = useState(false);
+
+  const [
+    responseError,
+    setResponseError
+  ] = useState<string | null>(null);
+
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function restoreLifecycle() {
+      setLifecycleLoading(true);
+      setLifecycleError(null);
+
+      try {
+        const status =
+          await fetchPaidAssessmentLifecycleStatus(
+            config,
+            hierarchy,
+            controller.signal
+          );
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        if (status.repository_chain_valid !== true) {
+          setLifecycleError(
+            "Governed lifecycle repository integrity could not be verified."
+          );
+          return;
+        }
+
+        setLifecycleStage(
+          status.current_stage
+        );
+
+        setDeliveryRecorded(
+          status.delivery_recorded
+        );
+
+        setReceiptAcknowledged(
+          status.receipt_acknowledged
+        );
+
+        setClientResponseRecorded(
+          status.client_response_recorded
+        );
+      } catch (caught) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        /*
+         * Lifecycle restoration is read-only.
+         *
+         * A failed status read must not infer delivery,
+         * receipt, response, closeout, or intervention
+         * authority.
+         */
+        setLifecycleError(
+          apiErrorMessage(
+            caught,
+            "Governed client lifecycle could not be restored."
+          )
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setLifecycleLoading(false);
+        }
+      }
+    }
+
+    void restoreLifecycle();
+
+    return () => controller.abort();
+  }, [
+    config.baseUrl,
+    config.tenantId,
+    config.actorId,
+    config.actorRoles,
+    hierarchy.tenantId,
+    hierarchy.clientId,
+    hierarchy.engagementId,
+    hierarchy.assessmentId
+  ]);
+
+
   const localPrerequisitesReady =
     reportReady &&
     repositoryVerified &&
@@ -182,6 +354,155 @@ export function PaidAssessmentDeliveryControls({
     deliveryCompleted &&
     !recording &&
     !deliveryRecorded;
+
+
+  const canRecordAcknowledgment =
+    deliveryRecorded &&
+    !receiptAcknowledged &&
+    acknowledgmentMethod.trim().length > 0 &&
+    acknowledgmentReference.trim().length > 0 &&
+    clientConfirmedReceipt &&
+    !acknowledgmentRecording;
+
+
+  async function recordClientAcknowledgment() {
+    if (!canRecordAcknowledgment) {
+      return;
+    }
+
+    setAcknowledgmentRecording(true);
+    setAcknowledgmentError(null);
+
+    const acknowledgedAt =
+      new Date().toISOString();
+
+    const acknowledgmentId =
+      (
+        `client-acknowledgment-` +
+        `${hierarchy.assessmentId}-` +
+        `${Date.now()}`
+      );
+
+    try {
+      const result =
+        await recordPaidAssessmentClientAcknowledgment(
+          config,
+          hierarchy,
+          {
+            acknowledgment_id:
+              acknowledgmentId,
+            acknowledged_by:
+              config.actorId,
+            acknowledged_at:
+              acknowledgedAt,
+            acknowledgment_method:
+              acknowledgmentMethod.trim(),
+            acknowledgment_reference:
+              acknowledgmentReference.trim(),
+            client_acknowledged_receipt:
+              clientConfirmedReceipt
+          }
+        );
+
+      if (!result.client_receipt_acknowledged) {
+        setAcknowledgmentError(
+          "The governed backend did not record client receipt acknowledgment."
+        );
+        return;
+      }
+
+      setReceiptAcknowledged(true);
+      setLifecycleStage(
+        "client_receipt_acknowledged"
+      );
+    } catch (caught) {
+      setAcknowledgmentError(
+        apiErrorMessage(
+          caught,
+          "Governed client receipt acknowledgment failed."
+        )
+      );
+    } finally {
+      setAcknowledgmentRecording(false);
+    }
+  }
+
+
+  const canRecordClientResponse =
+    receiptAcknowledged &&
+    !clientResponseRecorded &&
+    responseMethod.trim().length > 0 &&
+    responseReference.trim().length > 0 &&
+    findingsDisposition.trim().length > 0 &&
+    recommendationsDisposition.trim().length > 0 &&
+    !responseRecording;
+
+
+  async function recordClientResponse() {
+    if (!canRecordClientResponse) {
+      return;
+    }
+
+    setResponseRecording(true);
+    setResponseError(null);
+
+    const respondedAt =
+      new Date().toISOString();
+
+    const responseId =
+      (
+        `client-response-` +
+        `${hierarchy.assessmentId}-` +
+        `${Date.now()}`
+      );
+
+    try {
+      const result =
+        await recordPaidAssessmentClientResponse(
+          config,
+          hierarchy,
+          {
+            response_id:
+              responseId,
+            responded_by:
+              config.actorId,
+            responded_at:
+              respondedAt,
+            response_method:
+              responseMethod.trim(),
+            response_reference:
+              responseReference.trim(),
+            findings_disposition:
+              findingsDisposition,
+            recommendations_disposition:
+              recommendationsDisposition,
+            response_note:
+              responseNote.trim()
+          }
+        );
+
+      if (!result.client_response_recorded) {
+        setResponseError(
+          "The governed backend did not record the client response."
+        );
+        return;
+      }
+
+      setClientResponseRecorded(true);
+      setLifecycleStage(
+        "client_response_recorded"
+      );
+    } catch (caught) {
+      setResponseError(
+        apiErrorMessage(
+          caught,
+          "Governed client response recording failed."
+        )
+      );
+    } finally {
+      setResponseRecording(false);
+    }
+  }
 
 
   async function checkReadiness() {
@@ -653,6 +974,327 @@ export function PaidAssessmentDeliveryControls({
             </p>
             <p>{recordingError}</p>
           </div>
+        </div>
+      )}
+
+
+      {lifecycleLoading && (
+        <p>
+          Restoring governed client lifecycle...
+        </p>
+      )}
+
+
+      {lifecycleError && (
+        <div
+          className="error-panel"
+          role="alert"
+        >
+          <div>
+            <p className="error-title">
+              Lifecycle restoration failed
+            </p>
+            <p>{lifecycleError}</p>
+          </div>
+        </div>
+      )}
+
+
+      {deliveryRecorded &&
+        !receiptAcknowledged && (
+          <fieldset
+            disabled={acknowledgmentRecording}
+          >
+            <legend>
+              Client receipt acknowledgment
+            </legend>
+
+            <p>
+              Record this only after the client
+              explicitly confirms receipt of the
+              governed report package.
+            </p>
+
+            <label>
+              Acknowledgment method
+              <select
+                value={acknowledgmentMethod}
+                onChange={(event) =>
+                  setAcknowledgmentMethod(
+                    event.target.value
+                  )
+                }
+              >
+                <option value="email_reply">
+                  Email reply
+                </option>
+                <option value="secure_portal">
+                  Secure portal
+                </option>
+                <option value="phone_confirmation">
+                  Phone confirmation
+                </option>
+                <option value="in_person">
+                  In person
+                </option>
+                <option value="other">
+                  Other
+                </option>
+              </select>
+            </label>
+
+            <label>
+              Acknowledgment reference
+              <input
+                type="text"
+                value={acknowledgmentReference}
+                onChange={(event) =>
+                  setAcknowledgmentReference(
+                    event.target.value
+                  )
+                }
+                placeholder="Message ID, portal record, or receipt reference"
+              />
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                checked={clientConfirmedReceipt}
+                onChange={(event) =>
+                  setClientConfirmedReceipt(
+                    event.target.checked
+                  )
+                }
+              />
+              I confirm that the client explicitly
+              acknowledged receipt of the report
+            </label>
+
+            <p>
+              Receipt acknowledgment does not mean
+              that the client accepts the findings,
+              recommendations, or any intervention.
+            </p>
+
+            <div className="form-actions">
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!canRecordAcknowledgment}
+                onClick={() =>
+                  void recordClientAcknowledgment()
+                }
+              >
+                {acknowledgmentRecording
+                  ? "Recording receipt..."
+                  : "Record client receipt"}
+              </button>
+            </div>
+          </fieldset>
+        )}
+
+
+      {acknowledgmentError && (
+        <div
+          className="error-panel"
+          role="alert"
+        >
+          <div>
+            <p className="error-title">
+              Client receipt recording failed
+            </p>
+            <p>{acknowledgmentError}</p>
+          </div>
+        </div>
+      )}
+
+
+      {receiptAcknowledged && (
+        <div className="assessment-closeout-pending">
+          <strong>
+            Client receipt acknowledged.
+          </strong>
+
+          <p>
+            Receipt is recorded independently from
+            findings acceptance, recommendation
+            acceptance, response, closeout, or
+            intervention authority.
+          </p>
+        </div>
+      )}
+
+
+      {receiptAcknowledged &&
+        !clientResponseRecorded && (
+          <fieldset
+            disabled={responseRecording}
+          >
+            <legend>
+              Client response
+            </legend>
+
+            <p>
+              Record only an explicit client response.
+              Receipt alone does not establish findings
+              or recommendation disposition.
+            </p>
+
+            <label>
+              Response method
+              <select
+                value={responseMethod}
+                onChange={(event) =>
+                  setResponseMethod(
+                    event.target.value
+                  )
+                }
+              >
+                <option value="email_reply">
+                  Email reply
+                </option>
+                <option value="secure_portal">
+                  Secure portal
+                </option>
+                <option value="meeting">
+                  Meeting
+                </option>
+                <option value="phone">
+                  Phone
+                </option>
+                <option value="other">
+                  Other
+                </option>
+              </select>
+            </label>
+
+            <label>
+              Response reference
+              <input
+                type="text"
+                value={responseReference}
+                onChange={(event) =>
+                  setResponseReference(
+                    event.target.value
+                  )
+                }
+                placeholder="Message ID, meeting note, or response reference"
+              />
+            </label>
+
+            <label>
+              Findings disposition
+              <select
+                value={findingsDisposition}
+                onChange={(event) =>
+                  setFindingsDisposition(
+                    event.target.value
+                  )
+                }
+              >
+                <option value="acknowledged">
+                  Acknowledged
+                </option>
+                <option value="under_review">
+                  Under review
+                </option>
+                <option value="disputed">
+                  Disputed
+                </option>
+              </select>
+            </label>
+
+            <label>
+              Recommendations disposition
+              <select
+                value={recommendationsDisposition}
+                onChange={(event) =>
+                  setRecommendationsDisposition(
+                    event.target.value
+                  )
+                }
+              >
+                <option value="under_review">
+                  Under review
+                </option>
+                <option value="accepted">
+                  Accepted
+                </option>
+                <option value="partially_accepted">
+                  Partially accepted
+                </option>
+                <option value="declined">
+                  Declined
+                </option>
+              </select>
+            </label>
+
+            <label>
+              Response note
+              <textarea
+                value={responseNote}
+                onChange={(event) =>
+                  setResponseNote(
+                    event.target.value
+                  )
+                }
+                placeholder="Optional client response note"
+              />
+            </label>
+
+            <p>
+              Findings acknowledgment is not validation.
+              Recommendation acceptance does not authorize
+              implementation or intervention.
+            </p>
+
+            <div className="form-actions">
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!canRecordClientResponse}
+                onClick={() =>
+                  void recordClientResponse()
+                }
+              >
+                {responseRecording
+                  ? "Recording response..."
+                  : "Record client response"}
+              </button>
+            </div>
+          </fieldset>
+        )}
+
+
+      {responseError && (
+        <div
+          className="error-panel"
+          role="alert"
+        >
+          <div>
+            <p className="error-title">
+              Client response recording failed
+            </p>
+            <p>{responseError}</p>
+          </div>
+        </div>
+      )}
+
+
+      {clientResponseRecorded && (
+        <div className="assessment-closeout-pending">
+          <strong>
+            Client response recorded.
+          </strong>
+
+          <p>
+            The response is persisted independently
+            from findings validation, implementation
+            authorization, intervention authority,
+            closeout, ROI verification, or verified
+            customer outcomes.
+          </p>
         </div>
       )}
 

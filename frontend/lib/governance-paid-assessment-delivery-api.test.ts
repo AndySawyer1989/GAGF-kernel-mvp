@@ -15,7 +15,12 @@ import {
   fetchPaidAssessmentDeliveryStatus,
   projectPaidAssessmentRecordedDelivery,
   fetchPaidAssessmentDeliveryReadiness,
+  fetchPaidAssessmentLifecycleStatus,
+  recordPaidAssessmentClientAcknowledgment,
+  recordPaidAssessmentClientResponse,
   recordPaidAssessmentDelivery,
+  type PaidAssessmentClientAcknowledgmentRequest,
+  type PaidAssessmentClientResponseRequest,
   type PaidAssessmentDeliveryApprovalRequest,
   type PaidAssessmentDeliveryRecordingRequest,
   type PaidAssessmentHierarchy
@@ -86,6 +91,35 @@ PaidAssessmentDeliveryRecordingRequest {
     delivery_method: "email",
     delivery_reference: "customer-message-001",
     delivery_completed: true
+  };
+}
+
+
+function acknowledgmentRequest():
+PaidAssessmentClientAcknowledgmentRequest {
+  return {
+    acknowledgment_id: "client-ack-001",
+    acknowledged_by: "client-representative",
+    acknowledged_at: "2026-09-07T19:15:00+00:00",
+    acknowledgment_method: "email_reply",
+    acknowledgment_reference: "receipt-mail-001",
+    client_acknowledged_receipt: true
+  };
+}
+
+
+function clientResponseRequest():
+PaidAssessmentClientResponseRequest {
+  return {
+    response_id: "client-response-001",
+    responded_by: "client-representative",
+    responded_at: "2026-09-07T19:30:00+00:00",
+    response_method: "email_reply",
+    response_reference: "response-mail-001",
+    findings_disposition: "acknowledged",
+    recommendations_disposition: "accepted",
+    response_note:
+      "Client accepts recommendations for planning review."
   };
 }
 
@@ -641,5 +675,337 @@ describe(
         });
       }
     );
+
+    it(
+      "fetches restart-safe lifecycle status",
+      async () => {
+        const fetchMock = vi.fn<
+          (
+            input: RequestInfo | URL,
+            init?: RequestInit
+          ) => Promise<Response>
+        >(
+          async () =>
+            jsonResponse({
+              tenant_id: "tenant-alpha",
+              client_id: "client-acme",
+              engagement_id: "engagement-001",
+              assessment_id: "assessment-001",
+              hierarchy_key:
+                "tenant-alpha/client-acme/engagement-001/assessment-001",
+              current_stage:
+                "client_receipt_acknowledged",
+              pending_next_step:
+                "record_client_response",
+              delivery_recorded: true,
+              receipt_acknowledged: true,
+              client_response_recorded: false,
+              report_id: "report-001",
+              findings_disposition: null,
+              recommendations_disposition: null,
+              lifecycle_artifact_count: 2,
+              repository_chain_valid: true
+            })
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const result =
+          await fetchPaidAssessmentLifecycleStatus(
+            CONFIG,
+            HIERARCHY
+          );
+
+        expect(result.delivery_recorded).toBe(true);
+        expect(result.receipt_acknowledged).toBe(true);
+        expect(result.client_response_recorded).toBe(false);
+        expect(result.repository_chain_valid).toBe(true);
+
+        const [
+          input,
+          init
+        ] = fetchMock.mock.calls[0];
+
+        expect(requestUrl(input)).toBe(
+          (
+            "http://127.0.0.1:8000/" +
+            "api/v1/governance-paid-assessments/" +
+            "tenant-alpha/client-acme/" +
+            "engagement-001/assessment-001/" +
+            "lifecycle-status"
+          )
+        );
+
+        expect(init).toMatchObject({
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "console-admin",
+            "X-Actor-Roles": "assessment:admin"
+          }
+        });
+      }
+    );
+
+
+    it(
+      "posts explicit client receipt acknowledgment without lineage authority",
+      async () => {
+        const fetchMock = vi.fn<
+          (
+            input: RequestInfo | URL,
+            init?: RequestInit
+          ) => Promise<Response>
+        >(
+          async () =>
+            jsonResponse({
+              acknowledgment_status:
+                "client_receipt_acknowledged",
+              client_receipt_acknowledged: true,
+              report_id: "report-001",
+              acknowledgment_id:
+                "client-ack-001",
+              acknowledged_by:
+                "client-representative",
+              acknowledged_at:
+                "2026-09-07T19:15:00+00:00",
+              acknowledgment_method:
+                "email_reply",
+              acknowledgment_reference:
+                "receipt-mail-001"
+            })
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const request = acknowledgmentRequest();
+
+        const result =
+          await recordPaidAssessmentClientAcknowledgment(
+            CONFIG,
+            HIERARCHY,
+            request
+          );
+
+        expect(
+          result.client_receipt_acknowledged
+        ).toBe(true);
+
+        const [
+          input,
+          init
+        ] = fetchMock.mock.calls[0];
+
+        expect(requestUrl(input)).toContain(
+          "/client-acknowledgment"
+        );
+
+        expect(init).toMatchObject({
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "console-admin",
+            "X-Actor-Roles": "assessment:admin"
+          }
+        });
+
+        const body = JSON.parse(
+          String(init?.body)
+        );
+
+        expect(body).toEqual(request);
+
+        expect(Object.keys(body).sort()).toEqual(
+          [
+            "acknowledgment_id",
+            "acknowledged_at",
+            "acknowledged_by",
+            "acknowledgment_method",
+            "acknowledgment_reference",
+            "client_acknowledged_receipt"
+          ].sort()
+        );
+
+        expect(body.report_id).toBeUndefined();
+        expect(
+          body.delivery_event_hash
+        ).toBeUndefined();
+        expect(body.database_path).toBeUndefined();
+        expect(body.repository_path).toBeUndefined();
+      }
+    );
+
+
+    it(
+      "posts explicit client response without acknowledgment lineage authority",
+      async () => {
+        const fetchMock = vi.fn<
+          (
+            input: RequestInfo | URL,
+            init?: RequestInit
+          ) => Promise<Response>
+        >(
+          async () =>
+            jsonResponse({
+              response_status:
+                "client_response_recorded",
+              client_response_recorded: true,
+              report_id: "report-001",
+              response_id:
+                "client-response-001",
+              responded_by:
+                "client-representative",
+              responded_at:
+                "2026-09-07T19:30:00+00:00",
+              response_method:
+                "email_reply",
+              response_reference:
+                "response-mail-001",
+              findings_disposition:
+                "acknowledged",
+              recommendations_disposition:
+                "accepted",
+              response_note:
+                "Client accepts recommendations for planning review."
+            })
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const request = clientResponseRequest();
+
+        const result =
+          await recordPaidAssessmentClientResponse(
+            CONFIG,
+            HIERARCHY,
+            request
+          );
+
+        expect(
+          result.client_response_recorded
+        ).toBe(true);
+
+        const [
+          input,
+          init
+        ] = fetchMock.mock.calls[0];
+
+        expect(requestUrl(input)).toContain(
+          "/client-response"
+        );
+
+        expect(init).toMatchObject({
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "console-admin",
+            "X-Actor-Roles": "assessment:admin"
+          }
+        });
+
+        const body = JSON.parse(
+          String(init?.body)
+        );
+
+        expect(body).toEqual(request);
+
+        expect(Object.keys(body).sort()).toEqual(
+          [
+            "response_id",
+            "responded_at",
+            "responded_by",
+            "response_method",
+            "response_note",
+            "response_reference",
+            "findings_disposition",
+            "recommendations_disposition"
+          ].sort()
+        );
+
+        expect(body.report_id).toBeUndefined();
+        expect(
+          body.acknowledgment_id
+        ).toBeUndefined();
+        expect(
+          body.acknowledgment_hash
+        ).toBeUndefined();
+        expect(body.database_path).toBeUndefined();
+        expect(body.repository_path).toBeUndefined();
+      }
+    );
+
+
+    it(
+      "preserves client acknowledgment conflict",
+      async () => {
+        const payload = {
+          detail:
+            "client acknowledgment lifecycle artifact already exists"
+        };
+
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(
+            async () =>
+              jsonResponse(
+                payload,
+                409
+              )
+          )
+        );
+
+        await expect(
+          recordPaidAssessmentClientAcknowledgment(
+            CONFIG,
+            HIERARCHY,
+            acknowledgmentRequest()
+          )
+        ).rejects.toMatchObject({
+          name: "GovernanceAssessmentApiError",
+          status: 409,
+          payload
+        });
+      }
+    );
+
+
+    it(
+      "preserves client response conflict",
+      async () => {
+        const payload = {
+          detail:
+            "client response lifecycle artifact already exists"
+        };
+
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(
+            async () =>
+              jsonResponse(
+                payload,
+                409
+              )
+          )
+        );
+
+        await expect(
+          recordPaidAssessmentClientResponse(
+            CONFIG,
+            HIERARCHY,
+            clientResponseRequest()
+          )
+        ).rejects.toMatchObject({
+          name: "GovernanceAssessmentApiError",
+          status: 409,
+          payload
+        });
+      }
+    );
+
   }
 );

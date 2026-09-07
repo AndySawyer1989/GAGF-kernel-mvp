@@ -33,6 +33,72 @@ export type PaidAssessmentRecordedDeliveryProjection = {
   deliveredBy: string;
 };
 
+export type PaidAssessmentLifecycleStatusResponse = {
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  hierarchy_key: string;
+  current_stage: string;
+  pending_next_step: string | null;
+  delivery_recorded: boolean;
+  receipt_acknowledged: boolean;
+  client_response_recorded: boolean;
+  report_id: string | null;
+  findings_disposition: string | null;
+  recommendations_disposition: string | null;
+  lifecycle_artifact_count: number;
+  repository_chain_valid: boolean;
+  boundaries?: Record<string, boolean>;
+};
+
+export type PaidAssessmentClientAcknowledgmentRequest = {
+  acknowledgment_id: string;
+  acknowledged_by: string;
+  acknowledged_at: string;
+  acknowledgment_method: string;
+  acknowledgment_reference: string;
+  client_acknowledged_receipt: boolean;
+};
+
+export type PaidAssessmentClientAcknowledgmentResponse = {
+  acknowledgment_status: string;
+  client_receipt_acknowledged: boolean;
+  report_id: string;
+  acknowledgment_id: string;
+  acknowledged_by: string;
+  acknowledged_at: string;
+  acknowledgment_method: string;
+  acknowledgment_reference: string;
+  boundaries?: Record<string, boolean>;
+};
+
+export type PaidAssessmentClientResponseRequest = {
+  response_id: string;
+  responded_by: string;
+  responded_at: string;
+  response_method: string;
+  response_reference: string;
+  findings_disposition: string;
+  recommendations_disposition: string;
+  response_note: string;
+};
+
+export type PaidAssessmentClientResponseResponse = {
+  response_status: string;
+  client_response_recorded: boolean;
+  report_id: string;
+  response_id: string;
+  responded_by: string;
+  responded_at: string;
+  response_method: string;
+  response_reference: string;
+  findings_disposition: string;
+  recommendations_disposition: string;
+  response_note: string;
+  boundaries?: Record<string, boolean>;
+};
+
 export function projectPaidAssessmentRecordedDelivery(
   status: PaidAssessmentDeliveryStatusResponse
 ): PaidAssessmentRecordedDeliveryProjection | null {
@@ -118,6 +184,9 @@ function buildDeliveryUrl(
     | "delivery-readiness"
     | "delivery-approval"
     | "delivery-recording"
+    | "lifecycle-status"
+    | "client-acknowledgment"
+    | "client-response"
 ): URL {
   const tenantId = encodeURIComponent(
     hierarchy.tenantId
@@ -275,5 +344,96 @@ export async function recordPaidAssessmentDelivery(
   >(
     response,
     "Paid assessment delivery recording request failed"
+  );
+}
+
+export async function fetchPaidAssessmentLifecycleStatus(
+  config: GovernanceAssessmentApiConfig,
+  hierarchy: PaidAssessmentHierarchy,
+  signal?: AbortSignal
+): Promise<PaidAssessmentLifecycleStatusResponse> {
+  const response = await fetch(
+    buildDeliveryUrl(
+      config,
+      hierarchy,
+      "lifecycle-status"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return parseResponse<PaidAssessmentLifecycleStatusResponse>(
+    response,
+    "Failed to fetch paid assessment lifecycle status"
+  );
+}
+
+
+export async function recordPaidAssessmentClientAcknowledgment(
+  config: GovernanceAssessmentApiConfig,
+  hierarchy: PaidAssessmentHierarchy,
+  request: PaidAssessmentClientAcknowledgmentRequest,
+  signal?: AbortSignal
+): Promise<PaidAssessmentClientAcknowledgmentResponse> {
+  const response = await fetch(
+    buildDeliveryUrl(
+      config,
+      hierarchy,
+      "client-acknowledgment"
+    ),
+    {
+      method: "POST",
+      headers: assessmentHeaders(
+        config,
+        true
+      ),
+      body: JSON.stringify(request),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return parseResponse<
+    PaidAssessmentClientAcknowledgmentResponse
+  >(
+    response,
+    "Paid assessment client acknowledgment request failed"
+  );
+}
+
+
+export async function recordPaidAssessmentClientResponse(
+  config: GovernanceAssessmentApiConfig,
+  hierarchy: PaidAssessmentHierarchy,
+  request: PaidAssessmentClientResponseRequest,
+  signal?: AbortSignal
+): Promise<PaidAssessmentClientResponseResponse> {
+  const response = await fetch(
+    buildDeliveryUrl(
+      config,
+      hierarchy,
+      "client-response"
+    ),
+    {
+      method: "POST",
+      headers: assessmentHeaders(
+        config,
+        true
+      ),
+      body: JSON.stringify(request),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return parseResponse<
+    PaidAssessmentClientResponseResponse
+  >(
+    response,
+    "Paid assessment client response request failed"
   );
 }
