@@ -151,6 +151,20 @@ class UnusedClientResponseService:
         )
 
 
+class UnusedCloseoutStatusService:
+    def get_status(self, **kwargs: Any):
+        raise AssertionError(
+            "closeout status service must not be called"
+        )
+
+
+class UnusedAdministrativeCloseoutService:
+    def record(self, **kwargs: Any):
+        raise AssertionError(
+            "administrative closeout service must not be called"
+        )
+
+
 def build_client(
     lifecycle_status: FakeLifecycleStatusService,
 ) -> TestClient:
@@ -165,6 +179,10 @@ def build_client(
             lifecycle_status_service=lifecycle_status,
             client_acknowledgment_service=UnusedClientAcknowledgmentService(),
             client_response_service=UnusedClientResponseService(),
+            closeout_status_service=UnusedCloseoutStatusService(),
+            administrative_closeout_service=(
+                UnusedAdministrativeCloseoutService()
+            ),
         )
     )
 

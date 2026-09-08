@@ -2089,25 +2089,13 @@ const readinessItems: AssessmentReadinessItem[] = [
 />
 
 <AssessmentCloseoutPanel
-  deliveryRecorded={
-    recordedDelivery !== null
-  }
-  reportId={
-    clientReportArtifact?.artifact_id ??
-    "Report package unavailable"
-  }
-  packageHash={
-    clientReportArtifact?.artifact_hash ??
-    "Package hash unavailable"
-  }
-  deliveredAt={
-    recordedDelivery?.deliveredAt ??
-    null
-  }
-  deliveredBy={
-    recordedDelivery?.deliveredBy ??
-    null
-  }
+  config={config}
+  hierarchy={{
+    tenantId: identity.tenantId,
+    clientId: identity.clientId,
+    engagementId: identity.engagementId,
+    assessmentId: identity.assessmentId
+  }}
 />
 
 <DiagnosticFindingsSummary

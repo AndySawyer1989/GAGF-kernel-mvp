@@ -99,6 +99,53 @@ export type PaidAssessmentClientResponseResponse = {
   boundaries?: Record<string, boolean>;
 };
 
+
+export type PaidAssessmentCloseoutStatusResponse = {
+  status_type: string;
+  version: string;
+  schema_version: string;
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  hierarchy_key: string;
+  found: boolean;
+  closeout_recorded: boolean;
+  closeout_status: string | null;
+  report_id: string | null;
+  closed_by: string | null;
+  closed_at: string | null;
+  closeout_reason: string | null;
+  repository_chain_valid: boolean;
+  boundaries?: Record<string, boolean>;
+};
+
+export type PaidAssessmentAdministrativeCloseoutRequest = {
+  closed_by: string;
+  closeout_reason: string;
+  administrative_closeout_confirmed: boolean;
+};
+
+export type PaidAssessmentAdministrativeCloseoutResponse = {
+  closeout_type: string;
+  version: string;
+  schema_version: string;
+  tenant_id: string;
+  client_id: string;
+  engagement_id: string;
+  assessment_id: string;
+  hierarchy_key: string;
+  report_id: string;
+  closeout_status: string;
+  administrative_closeout_recorded: boolean;
+  closed_by: string;
+  closeout_reason: string;
+  closeout_artifact_id: string;
+  closeout_artifact_hash: string;
+  repository_chain_valid: boolean;
+  boundaries?: Record<string, boolean>;
+};
+
 export function projectPaidAssessmentRecordedDelivery(
   status: PaidAssessmentDeliveryStatusResponse
 ): PaidAssessmentRecordedDeliveryProjection | null {
@@ -187,6 +234,8 @@ function buildDeliveryUrl(
     | "lifecycle-status"
     | "client-acknowledgment"
     | "client-response"
+    | "closeout-status"
+    | "administrative-closeout"
 ): URL {
   const tenantId = encodeURIComponent(
     hierarchy.tenantId
@@ -435,5 +484,66 @@ export async function recordPaidAssessmentClientResponse(
   >(
     response,
     "Paid assessment client response request failed"
+  );
+}
+
+
+export async function fetchPaidAssessmentCloseoutStatus(
+  config: GovernanceAssessmentApiConfig,
+  hierarchy: PaidAssessmentHierarchy,
+  signal?: AbortSignal
+): Promise<PaidAssessmentCloseoutStatusResponse> {
+  const response = await fetch(
+    buildDeliveryUrl(
+      config,
+      hierarchy,
+      "closeout-status"
+    ),
+    {
+      method: "GET",
+      headers: assessmentHeaders(config),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return parseResponse<
+    PaidAssessmentCloseoutStatusResponse
+  >(
+    response,
+    "Failed to fetch paid assessment closeout status"
+  );
+}
+
+
+export async function recordPaidAssessmentAdministrativeCloseout(
+  config: GovernanceAssessmentApiConfig,
+  hierarchy: PaidAssessmentHierarchy,
+  request: PaidAssessmentAdministrativeCloseoutRequest,
+  signal?: AbortSignal
+): Promise<PaidAssessmentAdministrativeCloseoutResponse> {
+  const response = await fetch(
+    buildDeliveryUrl(
+      config,
+      hierarchy,
+      "administrative-closeout"
+    ),
+    {
+      method: "POST",
+      headers: assessmentHeaders(
+        config,
+        true
+      ),
+      body: JSON.stringify(request),
+      cache: "no-store",
+      signal
+    }
+  );
+
+  return parseResponse<
+    PaidAssessmentAdministrativeCloseoutResponse
+  >(
+    response,
+    "Paid assessment administrative closeout request failed"
   );
 }

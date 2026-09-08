@@ -12,13 +12,16 @@ import {
 
 import {
   approvePaidAssessmentDelivery,
+  fetchPaidAssessmentCloseoutStatus,
   fetchPaidAssessmentDeliveryStatus,
   projectPaidAssessmentRecordedDelivery,
   fetchPaidAssessmentDeliveryReadiness,
   fetchPaidAssessmentLifecycleStatus,
+  recordPaidAssessmentAdministrativeCloseout,
   recordPaidAssessmentClientAcknowledgment,
   recordPaidAssessmentClientResponse,
   recordPaidAssessmentDelivery,
+  type PaidAssessmentAdministrativeCloseoutRequest,
   type PaidAssessmentClientAcknowledgmentRequest,
   type PaidAssessmentClientResponseRequest,
   type PaidAssessmentDeliveryApprovalRequest,
@@ -1007,5 +1010,296 @@ describe(
       }
     );
 
+  }
+);
+
+function administrativeCloseoutRequest():
+PaidAssessmentAdministrativeCloseoutRequest {
+  return {
+    closed_by: "console-admin",
+    closeout_reason:
+      "Client response recorded and administrative processing complete.",
+    administrative_closeout_confirmed: true
+  };
+}
+
+
+describe(
+  "paid assessment closeout API",
+  () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+
+    it(
+      "fetches restart-safe closeout status",
+      async () => {
+        const payload = {
+          status_type:
+            "governance-commercial-paid-assessment-closeout-status",
+          version: "0.1.0",
+          schema_version: "1.0.0",
+          tenant_id: "tenant-alpha",
+          client_id: "client-acme",
+          engagement_id: "engagement-001",
+          assessment_id: "assessment-001",
+          hierarchy_key:
+            "tenant-alpha/client-acme/engagement-001/assessment-001",
+          found: true,
+          closeout_recorded: true,
+          closeout_status: "assessment_closed",
+          report_id: "report-001",
+          closed_by: "console-admin",
+          closed_at: "2026-09-08T17:45:00+00:00",
+          closeout_reason:
+            "Administrative processing complete.",
+          repository_chain_valid: true,
+          boundaries: {
+            closeout_status_is_read_only_projection: true,
+            client_response_is_not_closeout: true,
+            pa010_remains_closeout_authority: true,
+            pa013_remains_operator_coordination_authority: true
+          }
+        };
+
+        const fetchMock = vi.fn<typeof fetch>(
+          async () =>
+            jsonResponse(payload)
+        );
+
+        vi.stubGlobal(
+          "fetch",
+          fetchMock
+        );
+
+        const result =
+          await fetchPaidAssessmentCloseoutStatus(
+            CONFIG,
+            HIERARCHY
+          );
+
+        expect(
+          result.closeout_status
+        ).toBe(
+          "assessment_closed"
+        );
+
+        expect(
+          result.closeout_recorded
+        ).toBe(true);
+
+        expect(
+          result.repository_chain_valid
+        ).toBe(true);
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        const [
+          requestUrl,
+          requestInit
+        ] = fetchMock.mock.calls[0];
+
+        expect(
+          String(requestUrl)
+        ).toContain(
+          "/api/v1/governance-paid-assessments/" +
+          "tenant-alpha/client-acme/" +
+          "engagement-001/assessment-001/" +
+          "closeout-status"
+        );
+
+        expect(requestInit).toMatchObject({
+          method: "GET",
+          cache: "no-store"
+        });
+      }
+    );
+
+
+    it(
+      "records only explicit administrative closeout fields",
+      async () => {
+        const payload = {
+          closeout_type:
+            "governance-commercial-paid-assessment-closeout",
+          version: "0.1.0",
+          schema_version: "1.0.0",
+          tenant_id: "tenant-alpha",
+          client_id: "client-acme",
+          engagement_id: "engagement-001",
+          assessment_id: "assessment-001",
+          hierarchy_key:
+            "tenant-alpha/client-acme/engagement-001/assessment-001",
+          report_id: "report-001",
+          closeout_status: "assessment_closed",
+          administrative_closeout_recorded: true,
+          closed_by: "console-admin",
+          closeout_reason:
+            "Client response recorded and administrative processing complete.",
+          closeout_artifact_id: "artifact-closeout-001",
+          closeout_artifact_hash: "hash-closeout-001",
+          repository_chain_valid: true,
+          boundaries: {
+            closeout_requires_explicit_human_confirmation: true,
+            response_is_not_closeout: true,
+            closeout_is_not_intervention_authorization: true
+          }
+        };
+
+        const fetchMock = vi.fn<typeof fetch>(
+          async () =>
+            jsonResponse(payload)
+        );
+
+        vi.stubGlobal(
+          "fetch",
+          fetchMock
+        );
+
+        const request =
+          administrativeCloseoutRequest();
+
+        const result =
+          await recordPaidAssessmentAdministrativeCloseout(
+            CONFIG,
+            HIERARCHY,
+            request
+          );
+
+        expect(
+          result.administrative_closeout_recorded
+        ).toBe(true);
+
+        expect(
+          result.closeout_status
+        ).toBe(
+          "assessment_closed"
+        );
+
+        const [
+          requestUrl,
+          requestInit
+        ] = fetchMock.mock.calls[0];
+
+        expect(
+          String(requestUrl)
+        ).toContain(
+          "/api/v1/governance-paid-assessments/" +
+          "tenant-alpha/client-acme/" +
+          "engagement-001/assessment-001/" +
+          "administrative-closeout"
+        );
+
+        expect(requestInit).toMatchObject({
+          method: "POST",
+          cache: "no-store"
+        });
+
+        const body = JSON.parse(
+          String(requestInit?.body)
+        );
+
+        expect(body).toEqual({
+          closed_by: "console-admin",
+          closeout_reason:
+            "Client response recorded and administrative processing complete.",
+          administrative_closeout_confirmed: true
+        });
+
+        expect(body).not.toHaveProperty(
+          "report_id"
+        );
+
+        expect(body).not.toHaveProperty(
+          "response_id"
+        );
+
+        expect(body).not.toHaveProperty(
+          "response_hash"
+        );
+
+        expect(body).not.toHaveProperty(
+          "database_path"
+        );
+
+        expect(body).not.toHaveProperty(
+          "repository_path"
+        );
+
+        expect(body).not.toHaveProperty(
+          "closeout_status"
+        );
+      }
+    );
+
+
+    it(
+      "preserves closeout-status conflict",
+      async () => {
+        const payload = {
+          detail:
+            "governed closeout status could not be projected"
+        };
+
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(
+            async () =>
+              jsonResponse(
+                payload,
+                409
+              )
+          )
+        );
+
+        await expect(
+          fetchPaidAssessmentCloseoutStatus(
+            CONFIG,
+            HIERARCHY
+          )
+        ).rejects.toMatchObject({
+          name:
+            "GovernanceAssessmentApiError",
+          status: 409,
+          payload
+        });
+      }
+    );
+
+
+    it(
+      "preserves administrative closeout conflict",
+      async () => {
+        const payload = {
+          detail:
+            "governed closeout requires persisted client response"
+        };
+
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(
+            async () =>
+              jsonResponse(
+                payload,
+                409
+              )
+          )
+        );
+
+        await expect(
+          recordPaidAssessmentAdministrativeCloseout(
+            CONFIG,
+            HIERARCHY,
+            administrativeCloseoutRequest()
+          )
+        ).rejects.toMatchObject({
+          name:
+            "GovernanceAssessmentApiError",
+          status: 409,
+          payload
+        });
+      }
+    );
   }
 );

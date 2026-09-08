@@ -20,6 +20,13 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution_input_bind
     GovernanceCommercialPaidAssessmentExecutionInputBindingService,
 )
 
+from backend.app.gagf.governance_commercial_paid_assessment_closeout import (
+    GovernanceCommercialPaidAssessmentCloseoutService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_closeout_status import (
+    GovernanceCommercialPaidAssessmentCloseoutStatusService,
+)
+
 
 def route_paths(app: FastAPI) -> tuple[str, ...]:
     return tuple(
@@ -682,3 +689,123 @@ def test_registered_execute_rejects_changed_bound_evidence(
             "detail"
         ]["message"]
     )
+
+def test_registration_adds_paid_assessment_closeout_routes(
+    tmp_path,
+):
+    app = FastAPI()
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    paths = route_paths(app)
+
+    base = (
+        "/api/v1/governance-paid-assessments/"
+        "{tenant_id}/{client_id}/"
+        "{engagement_id}/{assessment_id}"
+    )
+
+    assert (
+        base + "/closeout-status"
+        in paths
+    )
+
+    assert (
+        base + "/administrative-closeout"
+        in paths
+    )
+
+
+def test_registration_stores_closeout_services_on_app_state(
+    tmp_path,
+):
+    app = FastAPI()
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    assert isinstance(
+        app.state
+        .governance_commercial_paid_assessment_closeout_status_service,
+        GovernanceCommercialPaidAssessmentCloseoutStatusService,
+    )
+
+    assert isinstance(
+        app.state
+        .governance_commercial_paid_assessment_closeout_service,
+        GovernanceCommercialPaidAssessmentCloseoutService,
+    )
+
+
+def test_registered_closeout_status_requires_assessment_actor(
+    tmp_path,
+):
+    app = FastAPI()
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/governance-paid-assessments/"
+        "tenant-alpha/client-acme/"
+        "engagement-001/assessment-001/"
+        "closeout-status"
+    )
+
+    assert response.status_code in {
+        401,
+        403,
+    }
+
+
+def test_registered_administrative_closeout_requires_assessment_actor(
+    tmp_path,
+):
+    app = FastAPI()
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/governance-paid-assessments/"
+        "tenant-alpha/client-acme/"
+        "engagement-001/assessment-001/"
+        "administrative-closeout",
+        json={
+            "closed_by": "FIP Operator",
+            "closeout_reason": (
+                "Administrative processing complete."
+            ),
+            "administrative_closeout_confirmed": True,
+        },
+    )
+
+    assert response.status_code in {
+        401,
+        403,
+    }

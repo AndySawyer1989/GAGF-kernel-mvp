@@ -86,6 +86,13 @@ from backend.app.gagf.governance_commercial_paid_assessment_client_response impo
     GovernanceCommercialPaidAssessmentClientResponseService,
 )
 
+from backend.app.gagf.governance_commercial_paid_assessment_closeout import (
+    GovernanceCommercialPaidAssessmentCloseoutService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_closeout_status import (
+    GovernanceCommercialPaidAssessmentCloseoutStatusService,
+)
+
 
 ASSESSMENT_API_REGISTRATION_VERSION = "1.2.0"
 ASSESSMENT_API_REGISTERED_STATE_KEY = (
@@ -274,6 +281,18 @@ def register_governance_assessment_api(
         )
     )
 
+    paid_assessment_closeout_status_service = (
+        GovernanceCommercialPaidAssessmentCloseoutStatusService(
+            execution_service=paid_assessment_service
+        )
+    )
+
+    paid_assessment_closeout_service = (
+        GovernanceCommercialPaidAssessmentCloseoutService(
+            execution_service=paid_assessment_service
+        )
+    )
+
     paid_assessment_delivery_router = (
         build_governance_commercial_paid_assessment_delivery_router(
             readiness_service=(
@@ -297,15 +316,22 @@ def register_governance_assessment_api(
             client_response_service=(
                 paid_assessment_client_response_service
             ),
+            closeout_status_service=(
+                paid_assessment_closeout_status_service
+            ),
+            administrative_closeout_service=(
+                paid_assessment_closeout_service
+            ),
+            dependencies=(
+                Depends(require_assessment_actor),
+            ),
         )
     )
 
-    app.include_router(
-        paid_assessment_delivery_router,
-        dependencies=[
-            Depends(require_assessment_actor)
-        ],
-    )
+    for route in paid_assessment_delivery_router.routes:
+        app.router.routes.append(route)
+
+    app.openapi_schema = None
 
     audit_database_path = (
         assessment_database_path.with_name(
@@ -317,9 +343,31 @@ def register_governance_assessment_api(
         audit_database_path
     )
 
+    print(
+        "DEBUG routes before audit middleware:",
+        len(app.routes),
+        [
+            getattr(route, "path", "")
+            for route in app.routes
+            if "governance-paid-assessments"
+            in getattr(route, "path", "")
+        ],
+    )
+
     install_assessment_audit_middleware(
         app=app,
         ledger=audit_ledger,
+    )
+
+    print(
+        "DEBUG routes after audit middleware:",
+        len(app.routes),
+        [
+            getattr(route, "path", "")
+            for route in app.routes
+            if "governance-paid-assessments"
+            in getattr(route, "path", "")
+        ],
     )
 
     checkpoint_database_path = (
@@ -519,6 +567,14 @@ def register_governance_assessment_api(
 
     app.state.governance_commercial_paid_assessment_client_response_service = (
         paid_assessment_client_response_service
+    )
+
+    app.state.governance_commercial_paid_assessment_closeout_status_service = (
+        paid_assessment_closeout_status_service
+    )
+
+    app.state.governance_commercial_paid_assessment_closeout_service = (
+        paid_assessment_closeout_service
     )
 
     app.state.governance_paid_assessment_execution_directory = (

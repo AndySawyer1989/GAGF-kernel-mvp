@@ -29,6 +29,16 @@ from backend.app.gagf.governance_commercial_paid_assessment_client_acknowledgmen
     CommercialPaidAssessmentClientAcknowledgmentError,
     GovernanceCommercialPaidAssessmentClientAcknowledgmentService,
 )
+from backend.app.gagf.governance_commercial_paid_assessment_closeout import (
+    CommercialPaidAssessmentCloseoutError,
+    GovernanceCommercialPaidAssessmentCloseoutService,
+)
+from backend.app.gagf.governance_commercial_paid_assessment_closeout_status import (
+    CommercialPaidAssessmentCloseoutStatusError,
+    GovernanceCommercialPaidAssessmentCloseoutStatusService,
+)
+
+
 from backend.app.gagf.governance_commercial_paid_assessment_client_response import (
     CommercialPaidAssessmentClientResponseError,
     GovernanceCommercialPaidAssessmentClientResponseService,
@@ -76,6 +86,31 @@ class LifecycleStatusService(Protocol):
         client_id: str,
         engagement_id: str,
         assessment_id: str,
+    ) -> Any:
+        ...
+
+
+class CloseoutStatusService(Protocol):
+    def get_status(
+        self,
+        *,
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> Any:
+        ...
+
+
+class AdministrativeCloseoutService(Protocol):
+    def record(
+        self,
+        *,
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+        closeout_payload: dict[str, Any],
     ) -> Any:
         ...
 
@@ -130,6 +165,14 @@ class DeliveryRecordingService(Protocol):
         human_confirmation_payload: dict[str, Any],
     ) -> Any:
         ...
+
+
+class AdministrativeCloseoutRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    closed_by: str
+    closeout_reason: str
+    administrative_closeout_confirmed: bool
 
 
 class ClientResponseRequest(BaseModel):
@@ -198,6 +241,9 @@ def create_governance_commercial_paid_assessment_delivery_router(
     lifecycle_status_service: LifecycleStatusService,
     client_acknowledgment_service: ClientAcknowledgmentService,
     client_response_service: ClientResponseService,
+    closeout_status_service: CloseoutStatusService,
+    administrative_closeout_service: AdministrativeCloseoutService,
+    dependencies: tuple[Any, ...] = (),
 ) -> APIRouter:
     """
     Thin HTTP adapter over the already-authoritative 04F services.
@@ -209,6 +255,7 @@ def create_governance_commercial_paid_assessment_delivery_router(
     router = APIRouter(
         prefix=DELIVERY_API_PREFIX,
         tags=["governance-paid-assessment-delivery"],
+        dependencies=list(dependencies),
     )
 
     hierarchy_path = (
@@ -434,6 +481,66 @@ def create_governance_commercial_paid_assessment_delivery_router(
 
         return _safe_result_dict(result)
 
+    @router.get(
+        hierarchy_path + "/closeout-status",
+    )
+    def get_closeout_status(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+    ) -> dict[str, Any]:
+        try:
+            result = closeout_status_service.get_status(
+                tenant_id=tenant_id,
+                client_id=client_id,
+                engagement_id=engagement_id,
+                assessment_id=assessment_id,
+            )
+        except CommercialPaidAssessmentCloseoutStatusError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=str(exc),
+            ) from exc
+
+        return _safe_result_dict(
+            result
+        )
+
+
+    @router.post(
+        hierarchy_path + "/administrative-closeout",
+    )
+    def post_administrative_closeout(
+        tenant_id: str,
+        client_id: str,
+        engagement_id: str,
+        assessment_id: str,
+        request: AdministrativeCloseoutRequest,
+    ) -> dict[str, Any]:
+        try:
+            result = (
+                administrative_closeout_service.record(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    engagement_id=engagement_id,
+                    assessment_id=assessment_id,
+                    closeout_payload=(
+                        request.model_dump()
+                    ),
+                )
+            )
+        except CommercialPaidAssessmentCloseoutError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=str(exc),
+            ) from exc
+
+        return _safe_result_dict(
+            result
+        )
+
+
     return router
 
 
@@ -446,6 +553,9 @@ def build_governance_commercial_paid_assessment_delivery_router(
     lifecycle_status_service: GovernanceCommercialPaidAssessmentLifecycleStatusService,
     client_acknowledgment_service: GovernanceCommercialPaidAssessmentClientAcknowledgmentService,
     client_response_service: GovernanceCommercialPaidAssessmentClientResponseService,
+    closeout_status_service: GovernanceCommercialPaidAssessmentCloseoutStatusService,
+    administrative_closeout_service: GovernanceCommercialPaidAssessmentCloseoutService,
+    dependencies: tuple[Any, ...] = (),
 ) -> APIRouter:
     """
     Production-typed wrapper used by application registration.
@@ -505,6 +615,24 @@ def build_governance_commercial_paid_assessment_delivery_router(
         )
 
     if not isinstance(
+        closeout_status_service,
+        GovernanceCommercialPaidAssessmentCloseoutStatusService,
+    ):
+        raise TypeError(
+            "closeout_status_service must be a "
+            "GovernanceCommercialPaidAssessmentCloseoutStatusService"
+        )
+
+    if not isinstance(
+        administrative_closeout_service,
+        GovernanceCommercialPaidAssessmentCloseoutService,
+    ):
+        raise TypeError(
+            "administrative_closeout_service must be a "
+            "GovernanceCommercialPaidAssessmentCloseoutService"
+        )
+
+    if not isinstance(
         recording_service,
         GovernanceCommercialPaidAssessmentDeliveryRecordingService,
     ):
@@ -521,6 +649,9 @@ def build_governance_commercial_paid_assessment_delivery_router(
         lifecycle_status_service=lifecycle_status_service,
         client_acknowledgment_service=client_acknowledgment_service,
         client_response_service=client_response_service,
+        closeout_status_service=closeout_status_service,
+        administrative_closeout_service=administrative_closeout_service,
+        dependencies=dependencies,
     )
 
 

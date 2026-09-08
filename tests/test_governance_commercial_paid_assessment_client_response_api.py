@@ -177,6 +177,20 @@ class UnusedClientAcknowledgmentService:
         )
 
 
+class UnusedCloseoutStatusService:
+    def get_status(self, **kwargs: Any) -> Result:
+        raise AssertionError(
+            "closeout status service must not be called"
+        )
+
+
+class UnusedAdministrativeCloseoutService:
+    def record(self, **kwargs: Any) -> Result:
+        raise AssertionError(
+            "administrative closeout service must not be called"
+        )
+
+
 def build_client(
     response_service: FakeClientResponseService | None = None,
 ) -> tuple[
@@ -201,6 +215,10 @@ def build_client(
                 UnusedClientAcknowledgmentService()
             ),
             client_response_service=response_service,
+            closeout_status_service=UnusedCloseoutStatusService(),
+            administrative_closeout_service=(
+                UnusedAdministrativeCloseoutService()
+            ),
         )
     )
 
