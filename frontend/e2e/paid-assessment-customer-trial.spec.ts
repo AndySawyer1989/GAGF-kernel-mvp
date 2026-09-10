@@ -1319,6 +1319,111 @@ test.describe(
             ).toHaveCount(0);
           }
         );
+
+        /**
+         * ==================================================
+         * 13. OPERATOR FAILURE-STATE PROOF
+         * ==================================================
+         *
+         * The assessment has already been genuinely closed
+         * and successfully restored above.
+         *
+         * This step injects a read failure only. It must not
+         * create, modify, or infer governed lifecycle state.
+         */
+        await test.step(
+          "fail closed when governed lifecycle restoration is unavailable",
+          async () => {
+            const lifecyclePattern =
+              "**/api/v1/governance-paid-assessments/" +
+              "**/lifecycle-status";
+
+            let interceptedLifecycleReads = 0;
+
+            await page.route(
+              lifecyclePattern,
+              async (route) => {
+                interceptedLifecycleReads += 1;
+
+                /*
+                 * Return no governed lifecycle representation.
+                 *
+                 * 204 avoids manufacturing a browser-level
+                 * failed-resource diagnostic while still
+                 * proving that the UI fails closed when the
+                 * lifecycle read cannot produce usable state.
+                 */
+                await route.fulfill({
+                  status: 204
+                });
+              }
+            );
+
+            await page.reload({
+              waitUntil:
+                "domcontentloaded"
+            });
+
+            await expect(
+              page.getByText(
+                "Lifecycle restoration failed",
+                {
+                  exact: true
+                }
+              )
+            ).toBeVisible();
+
+            await expect(
+              page.getByText(
+                /No later lifecycle stage was inferred/i
+              )
+            ).toBeVisible();
+
+            await expect(
+              page.getByText(
+                /retry lifecycle restoration before continuing/i
+              )
+            ).toBeVisible();
+
+            expect(
+              interceptedLifecycleReads
+            ).toBeGreaterThan(0);
+
+            /*
+             * Failed restoration must not expose or infer
+             * any later customer-lifecycle action.
+             */
+            await expect(
+              page.getByRole(
+                "button",
+                {
+                  name:
+                    "Record client receipt"
+                }
+              )
+            ).toHaveCount(0);
+
+            await expect(
+              page.getByRole(
+                "button",
+                {
+                  name:
+                    "Record client response"
+                }
+              )
+            ).toHaveCount(0);
+
+            await expect(
+              page.getByRole(
+                "button",
+                {
+                  name:
+                    "Record administrative closeout"
+                }
+              )
+            ).toHaveCount(0);
+          }
+        );
       }
     );
   }

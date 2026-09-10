@@ -473,12 +473,27 @@ describe(
           />
         );
 
-        expect(
+        const restorationAlert =
           await screen.findByRole(
             "alert"
-          )
+          );
+
+        expect(
+          restorationAlert
         ).toHaveTextContent(
           "repository verification failed"
+        );
+
+        expect(
+          restorationAlert
+        ).toHaveTextContent(
+          /No administrative closeout state was inferred/i
+        );
+
+        expect(
+          restorationAlert
+        ).toHaveTextContent(
+          /retry restoration before continuing/i
         );
 
         expect(

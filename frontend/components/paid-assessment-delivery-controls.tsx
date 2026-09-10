@@ -1006,6 +1006,12 @@ export function PaidAssessmentDeliveryControls({
               Lifecycle restoration failed
             </p>
             <p>{lifecycleError}</p>
+            <p>
+              Current lifecycle state could not be
+              verified. No later lifecycle stage was
+              inferred. Resolve the error and retry
+              lifecycle restoration before continuing.
+            </p>
           </div>
         </div>
       )}

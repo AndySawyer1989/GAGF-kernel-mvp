@@ -1,4 +1,4 @@
-﻿import {
+import {
   fireEvent,
   render,
   screen,
@@ -544,6 +544,18 @@ describe(
         expect(
           await screen.findByText(
             "Lifecycle restoration failed"
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            /No later lifecycle stage was inferred/i
+          )
+        ).toBeInTheDocument();
+
+        expect(
+          screen.getByText(
+            /retry lifecycle restoration before continuing/i
           )
         ).toBeInTheDocument();
 

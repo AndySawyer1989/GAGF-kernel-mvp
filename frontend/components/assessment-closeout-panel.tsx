@@ -390,6 +390,12 @@ export function AssessmentCloseoutPanel({
             </p>
 
             <p>{restorationError}</p>
+            <p>
+              Closeout state could not be verified.
+              No administrative closeout state was
+              inferred. Resolve the error and retry
+              restoration before continuing.
+            </p>
           </div>
         </div>
       )}
@@ -488,6 +494,11 @@ export function AssessmentCloseoutPanel({
             </p>
 
             <p>{recordingError}</p>
+            <p>
+              Administrative closeout was not inferred
+              from this failed operation. Verify governed
+              closeout status before retrying.
+            </p>
           </div>
         </div>
       )}
