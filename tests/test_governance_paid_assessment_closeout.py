@@ -95,6 +95,7 @@ def build_delivery_event(**overrides):
         "delivered_at": "2026-08-18T19:15:00+00:00",
         "delivery_method": "email",
         "delivery_reference": "mail-message-001",
+        "delivery_completed": True,
         "delivery_status": "delivered",
         "delivery_event_hash": HEX_D,
     }

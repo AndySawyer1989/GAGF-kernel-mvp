@@ -146,6 +146,7 @@ def build_delivery_event(
         "delivered_at": "2026-08-18T19:15:00+00:00",
         "delivery_method": "email",
         "delivery_reference": "mail-message-001",
+        "delivery_completed": True,
         "delivery_status": "delivered",
         "delivery_event_hash": HEX_D,
     }
@@ -786,3 +787,371 @@ def test_response_retry_with_same_identity_hash_but_changed_payload_fails_closed
     assert repository.list_artifacts(
         context=build_context()
     ) == before
+
+def test_major_lifecycle_stages_survive_real_repository_restart(
+    tmp_path,
+):
+    """
+    04H-04 customer-trial restart proof.
+
+    Every major paid-assessment lifecycle stage must be recoverable from
+    durable repository state using a newly constructed repository and
+    resumable operator runner.
+
+    No lifecycle stage may depend on in-memory continuity.
+    """
+
+    database_path = tmp_path / "paid-assessment-restart-proof.sqlite"
+
+    context = build_context()
+
+    initial_repository = GovernanceAssessmentRepository(
+        database_path
+    )
+
+    initial_repository.create_assessment(
+        context=context,
+        assessment_name="Paid Governance Assessment",
+        status="completed",
+    )
+
+    initial_runner = GovernancePaidAssessmentResumableOperatorRunner(
+        repository=initial_repository
+    )
+
+    # -----------------------------------------------------
+    # A. Persist delivery.
+    # -----------------------------------------------------
+
+    delivery = build_delivery_event()
+
+    delivery_result = initial_runner.record_delivery(
+        delivery_event=delivery,
+        created_at=datetime(
+            2026,
+            8,
+            18,
+            19,
+            15,
+            tzinfo=timezone.utc,
+        ),
+    )
+
+    assert delivery_result.disposition == ACTION_RESULT_EXECUTED
+
+    assert initial_repository.verify_chain(
+        context=context
+    ) is True
+
+    # -----------------------------------------------------
+    # B. Simulate restart after delivery.
+    # -----------------------------------------------------
+
+    repository_after_delivery_restart = (
+        GovernanceAssessmentRepository(
+            database_path
+        )
+    )
+
+    runner_after_delivery_restart = (
+        GovernancePaidAssessmentResumableOperatorRunner(
+            repository=repository_after_delivery_restart
+        )
+    )
+
+    workflow_after_delivery_restart = (
+        runner_after_delivery_restart.get_workflow(
+            context=context
+        )
+    )
+
+    assert (
+        workflow_after_delivery_restart.workflow_stage
+        == WORKFLOW_STAGE_AWAITING_CLIENT_RECEIPT
+    )
+    assert (
+        workflow_after_delivery_restart.required_operator_action
+        == ACTION_RECORD_CLIENT_RECEIPT
+    )
+    assert (
+        repository_after_delivery_restart.verify_chain(
+            context=context
+        )
+        is True
+    )
+
+    # Exact replay after restart must reconcile, not append.
+    delivery_retry = (
+        runner_after_delivery_restart.record_delivery(
+            delivery_event=delivery
+        )
+    )
+
+    assert (
+        delivery_retry.disposition
+        == ACTION_RESULT_ALREADY_DURABLE
+    )
+
+    artifacts_after_delivery_restart = (
+        repository_after_delivery_restart.list_artifacts(
+            context=context
+        )
+    )
+
+    assert len(artifacts_after_delivery_restart) == 1
+    assert (
+        artifacts_after_delivery_restart[0].artifact_type
+        == DELIVERY_ARTIFACT_TYPE
+    )
+
+    # -----------------------------------------------------
+    # C. Persist client receipt.
+    # -----------------------------------------------------
+
+    acknowledgment = build_acknowledgment(
+        delivery
+    )
+
+    receipt_result = (
+        runner_after_delivery_restart.record_client_receipt(
+            client_acknowledgment=acknowledgment,
+            created_at=datetime(
+                2026,
+                8,
+                18,
+                19,
+                30,
+                tzinfo=timezone.utc,
+            ),
+        )
+    )
+
+    assert receipt_result.disposition == ACTION_RESULT_EXECUTED
+
+    # -----------------------------------------------------
+    # D. Simulate restart after client receipt.
+    # -----------------------------------------------------
+
+    repository_after_receipt_restart = (
+        GovernanceAssessmentRepository(
+            database_path
+        )
+    )
+
+    runner_after_receipt_restart = (
+        GovernancePaidAssessmentResumableOperatorRunner(
+            repository=repository_after_receipt_restart
+        )
+    )
+
+    workflow_after_receipt_restart = (
+        runner_after_receipt_restart.get_workflow(
+            context=context
+        )
+    )
+
+    assert (
+        workflow_after_receipt_restart.workflow_stage
+        == WORKFLOW_STAGE_AWAITING_CLIENT_RESPONSE
+    )
+    assert (
+        workflow_after_receipt_restart.required_operator_action
+        == ACTION_RECORD_CLIENT_RESPONSE
+    )
+    assert (
+        repository_after_receipt_restart.verify_chain(
+            context=context
+        )
+        is True
+    )
+
+    artifacts_after_receipt_restart = (
+        repository_after_receipt_restart.list_artifacts(
+            context=context
+        )
+    )
+
+    assert [
+        item.artifact_type
+        for item in artifacts_after_receipt_restart
+    ] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+    ]
+
+    # -----------------------------------------------------
+    # E. Persist client response.
+    # -----------------------------------------------------
+
+    response = build_response(
+        acknowledgment
+    )
+
+    response_result = (
+        runner_after_receipt_restart.record_client_response(
+            client_response=response,
+            created_at=datetime(
+                2026,
+                8,
+                18,
+                20,
+                0,
+                tzinfo=timezone.utc,
+            ),
+        )
+    )
+
+    assert response_result.disposition == ACTION_RESULT_EXECUTED
+
+    # -----------------------------------------------------
+    # F. Simulate restart after client response.
+    # -----------------------------------------------------
+
+    repository_after_response_restart = (
+        GovernanceAssessmentRepository(
+            database_path
+        )
+    )
+
+    runner_after_response_restart = (
+        GovernancePaidAssessmentResumableOperatorRunner(
+            repository=repository_after_response_restart
+        )
+    )
+
+    workflow_after_response_restart = (
+        runner_after_response_restart.get_workflow(
+            context=context
+        )
+    )
+
+    assert (
+        workflow_after_response_restart.workflow_stage
+        == WORKFLOW_STAGE_READY_FOR_CLOSEOUT
+    )
+    assert (
+        workflow_after_response_restart.required_operator_action
+        == ACTION_CONFIRM_ADMINISTRATIVE_CLOSEOUT
+    )
+    assert (
+        repository_after_response_restart.verify_chain(
+            context=context
+        )
+        is True
+    )
+
+    artifacts_after_response_restart = (
+        repository_after_response_restart.list_artifacts(
+            context=context
+        )
+    )
+
+    assert [
+        item.artifact_type
+        for item in artifacts_after_response_restart
+    ] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        CLIENT_RESPONSE_ARTIFACT_TYPE,
+    ]
+
+    # -----------------------------------------------------
+    # G. Persist administrative closeout.
+    # -----------------------------------------------------
+
+    closeout_request = PaidAssessmentCloseoutRequest(
+        context=context,
+        report_id="report-001",
+        closed_by="FIP Operator",
+        closeout_reason=(
+            "Assessment delivery, receipt, and client response "
+            "have been recorded."
+        ),
+        administrative_closeout_confirmed=True,
+    )
+
+    closeout_result = (
+        runner_after_response_restart.confirm_administrative_closeout(
+            request=closeout_request,
+            created_at=datetime(
+                2026,
+                8,
+                18,
+                20,
+                30,
+                tzinfo=timezone.utc,
+            ),
+        )
+    )
+
+    assert closeout_result.disposition == ACTION_RESULT_EXECUTED
+    assert (
+        closeout_result.artifact_type
+        == PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE
+    )
+
+    # -----------------------------------------------------
+    # H. Simulate restart after administrative closeout.
+    # -----------------------------------------------------
+
+    final_repository = GovernanceAssessmentRepository(
+        database_path
+    )
+
+    final_runner = GovernancePaidAssessmentResumableOperatorRunner(
+        repository=final_repository
+    )
+
+    final_workflow = final_runner.get_workflow(
+        context=context
+    )
+
+    assert final_workflow.workflow_stage == WORKFLOW_STAGE_CLOSED
+    assert final_workflow.required_operator_action == ACTION_NONE
+    assert final_workflow.allowed_operator_actions == ()
+    assert final_workflow.assessment_closed is True
+
+    assert final_repository.verify_chain(
+        context=context
+    ) is True
+
+    final_artifacts = final_repository.list_artifacts(
+        context=context
+    )
+
+    assert [
+        item.artifact_type
+        for item in final_artifacts
+    ] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        CLIENT_RESPONSE_ARTIFACT_TYPE,
+        PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
+    ]
+
+    assert [
+        item.sequence_number
+        for item in final_artifacts
+    ] == [1, 2, 3, 4]
+
+    # Exact closeout replay after a restart must reconcile
+    # with durable evidence and must not create artifact #5.
+    closeout_retry = (
+        final_runner.confirm_administrative_closeout(
+            request=closeout_request
+        )
+    )
+
+    assert (
+        closeout_retry.disposition
+        == ACTION_RESULT_ALREADY_DURABLE
+    )
+
+    artifacts_after_closeout_retry = (
+        final_repository.list_artifacts(
+            context=context
+        )
+    )
+
+    assert artifacts_after_closeout_retry == final_artifacts
+    assert len(artifacts_after_closeout_retry) == 4

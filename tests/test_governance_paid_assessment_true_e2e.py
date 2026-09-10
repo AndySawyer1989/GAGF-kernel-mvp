@@ -940,6 +940,19 @@ def test_paid_assessment_true_end_to_end_runtime_chain(tmp_path):
         for artifact in operator_workflow.evidence_artifacts
     ] == [11, 12, 13, 14]
 
+    # 04H-03 release proof:
+    # the persisted paid-assessment lifecycle suffix is exact,
+    # ordered, and contains no skipped or duplicated lifecycle stage.
+    assert [
+        artifact.artifact_type
+        for artifact in operator_workflow.evidence_artifacts
+    ] == [
+        DELIVERY_ARTIFACT_TYPE,
+        ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        CLIENT_RESPONSE_ARTIFACT_TYPE,
+        PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
+    ]
+
     operator_payload = operator_workflow.to_dict()
 
     assert operator_payload["workflow_stage"] == "closed"
