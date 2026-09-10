@@ -85,6 +85,7 @@ def build_delivery():
         delivery_method="email",
         delivery_reference="mail-message-001",
         delivery_status="delivered",
+        delivery_completed=True,
         delivery_event_hash=HEX_D,
     )
 
