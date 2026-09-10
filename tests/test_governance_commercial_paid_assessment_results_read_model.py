@@ -20,6 +20,9 @@ from backend.app.gagf.governance_assessment_domain import (
 from backend.app.gagf.governance_assessment_isolation import (
     CommercialHierarchyContext,
 )
+from backend.app.gagf.governance_assessment_repository import (
+    GovernanceAssessmentRepository,
+)
 from backend.app.gagf.governance_assessment_scope_configuration import (
     EvidenceRequirement,
 )
@@ -40,6 +43,14 @@ from backend.app.gagf.governance_commercial_paid_assessment_results_read_model i
     GovernanceCommercialPaidAssessmentResultsReadModelService,
     SAFE_RESULT_ARTIFACT_TYPES,
 )
+from backend.app.gagf.governance_paid_assessment_closeout import (
+    PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
+)
+from backend.app.gagf.governance_paid_assessment_lifecycle_persistence import (
+    ACKNOWLEDGMENT_ARTIFACT_TYPE,
+    CLIENT_RESPONSE_ARTIFACT_TYPE,
+    DELIVERY_ARTIFACT_TYPE,
+)
 
 
 CSV_TEXT = (
@@ -48,6 +59,14 @@ CSV_TEXT = (
     "organizational_unit\n"
     "event-001,APPROVAL_DELAYED,2026-08-15T12:00:00+00:00,"
     "APPROVAL_DELAYED,120,Change Management,Operations\n"
+)
+
+
+LIFECYCLE_ARTIFACT_ORDER = (
+    DELIVERY_ARTIFACT_TYPE,
+    ACKNOWLEDGMENT_ARTIFACT_TYPE,
+    CLIENT_RESPONSE_ARTIFACT_TYPE,
+    PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
 )
 
 
@@ -201,6 +220,74 @@ def build_executed_service(
     )
 
     return service
+
+
+def build_context() -> CommercialHierarchyContext:
+    return CommercialHierarchyContext(
+        tenant_id="tenant-001",
+        client_id="client-001",
+        engagement_id="engagement-001",
+        assessment_id="assessment-001",
+    )
+
+
+def build_repository(
+    service: GovernanceCommercialPaidAssessmentExecutionService,
+) -> GovernanceAssessmentRepository:
+    database_path = service.database_path_for_hierarchy(
+        tenant_id="tenant-001",
+        client_id="client-001",
+        engagement_id="engagement-001",
+        assessment_id="assessment-001",
+    )
+
+    return GovernanceAssessmentRepository(
+        database_path
+    )
+
+
+def append_lifecycle_artifacts(
+    service: GovernanceCommercialPaidAssessmentExecutionService,
+    *,
+    artifact_types: tuple[str, ...],
+) -> None:
+    repository = build_repository(service)
+    context = build_context()
+
+    for index, artifact_type in enumerate(
+        artifact_types,
+        start=1,
+    ):
+        repository.append_artifact(
+            context=context,
+            artifact_type=artifact_type,
+            payload={
+                "test_lifecycle_artifact": True,
+                "test_sequence": index,
+                "artifact_type": artifact_type,
+            },
+        )
+
+    assert repository.verify_chain(
+        context=context
+    ) is True
+
+
+def read_results(
+    service: GovernanceCommercialPaidAssessmentExecutionService,
+) -> dict:
+    return (
+        GovernanceCommercialPaidAssessmentResultsReadModelService(
+            execution_service=service
+        )
+        .read(
+            tenant_id="tenant-001",
+            client_id="client-001",
+            engagement_id="engagement-001",
+            assessment_id="assessment-001",
+        )
+        .to_dict()
+    )
 
 
 def test_read_model_requires_execution_service() -> None:
@@ -453,3 +540,203 @@ def test_read_model_is_read_only(
 
     assert result.repository_chain_valid is True
     assert after_bytes == before_bytes
+
+
+@pytest.mark.parametrize(
+    ("lifecycle_count", "expected_artifact_count"),
+    (
+        (0, 10),
+        (1, 11),
+        (2, 12),
+        (3, 13),
+        (4, 14),
+    ),
+)
+def test_read_model_accepts_governed_lifecycle_prefixes(
+    tmp_path: Path,
+    lifecycle_count: int,
+    expected_artifact_count: int,
+) -> None:
+    service = build_executed_service(tmp_path)
+
+    append_lifecycle_artifacts(
+        service,
+        artifact_types=LIFECYCLE_ARTIFACT_ORDER[
+            :lifecycle_count
+        ],
+    )
+
+    result = read_results(service)
+
+    assert (
+        result["artifact_count"]
+        == expected_artifact_count
+    )
+    assert result["repository_chain_valid"] is True
+
+    result_types = tuple(
+        artifact["artifact_type"]
+        for artifact in result["result_artifacts"]
+    )
+
+    assert result_types == SAFE_RESULT_ARTIFACT_TYPES
+
+    inventory_types = tuple(
+        artifact["artifact_type"]
+        for artifact in result["artifact_inventory"]
+    )
+
+    actual_lifecycle_types = (
+        inventory_types[-lifecycle_count:]
+        if lifecycle_count
+        else ()
+    )
+
+    assert actual_lifecycle_types == (
+        LIFECYCLE_ARTIFACT_ORDER[
+            :lifecycle_count
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "invalid_suffix",
+    (
+        (
+            ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        ),
+        (
+            CLIENT_RESPONSE_ARTIFACT_TYPE,
+        ),
+        (
+            PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
+        ),
+        (
+            DELIVERY_ARTIFACT_TYPE,
+            CLIENT_RESPONSE_ARTIFACT_TYPE,
+        ),
+        (
+            DELIVERY_ARTIFACT_TYPE,
+            PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
+        ),
+        (
+            DELIVERY_ARTIFACT_TYPE,
+            CLIENT_RESPONSE_ARTIFACT_TYPE,
+            ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        ),
+        (
+            DELIVERY_ARTIFACT_TYPE,
+            DELIVERY_ARTIFACT_TYPE,
+        ),
+        (
+            DELIVERY_ARTIFACT_TYPE,
+            ACKNOWLEDGMENT_ARTIFACT_TYPE,
+            ACKNOWLEDGMENT_ARTIFACT_TYPE,
+        ),
+        (
+            DELIVERY_ARTIFACT_TYPE,
+            "unknown-paid-assessment-lifecycle-artifact",
+        ),
+        (
+            DELIVERY_ARTIFACT_TYPE,
+            ACKNOWLEDGMENT_ARTIFACT_TYPE,
+            CLIENT_RESPONSE_ARTIFACT_TYPE,
+            PAID_ASSESSMENT_CLOSEOUT_ARTIFACT_TYPE,
+            "unexpected-post-closeout-artifact",
+        ),
+    ),
+)
+def test_read_model_rejects_invalid_lifecycle_suffix(
+    tmp_path: Path,
+    invalid_suffix: tuple[str, ...],
+) -> None:
+    service = build_executed_service(tmp_path)
+
+    append_lifecycle_artifacts(
+        service,
+        artifact_types=invalid_suffix,
+    )
+
+    read_service = (
+        GovernanceCommercialPaidAssessmentResultsReadModelService(
+            execution_service=service
+        )
+    )
+
+    with pytest.raises(
+        CommercialPaidAssessmentResultsReadModelError,
+        match=(
+            "paid assessment lifecycle artifact "
+            "order is invalid"
+        ),
+    ):
+        read_service.read(
+            tenant_id="tenant-001",
+            client_id="client-001",
+            engagement_id="engagement-001",
+            assessment_id="assessment-001",
+        )
+
+
+def test_closed_lifecycle_keeps_safe_result_projection(
+    tmp_path: Path,
+) -> None:
+    service = build_executed_service(tmp_path)
+
+    append_lifecycle_artifacts(
+        service,
+        artifact_types=LIFECYCLE_ARTIFACT_ORDER,
+    )
+
+    result = read_results(service)
+
+    assert result["artifact_count"] == 14
+    assert result["repository_chain_valid"] is True
+    assert len(result["artifact_inventory"]) == 14
+
+    inventory_types = tuple(
+        artifact["artifact_type"]
+        for artifact in result["artifact_inventory"]
+    )
+
+    assert inventory_types[-4:] == (
+        LIFECYCLE_ARTIFACT_ORDER
+    )
+
+    result_types = tuple(
+        artifact["artifact_type"]
+        for artifact in result["result_artifacts"]
+    )
+
+    assert result_types == SAFE_RESULT_ARTIFACT_TYPES
+
+    for lifecycle_type in LIFECYCLE_ARTIFACT_ORDER:
+        assert lifecycle_type not in result_types
+
+
+def test_lifecycle_suffix_preserves_complete_assessment_record(
+    tmp_path: Path,
+) -> None:
+    service = build_executed_service(tmp_path)
+    repository = build_repository(service)
+    context = build_context()
+
+    before = repository.get_assessment(
+        context=context
+    )
+
+    assert before.status == "complete"
+
+    append_lifecycle_artifacts(
+        service,
+        artifact_types=LIFECYCLE_ARTIFACT_ORDER,
+    )
+
+    after = repository.get_assessment(
+        context=context
+    )
+
+    assert after.status == "complete"
+    assert repository.verify_chain(
+        context=context
+    ) is True

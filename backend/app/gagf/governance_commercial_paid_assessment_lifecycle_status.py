@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +15,8 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution import (
 )
 from backend.app.gagf.governance_paid_assessment_lifecycle_query import (
     GovernancePaidAssessmentLifecycleQueryService,
+    LIFECYCLE_STAGE_NOT_STARTED,
+    NEXT_STEP_RECORD_DELIVERY,
     PaidAssessmentLifecycleQueryError,
 )
 
@@ -160,8 +162,21 @@ class GovernanceCommercialPaidAssessmentLifecycleStatusService:
         database_path = Path(database_path)
 
         if not database_path.exists():
-            raise CommercialPaidAssessmentLifecycleStatusError(
-                "paid assessment hierarchy database does not exist"
+            return CommercialPaidAssessmentLifecycleStatus(
+                tenant_id=hierarchy[0],
+                client_id=hierarchy[1],
+                engagement_id=hierarchy[2],
+                assessment_id=hierarchy[3],
+                current_stage=LIFECYCLE_STAGE_NOT_STARTED,
+                pending_next_step=NEXT_STEP_RECORD_DELIVERY,
+                delivery_recorded=False,
+                receipt_acknowledged=False,
+                client_response_recorded=False,
+                report_id=None,
+                findings_disposition=None,
+                recommendations_disposition=None,
+                lifecycle_artifact_count=0,
+                repository_chain_valid=True,
             )
 
         if not database_path.is_file():

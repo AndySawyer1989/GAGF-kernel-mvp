@@ -343,32 +343,12 @@ def register_governance_assessment_api(
         audit_database_path
     )
 
-    print(
-        "DEBUG routes before audit middleware:",
-        len(app.routes),
-        [
-            getattr(route, "path", "")
-            for route in app.routes
-            if "governance-paid-assessments"
-            in getattr(route, "path", "")
-        ],
-    )
 
     install_assessment_audit_middleware(
         app=app,
         ledger=audit_ledger,
     )
 
-    print(
-        "DEBUG routes after audit middleware:",
-        len(app.routes),
-        [
-            getattr(route, "path", "")
-            for route in app.routes
-            if "governance-paid-assessments"
-            in getattr(route, "path", "")
-        ],
-    )
 
     checkpoint_database_path = (
         assessment_database_path.with_name(

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -96,6 +96,7 @@ def build_delivery_event(
         "delivered_at": "2026-09-03T20:00:00+00:00",
         "delivery_method": "email",
         "delivery_reference": "mail-message-001",
+        "delivery_completed": True,
         "delivery_status": "delivered",
     }
 
@@ -129,6 +130,9 @@ def build_delivery_event(
         "delivery_method": values["delivery_method"],
         "delivery_reference": (
             values["delivery_reference"]
+        ),
+        "delivery_completed": (
+            values["delivery_completed"]
         ),
         "delivery_status": values["delivery_status"],
     }

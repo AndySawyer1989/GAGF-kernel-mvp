@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from dataclasses import dataclass
@@ -357,6 +357,9 @@ class GovernanceCommercialPaidAssessmentClientAcknowledgmentService:
             delivery_reference=self._require_text(
                 payload.get("delivery_reference"),
                 "delivery.delivery_reference",
+            ),
+            delivery_completed=(
+                payload.get("delivery_completed") is True
             ),
             delivery_status=self._require_text(
                 payload.get("delivery_status"),

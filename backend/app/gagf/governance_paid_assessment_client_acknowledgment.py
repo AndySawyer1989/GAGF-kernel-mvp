@@ -401,6 +401,9 @@ class GovernancePaidAssessmentClientAcknowledgmentService:
                     "delivery_reference": (
                         delivery_event.delivery_reference
                     ),
+                    "delivery_completed": (
+                        delivery_event.delivery_completed
+                    ),
                     "delivery_status": delivery_event.delivery_status,
                 }
             )

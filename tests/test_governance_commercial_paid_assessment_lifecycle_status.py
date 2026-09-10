@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 
@@ -412,22 +412,35 @@ def test_repository_chain_tamper_fails_closed(
         )
 
 
-def test_rejects_missing_hierarchy_database(
+def test_missing_hierarchy_database_projects_not_started(
     tmp_path: Path,
 ) -> None:
     execution_service = build_execution_service(
         tmp_path
     )
 
-    with pytest.raises(
-        CommercialPaidAssessmentLifecycleStatusError,
-        match="hierarchy database does not exist",
-    ):
-        build_service(
-            execution_service
-        ).get_status(
-            **HIERARCHY
-        )
+    result = build_service(
+        execution_service
+    ).get_status(
+        **HIERARCHY
+    )
+
+    assert (
+        result.current_stage
+        == LIFECYCLE_STAGE_NOT_STARTED
+    )
+    assert (
+        result.pending_next_step
+        == NEXT_STEP_RECORD_DELIVERY
+    )
+    assert result.delivery_recorded is False
+    assert result.receipt_acknowledged is False
+    assert result.client_response_recorded is False
+    assert result.report_id is None
+    assert result.findings_disposition is None
+    assert result.recommendations_disposition is None
+    assert result.lifecycle_artifact_count == 0
+    assert result.repository_chain_valid is True
 
 
 def test_rejects_blank_hierarchy_component(

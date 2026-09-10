@@ -303,6 +303,9 @@ class GovernanceRealPaidAssessmentClientReceiptService:
                 raw_event.get("delivery_reference"),
                 "delivery_event.delivery_reference",
             ),
+            delivery_completed=(
+                raw_event.get("delivery_completed") is True
+            ),
             delivery_status=self._require_text(
                 raw_event.get("delivery_status"),
                 "delivery_event.delivery_status",
@@ -348,6 +351,9 @@ class GovernanceRealPaidAssessmentClientReceiptService:
                     "delivery_method": delivery_event.delivery_method,
                     "delivery_reference": (
                         delivery_event.delivery_reference
+                    ),
+                    "delivery_completed": (
+                        delivery_event.delivery_completed
                     ),
                     "delivery_status": delivery_event.delivery_status,
                 }

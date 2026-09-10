@@ -12,6 +12,7 @@ export type PaidAssessmentHierarchy = {
 
 export type PaidAssessmentDeliveryReadinessResponse = {
   delivery_readiness_status: string;
+  report_id: string;
   boundaries?: Record<string, boolean>;
 };
 

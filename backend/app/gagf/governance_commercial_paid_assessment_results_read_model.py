@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -254,7 +254,7 @@ class GovernanceCommercialPaidAssessmentResultsReadModelService:
             GovernanceAssessmentDemonstrationPersistenceService.ARTIFACT_ORDER
         )
 
-        if len(artifacts) != len(expected_order):
+        if len(artifacts) < len(expected_order):
             raise CommercialPaidAssessmentResultsReadModelError(
                 "canonical paid assessment artifact count is invalid"
             )
@@ -263,9 +263,38 @@ class GovernanceCommercialPaidAssessmentResultsReadModelService:
             artifact.artifact_type for artifact in artifacts
         )
 
-        if artifact_types != expected_order:
+        canonical_artifact_types = artifact_types[
+            : len(expected_order)
+        ]
+
+        if canonical_artifact_types != expected_order:
             raise CommercialPaidAssessmentResultsReadModelError(
                 "canonical paid assessment artifact order is invalid"
+            )
+
+        allowed_lifecycle_order = (
+            "paid-assessment-delivery-event",
+            "paid-assessment-client-acknowledgment",
+            "paid-assessment-client-response",
+            "paid-assessment-closeout",
+        )
+
+        lifecycle_artifact_types = artifact_types[
+            len(expected_order) :
+        ]
+
+        expected_lifecycle_prefix = allowed_lifecycle_order[
+            : len(lifecycle_artifact_types)
+        ]
+
+        if (
+            len(lifecycle_artifact_types)
+            > len(allowed_lifecycle_order)
+            or lifecycle_artifact_types
+            != expected_lifecycle_prefix
+        ):
+            raise CommercialPaidAssessmentResultsReadModelError(
+                "paid assessment lifecycle artifact order is invalid"
             )
 
         if len(set(artifact_types)) != len(artifact_types):

@@ -36,6 +36,7 @@ def build_delivery_event(**overrides):
         "delivered_at": "2026-08-18T19:15:00+00:00",
         "delivery_method": "email",
         "delivery_reference": "mail-message-001",
+        "delivery_completed": True,
         "delivery_status": "delivered",
     }
     values.update(overrides)
@@ -152,6 +153,7 @@ def test_rejects_tampered_delivery_event_hash():
         delivered_at=delivery_event.delivered_at,
         delivery_method=delivery_event.delivery_method,
         delivery_reference="tampered-reference",
+        delivery_completed=delivery_event.delivery_completed,
         delivery_status=delivery_event.delivery_status,
         delivery_event_hash=delivery_event.delivery_event_hash,
     )

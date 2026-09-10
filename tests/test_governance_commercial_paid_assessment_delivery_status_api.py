@@ -139,6 +139,14 @@ class UnusedClientAcknowledgmentService:
 
 
 
+class UnusedCloseoutStatusService:
+    pass
+
+
+class UnusedAdministrativeCloseoutService:
+    pass
+
+
 class UnusedClientResponseService:
     def record(self, **kwargs: Any):
         raise AssertionError(
@@ -160,6 +168,10 @@ def build_client(
             lifecycle_status_service=UnusedLifecycleStatusService(),
             client_acknowledgment_service=UnusedClientAcknowledgmentService(),
             client_response_service=UnusedClientResponseService(),
+            closeout_status_service=UnusedCloseoutStatusService(),
+            administrative_closeout_service=(
+                UnusedAdministrativeCloseoutService()
+            ),
         )
     )
 

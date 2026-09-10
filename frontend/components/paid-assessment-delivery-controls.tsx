@@ -81,6 +81,11 @@ export function PaidAssessmentDeliveryControls({
   ] = useState<string | null>(null);
 
   const [
+    readinessReportId,
+    setReadinessReportId
+  ] = useState<string | null>(null);
+
+  const [
     readinessChecking,
     setReadinessChecking
   ] = useState(false);
@@ -340,6 +345,7 @@ export function PaidAssessmentDeliveryControls({
 
   const canApprove =
     localPrerequisitesReady &&
+    readinessReportId !== null &&
     readinessStatus ===
       "ready_for_delivery_approval_review" &&
     allApprovalConfirmations &&
@@ -523,6 +529,10 @@ export function PaidAssessmentDeliveryControls({
       setReadinessStatus(
         result.delivery_readiness_status
       );
+
+      setReadinessReportId(
+        result.report_id
+      );
     } catch (caught) {
       setReadinessStatus(null);
 
@@ -541,7 +551,7 @@ export function PaidAssessmentDeliveryControls({
   async function approveDelivery() {
     if (
       !canApprove ||
-      reportId === null
+      readinessReportId === null
     ) {
       return;
     }
@@ -572,7 +582,8 @@ export function PaidAssessmentDeliveryControls({
               hierarchy.engagementId,
             assessment_id:
               hierarchy.assessmentId,
-            report_id: reportId,
+            report_id:
+              readinessReportId,
             approved_by: config.actorId,
             approved_at: approvedAt,
             scope_approved: scopeApproved,
@@ -611,7 +622,7 @@ export function PaidAssessmentDeliveryControls({
   async function recordDelivery() {
     if (
       !canRecordDelivery ||
-      reportId === null
+      readinessReportId === null
     ) {
       return;
     }
@@ -646,7 +657,7 @@ export function PaidAssessmentDeliveryControls({
             assessment_id:
               hierarchy.assessmentId,
             report_id:
-              reportId,
+              readinessReportId,
             delivered_by:
               config.actorId,
             delivered_at:

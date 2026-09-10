@@ -172,6 +172,7 @@ class GovernedPaidAssessmentDeliveryEvent:
     delivered_at: str
     delivery_method: str
     delivery_reference: str
+    delivery_completed: bool
     delivery_status: str
     delivery_event_hash: str
     event_type: str = PAID_ASSESSMENT_DELIVERY_EVENT_ID
@@ -212,6 +213,7 @@ class GovernedPaidAssessmentDeliveryEvent:
             "delivered_at": self.delivered_at,
             "delivery_method": self.delivery_method,
             "delivery_reference": self.delivery_reference,
+            "delivery_completed": self.delivery_completed,
             "delivery_status": self.delivery_status,
             "delivery_event_hash": self.delivery_event_hash,
         }
@@ -275,6 +277,9 @@ class GovernancePaidAssessmentDeliveryEventService:
             "delivery_reference": (
                 human_confirmation.delivery_reference
             ),
+            "delivery_completed": (
+                human_confirmation.delivery_completed
+            ),
             "delivery_status": self.DELIVERY_STATUS,
         }
 
@@ -299,6 +304,9 @@ class GovernancePaidAssessmentDeliveryEventService:
             delivery_method=human_confirmation.delivery_method,
             delivery_reference=(
                 human_confirmation.delivery_reference
+            ),
+            delivery_completed=(
+                human_confirmation.delivery_completed
             ),
             delivery_status=self.DELIVERY_STATUS,
             delivery_event_hash=sha256_text(
