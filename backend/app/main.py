@@ -2264,3 +2264,22 @@ from backend.app.gagf.prelive_api_registration import (
 _register_prelive_api(
     app=app,
 )
+
+
+# 04I-05C: Controlled Customer Trial Preflight API
+from pathlib import Path as _CustomerTrialPreflightPath
+
+from backend.app.gagf.governance_customer_trial_preflight_api_registration import (
+    register_customer_trial_preflight_api as _register_customer_trial_preflight_api,
+)
+
+_CUSTOMER_TRIAL_PREFLIGHT_DATABASE_PATH = (
+    _CustomerTrialPreflightPath(__file__).resolve().parent
+    / "data"
+    / "governance_customer_trial_preflight.sqlite3"
+)
+
+_register_customer_trial_preflight_api(
+    app=app,
+    database_path=_CUSTOMER_TRIAL_PREFLIGHT_DATABASE_PATH,
+)
