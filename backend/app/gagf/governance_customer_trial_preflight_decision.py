@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -25,6 +27,29 @@ AUTHORITY_BOUNDARY = (
 )
 
 
+def _canonical_json(
+    value: Any,
+) -> str:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+
+def _package_hash(
+    package: CustomerTrialEngagementPackage,
+) -> str:
+    payload = _canonical_json(
+        package.to_dict()
+    )
+
+    return hashlib.sha256(
+        payload.encode("utf-8")
+    ).hexdigest()
+
+
 @dataclass(frozen=True)
 class CustomerTrialPackageIdentity:
     tenant_id: str
@@ -40,6 +65,7 @@ class CustomerTrialPreflightDecision:
     blocking_issue_count: int
     blocking_codes: tuple[str, ...]
     package_identity: CustomerTrialPackageIdentity
+    package_hash: str
     evaluated_at: str
     authority_boundary: str
     schema_version: str = (
@@ -100,6 +126,11 @@ def build_customer_trial_preflight_decision(
         blocking_codes=blocking_codes,
         package_identity=(
             _package_identity(
+                package
+            )
+        ),
+        package_hash=(
+            _package_hash(
                 package
             )
         ),

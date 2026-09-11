@@ -196,3 +196,56 @@ def test_preflight_is_deterministic_for_fixed_time():
     )
 
     assert first == second
+
+def test_preflight_decision_binds_package_content():
+    package = build_package()
+
+    changed_package = replace(
+        package,
+        period_start="2026-09-02",
+    )
+
+    first = (
+        build_customer_trial_preflight_decision(
+            package,
+            evaluated_at=EVALUATED_AT,
+        )
+    )
+
+    second = (
+        build_customer_trial_preflight_decision(
+            changed_package,
+            evaluated_at=EVALUATED_AT,
+        )
+    )
+
+    assert len(first.package_hash) == 64
+    assert len(second.package_hash) == 64
+
+    assert (
+        first.package_hash
+        != second.package_hash
+    )
+
+
+def test_preflight_package_hash_is_deterministic():
+    package = build_package()
+
+    first = (
+        build_customer_trial_preflight_decision(
+            package,
+            evaluated_at=EVALUATED_AT,
+        )
+    )
+
+    second = (
+        build_customer_trial_preflight_decision(
+            package,
+            evaluated_at=EVALUATED_AT,
+        )
+    )
+
+    assert (
+        first.package_hash
+        == second.package_hash
+    )
