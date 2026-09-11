@@ -2283,3 +2283,30 @@ _register_customer_trial_preflight_api(
     app=app,
     database_path=_CUSTOMER_TRIAL_PREFLIGHT_DATABASE_PATH,
 )
+
+
+# 04J-03D: Controlled Customer Trial Execution Handoff API
+from pathlib import Path as _CustomerTrialExecutionHandoffPath
+
+from backend.app.gagf.governance_customer_trial_execution_handoff_api_registration import (
+    register_customer_trial_execution_handoff_api as _register_customer_trial_execution_handoff_api,
+)
+
+_CUSTOMER_TRIAL_EXECUTION_HANDOFF_DATABASE_PATH = (
+    _CustomerTrialExecutionHandoffPath(__file__).resolve().parent
+    / "data"
+    / "governance_customer_trial_execution_handoff.sqlite3"
+)
+
+_register_customer_trial_execution_handoff_api(
+    app=app,
+    database_path=(
+        _CUSTOMER_TRIAL_EXECUTION_HANDOFF_DATABASE_PATH
+    ),
+    preflight_service=(
+        app.state.governance_customer_trial_preflight_service
+    ),
+    execution_input_binding_service=(
+        app.state.governance_commercial_paid_assessment_execution_input_binding_service
+    ),
+)
