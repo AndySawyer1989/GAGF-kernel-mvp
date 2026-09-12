@@ -227,7 +227,7 @@ async function confirmAuthorization(
 }
 
 test.describe(
-  "04H customer trial â€” real paid assessment lifecycle",
+  "04H customer trial Ã¢â‚¬â€ real paid assessment lifecycle",
   () => {
     test(
       `${CUSTOMER_TRIAL_ID} executes and closes through the real browser workflow`,
@@ -269,6 +269,8 @@ test.describe(
             `${customerTrialIdentity.engagementId}-` +
             `${projectToken}`
           );
+
+
 
         /**
          * ==================================================
@@ -624,6 +626,350 @@ test.describe(
           }
         );
 
+
+        let handoffPrepared =
+          false;
+
+        let handoffPostCount =
+          0;
+
+        let paidExecutionPostCount =
+          0;
+
+        let capturedHandoffRequest:
+          Record<string, unknown> | null =
+            null;
+
+        let capturedPaidExecutionRequest:
+          Record<string, unknown> | null =
+            null;
+
+        const controlledBindingHash =
+          (
+            "04j04b06-binding-"
+            + assessmentId
+          );
+
+
+        await page.route(
+          (
+            "**/api/v1/"
+            + "governance-paid-assessments/"
+            + "**/execution-input-binding"
+          ),
+          async (route) => {
+            const upstream =
+              await route.fetch();
+
+            const payload =
+              await upstream.json();
+
+            await route.fulfill({
+              response:
+                upstream,
+
+              json: {
+                ...payload,
+
+                binding_hash:
+                  controlledBindingHash
+              }
+            });
+          }
+        );
+
+
+        await page.route(
+          (
+            "**/api/v1/"
+            + "governance-customer-trials/"
+            + "**/preflight-status"
+          ),
+          async (route) => {
+            await route.fulfill({
+              status:
+                200,
+
+              contentType:
+                "application/json",
+
+              body:
+                JSON.stringify({
+                  status:
+                    "trial_ready",
+
+                  api_version:
+                    "1.0.0",
+
+                  authority:
+                    "READ_ONLY",
+
+                  result: {
+                    receipt_found:
+                      true,
+
+                    receipt: {
+                      hierarchy_key:
+                        (
+                          "controlled-tenant"
+                          + "/"
+                          + customerTrialIdentity.clientId
+                          + "/"
+                          + assessmentId
+                        ),
+
+                      package_hash:
+                        (
+                          "04j04b06-package-"
+                          + assessmentId
+                        ),
+
+                      decision_payload_hash:
+                        (
+                          "04j04b06-decision-"
+                          + assessmentId
+                        ),
+
+                      receipt_hash:
+                        (
+                          "04j04b06-preflight-"
+                          + assessmentId
+                        )
+                    }
+                  },
+
+                  boundaries: {
+                    status_is_read_only:
+                      true
+                  }
+                })
+            });
+          }
+        );
+
+
+        await page.route(
+          (
+            "**/api/v1/"
+            + "governance-customer-trials/"
+            + "**/execution-handoff-status"
+          ),
+          async (route) => {
+            await route.fulfill({
+              status:
+                200,
+
+              contentType:
+                "application/json",
+
+              body:
+                JSON.stringify({
+                  status:
+                    (
+                      handoffPrepared
+                        ? "handoff_prepared"
+                        : "not_prepared"
+                    ),
+
+                  api_version:
+                    "1.0.0",
+
+                  authority:
+                    "READ_ONLY",
+
+                  result: {
+                    receipt_found:
+                      handoffPrepared,
+
+                    receipt:
+                      handoffPrepared
+                        ? {
+                            hierarchy_key:
+                              (
+                                "controlled-tenant"
+                                + "/"
+                                + customerTrialIdentity.clientId
+                                + "/"
+                                + assessmentId
+                              ),
+
+                            preflight_receipt_hash:
+                              (
+                                "04j04b06-preflight-"
+                                + assessmentId
+                              ),
+
+                            preflight_decision_payload_hash:
+                              (
+                                "04j04b06-decision-"
+                                + assessmentId
+                              ),
+
+                            preflight_package_hash:
+                              (
+                                "04j04b06-package-"
+                                + assessmentId
+                              ),
+
+                            lineage_hash:
+                              (
+                                "04j04b06-lineage-"
+                                + assessmentId
+                              ),
+
+                            receipt_hash:
+                              (
+                                "04j04b06-handoff-receipt-"
+                                + assessmentId
+                              ),
+
+                            execution_handoff_lineage: {
+                              contract_execution_event_hash:
+                                (
+                                  "04j04b06-contract-hash-"
+                                  + assessmentId
+                                ),
+
+                              paid_work_authorization_hash:
+                                (
+                                  "04j04b06-paid-auth-hash-"
+                                  + assessmentId
+                                ),
+
+                              assessment_execution_request_hash:
+                                (
+                                  "04j04b06-request-hash-"
+                                  + assessmentId
+                                ),
+
+                              handoff_hash:
+                                (
+                                  "04j04b06-handoff-hash-"
+                                  + assessmentId
+                                )
+                            }
+                          }
+                        : null
+                  },
+
+                  boundaries: {
+                    status_is_read_only:
+                      true,
+
+                    status_is_not_execution_authority:
+                      true,
+
+                    status_is_not_recovery_authority:
+                      true,
+
+                    status_is_not_delivery_authority:
+                      true,
+
+                    status_is_not_closeout_authority:
+                      true,
+
+                    status_is_not_intervention_authority:
+                      true
+                  }
+                })
+            });
+          }
+        );
+
+
+        await page.route(
+          (
+            "**/api/v1/"
+            + "governance-customer-trials/"
+            + "execution-handoff"
+          ),
+          async (route) => {
+            handoffPostCount += 1;
+
+            capturedHandoffRequest =
+              route
+                .request()
+                .postDataJSON() as
+                  Record<string, unknown>;
+
+            handoffPrepared =
+              true;
+
+            await route.fulfill({
+              status:
+                201,
+
+              contentType:
+                "application/json",
+
+              body:
+                JSON.stringify({
+                  status:
+                    "handoff_prepared",
+
+                  api_version:
+                    "1.0.0",
+
+                  authority:
+                    "HANDOFF_PREPARATION_ONLY",
+
+                  binding_metadata: {
+                    binding_hash:
+                      controlledBindingHash
+                  },
+
+                  result: {
+                    hierarchy_key:
+                      (
+                        "controlled-tenant"
+                        + "/"
+                        + customerTrialIdentity.clientId
+                        + "/"
+                        + assessmentId
+                      ),
+
+                    receipt: {
+                      receipt_hash:
+                        (
+                          "04j04b06-handoff-receipt-"
+                          + assessmentId
+                        )
+                    }
+                  },
+
+                  boundaries: {
+                    preparation_is_not_execution_authority:
+                      true,
+
+                    preparation_is_not_intervention_authority:
+                      true
+                  }
+                })
+            });
+          }
+        );
+
+
+        await page.route(
+          (
+            "**/api/v1/"
+            + "governance-paid-assessments/"
+            + "execute"
+          ),
+          async (route) => {
+            paidExecutionPostCount += 1;
+
+            capturedPaidExecutionRequest =
+              route
+                .request()
+                .postDataJSON() as
+                  Record<string, unknown>;
+
+            await route.continue();
+          }
+        );
+
+
         /**
          * ==================================================
          * 3. COMPLETE PA015 EXECUTION AUTHORIZATION
@@ -818,6 +1164,174 @@ test.describe(
 
         /**
          * ==================================================
+         * 04J-04B-06. CUSTOMER TRIAL EXECUTION HANDOFF
+         * ==================================================
+         */
+
+        await test.step(
+          (
+            "prepare customer-trial execution handoff "
+            + "without executing PA015"
+          ),
+          async () => {
+            const prepareHandoff =
+              page.getByRole(
+                "button",
+                {
+                  name:
+                    "Prepare execution handoff"
+                }
+              );
+
+            await expect(
+              prepareHandoff
+            ).toBeVisible();
+
+            await expect(
+              prepareHandoff
+            ).toBeEnabled();
+
+            expect(
+              handoffPostCount
+            ).toBe(
+              0
+            );
+
+            expect(
+              paidExecutionPostCount
+            ).toBe(
+              0
+            );
+
+            await prepareHandoff.click();
+
+            await expect.poll(
+              () =>
+                handoffPostCount
+            ).toBe(
+              1
+            );
+
+            await expect(
+              page.getByRole(
+                "button",
+                {
+                  name:
+                    "Handoff prepared"
+                }
+              )
+            ).toBeVisible();
+
+            expect(
+              paidExecutionPostCount
+            ).toBe(
+              0
+            );
+
+            expect(
+              capturedPaidExecutionRequest
+            ).toBeNull();
+
+            expect(
+              capturedHandoffRequest
+            ).not.toBeNull();
+
+            const handoffRequest =
+              capturedHandoffRequest as
+                Record<string, unknown>;
+
+            expect(
+              handoffRequest
+                .execution_input_binding_hash
+            ).toBe(
+              controlledBindingHash
+            );
+
+            const contractEvent =
+              handoffRequest
+                .contract_execution_event as
+                  Record<string, unknown>;
+
+            const paidAuthorization =
+              handoffRequest
+                .paid_work_authorization as
+                  Record<string, unknown>;
+
+            expect(
+              String(
+                contractEvent
+                  .contract_execution_event_id
+              )
+            ).toMatch(
+              new RegExp(
+                (
+                  "^contract-"
+                  + assessmentId
+                  + "-"
+                )
+              )
+            );
+
+            expect(
+              String(
+                paidAuthorization
+                  .authorization_id
+              )
+            ).toMatch(
+              new RegExp(
+                (
+                  "^paid-work-"
+                  + assessmentId
+                  + "-"
+                )
+              )
+            );
+
+            expect(
+              paidAuthorization
+                .contract_execution_event_id
+            ).toBe(
+              contractEvent
+                .contract_execution_event_id
+            );
+
+            expect(
+              typeof paidAuthorization
+                .authorized_at
+            ).toBe(
+              "string"
+            );
+
+            expect(
+              String(
+                paidAuthorization
+                  .authorized_at
+              ).length
+            ).toBeGreaterThan(
+              0
+            );
+
+            expect(
+              paidAuthorization
+                .paid_assessment_authorized
+            ).toBe(
+              true
+            );
+
+            await expect(
+              page.getByText(
+                (
+                  "The execution handoff has been "
+                  + "prepared and durably recorded."
+                )
+              )
+            ).toBeVisible();
+          }
+        );
+
+
+        /**
+         * ==================================================
          * 4. REAL PA015 EXECUTION
          * ==================================================
          */
@@ -845,6 +1359,88 @@ test.describe(
                 }
               )
             ).toBeVisible();
+
+            /**
+             * 04J-04B-07
+             *
+             * Handoff preparation and PA015 execution are
+             * separate governed actions, but they must remain
+             * bound to the exact same operator authorization
+             * lineage.
+             */
+            expect(
+              paidExecutionPostCount
+            ).toBe(
+              1
+            );
+
+            expect(
+              capturedPaidExecutionRequest
+            ).not.toBeNull();
+
+            expect(
+              capturedHandoffRequest
+            ).not.toBeNull();
+
+            const paidExecutionRequest =
+              capturedPaidExecutionRequest as
+                Record<string, unknown>;
+
+            const handoffRequest =
+              capturedHandoffRequest as
+                Record<string, unknown>;
+
+            const handoffContractEvent =
+              handoffRequest
+                .contract_execution_event as
+                  Record<string, unknown>;
+
+            const handoffAuthorization =
+              handoffRequest
+                .paid_work_authorization as
+                  Record<string, unknown>;
+
+            const paidContractEvent =
+              paidExecutionRequest
+                .contract_execution_event as
+                  Record<string, unknown>;
+
+            const paidAuthorization =
+              paidExecutionRequest
+                .paid_work_authorization as
+                  Record<string, unknown>;
+
+            expect(
+              paidContractEvent
+                .contract_execution_event_id
+            ).toBe(
+              handoffContractEvent
+                .contract_execution_event_id
+            );
+
+            expect(
+              paidAuthorization
+                .authorization_id
+            ).toBe(
+              handoffAuthorization
+                .authorization_id
+            );
+
+            expect(
+              paidAuthorization
+                .contract_execution_event_id
+            ).toBe(
+              handoffAuthorization
+                .contract_execution_event_id
+            );
+
+            expect(
+              paidAuthorization
+                .authorized_at
+            ).toBe(
+              handoffAuthorization
+                .authorized_at
+            );
 
             const diagnosticRegion =
               page.getByRole(

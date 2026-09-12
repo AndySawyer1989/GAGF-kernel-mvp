@@ -23,6 +23,12 @@ import {
   type PaidAssessmentExecutionAuthorizationValue
 } from "@/components/paid-assessment-execution-authorization";
 import {
+  CustomerTrialStatusPanel
+} from "@/components/customer-trial-status-panel";
+import {
+  CustomerTrialExecutionHandoffControl
+} from "@/components/customer-trial-execution-handoff-control";
+import {
   AssessmentDeliveryStatus
 } from "@/components/assessment-delivery-status";
 import {
@@ -70,6 +76,17 @@ import {
   fetchPaidAssessmentDeliveryStatus,
   projectPaidAssessmentRecordedDelivery
 } from "@/lib/governance-paid-assessment-delivery-api";
+import {
+  fetchCustomerTrialExecutionHandoffStatus,
+  fetchCustomerTrialPreflightStatus,
+  prepareCustomerTrialExecutionHandoff,
+  type CustomerTrialExecutionHandoffStatus,
+  type CustomerTrialPreflightStatus
+} from "@/lib/governance-customer-trial-api";
+import {
+  buildPaidAssessmentAuthorizationEnvelope,
+  type PaidAssessmentAuthorizationEnvelope
+} from "@/lib/governance-paid-assessment-authorization-envelope";
 
 function textValue(
   payload: Record<string, unknown> | undefined,
@@ -278,6 +295,58 @@ export default function AssessmentDetailPage() {
     useState(true);
   const [error, setError] =
     useState<string | null>(null);
+
+  const [
+    customerTrialPreflight,
+    setCustomerTrialPreflight
+  ] =
+    useState<
+      CustomerTrialPreflightStatus | null
+    >(null);
+
+  const [
+    customerTrialHandoff,
+    setCustomerTrialHandoff
+  ] =
+    useState<
+      CustomerTrialExecutionHandoffStatus | null
+    >(null);
+
+  const [
+    customerTrialLoading,
+    setCustomerTrialLoading
+  ] =
+    useState(true);
+
+  const [
+    customerTrialError,
+    setCustomerTrialError
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    customerTrialHandoffPreparing,
+    setCustomerTrialHandoffPreparing
+  ] =
+    useState(false);
+
+  const [
+    customerTrialHandoffPreparationError,
+    setCustomerTrialHandoffPreparationError
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    executionAuthorizationEnvelope,
+    setExecutionAuthorizationEnvelope
+  ] =
+    useState<
+      PaidAssessmentAuthorizationEnvelope | null
+    >(null);
 
   const [
     executionBinding,
@@ -493,6 +562,80 @@ export default function AssessmentDetailPage() {
 
     return () => controller.abort();
   }, [loadAssessment]);
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function loadCustomerTrialStatus() {
+      setCustomerTrialLoading(true);
+      setCustomerTrialError(null);
+
+      try {
+        const [
+          preflightStatus,
+          handoffStatus
+        ] = await Promise.all([
+          fetchCustomerTrialPreflightStatus(
+            config,
+            identity,
+            controller.signal
+          ),
+          fetchCustomerTrialExecutionHandoffStatus(
+            config,
+            identity,
+            controller.signal
+          )
+        ]);
+
+        if (
+          !controller.signal.aborted
+        ) {
+          setCustomerTrialPreflight(
+            preflightStatus
+          );
+
+          setCustomerTrialHandoff(
+            handoffStatus
+          );
+        }
+      } catch (error) {
+        if (
+          controller.signal.aborted
+        ) {
+          return;
+        }
+
+        setCustomerTrialPreflight(
+          null
+        );
+
+        setCustomerTrialHandoff(
+          null
+        );
+
+        setCustomerTrialError(
+          error instanceof Error
+            ? error.message
+            : (
+                "Unable to restore governed "
+                + "customer-trial status."
+              )
+        );
+      } finally {
+        if (
+          !controller.signal.aborted
+        ) {
+          setCustomerTrialLoading(false);
+        }
+      }
+    }
+
+    void loadCustomerTrialStatus();
+
+    return () =>
+      controller.abort();
+  }, [config, identity]);
 
   useEffect(() => {
     const controller =
@@ -1470,6 +1613,230 @@ const readinessItems: AssessmentReadinessItem[] = [
     executionAuthorization
       .executionEvidenceApproved;
 
+  function executionInputBindingHash():
+    string {
+    if (
+      executionBinding === null
+    ) {
+      throw new Error(
+        "Governed execution-input binding is unavailable."
+      );
+    }
+
+    const binding =
+      executionBinding as unknown as
+        Record<string, unknown>;
+
+    const value =
+      (
+        typeof binding.execution_input_binding_hash ===
+          "string"
+          ? binding.execution_input_binding_hash
+          : (
+              typeof binding.binding_hash ===
+                "string"
+                ? binding.binding_hash
+                : null
+            )
+      );
+
+    if (
+      value === null ||
+      value.trim().length === 0
+    ) {
+      throw new Error(
+        "Governed execution-input binding hash is unavailable."
+      );
+    }
+
+    return value;
+  }
+
+
+  function ensureExecutionAuthorizationEnvelope():
+    PaidAssessmentAuthorizationEnvelope {
+    if (
+      executionAuthorizationEnvelope !== null
+    ) {
+      return executionAuthorizationEnvelope;
+    }
+
+    const envelope =
+      buildPaidAssessmentAuthorizationEnvelope({
+        assessmentId:
+          identity.assessmentId
+      });
+
+    setExecutionAuthorizationEnvelope(
+      envelope
+    );
+
+    return envelope;
+  }
+
+  const customerTrialReady =
+    customerTrialPreflight
+      ?.result
+      .receipt_found === true;
+
+  const customerTrialHandoffPrepared =
+    customerTrialHandoff
+      ?.result
+      .receipt_found === true;
+
+
+  async function
+  handlePrepareCustomerTrialHandoff() {
+    if (
+      !customerTrialReady ||
+      !executionAuthorizationComplete ||
+      executionBinding === null ||
+      customerTrialHandoffPrepared ||
+      customerTrialHandoffPreparing
+    ) {
+      return;
+    }
+
+    setCustomerTrialHandoffPreparing(
+      true
+    );
+
+    setCustomerTrialHandoffPreparationError(
+      null
+    );
+
+    try {
+      const {
+        authorizedAt,
+        contractExecutionEventId,
+        authorizationId
+      } =
+        ensureExecutionAuthorizationEnvelope();
+
+      const bindingHash =
+        executionInputBindingHash();
+
+      await prepareCustomerTrialExecutionHandoff(
+        config,
+        {
+          tenant_id:
+            identity.tenantId,
+
+          client_id:
+            identity.clientId,
+
+          engagement_id:
+            identity.engagementId,
+
+          assessment_id:
+            identity.assessmentId,
+
+          execution_input_binding_hash:
+            bindingHash,
+
+          contract_execution_event: {
+            contract_execution_event_id:
+              contractExecutionEventId,
+
+            contract_executed:
+              executionAuthorization
+                .contractExecuted,
+
+            contract_execution_review_ready:
+              executionAuthorization
+                .contractExecutionReviewReady,
+
+            contract_execution_confirmed:
+              executionAuthorization
+                .contractExecutionConfirmed,
+
+            executed_contract_reference_recorded:
+              executionAuthorization
+                .executedContractReferenceRecorded,
+
+            executed_at_recorded:
+              executionAuthorization
+                .executedAtRecorded,
+
+            all_required_signatures_recorded:
+              executionAuthorization
+                .allRequiredSignaturesRecorded,
+
+            human_operator_confirmed_execution:
+              executionAuthorization
+                .humanOperatorConfirmedExecution,
+
+            requires_final_paid_work_authorization:
+              true,
+
+            human_boundary_required:
+              true,
+
+            gagf_kernel_authoritative:
+              true,
+
+            ai_override_allowed:
+              false
+          },
+
+          paid_work_authorization: {
+            authorization_id:
+              authorizationId,
+
+            tenant_id:
+              identity.tenantId,
+
+            client_id:
+              identity.clientId,
+
+            engagement_id:
+              identity.engagementId,
+
+            assessment_id:
+              identity.assessmentId,
+
+            contract_execution_event_id:
+              contractExecutionEventId,
+
+            authorized_by:
+              config.actorId,
+
+            authorized_at:
+              authorizedAt,
+
+            paid_assessment_authorized:
+              executionAuthorization
+                .paidAssessmentAuthorized
+          }
+        }
+      );
+
+      const refreshed =
+        await fetchCustomerTrialExecutionHandoffStatus(
+          config,
+          identity
+        );
+
+      setCustomerTrialHandoff(
+        refreshed
+      );
+    } catch (caught) {
+      setCustomerTrialHandoffPreparationError(
+        caught instanceof Error
+          ? caught.message
+          : (
+              "Unable to prepare governed "
+              + "customer-trial execution handoff."
+            )
+      );
+    } finally {
+      setCustomerTrialHandoffPreparing(
+        false
+      );
+    }
+  }
+
+
   const canRunDiagnostic =
     readyForAnalysis &&
     executionAuthorizationComplete &&
@@ -1494,17 +1861,12 @@ const readinessItems: AssessmentReadinessItem[] = [
       null
     );
 
-    const authorizedAt =
-      new Date().toISOString();
-
-    const eventNonce =
-      `${Date.now()}`;
-
-    const contractExecutionEventId =
-      `contract-${identity.assessmentId}-${eventNonce}`;
-
-    const authorizationId =
-      `paid-work-${identity.assessmentId}-${eventNonce}`;
+    const {
+      authorizedAt,
+      contractExecutionEventId,
+      authorizationId
+    } =
+      ensureExecutionAuthorizationEnvelope();
 
     try {
       const response =
@@ -1962,6 +2324,61 @@ const readinessItems: AssessmentReadinessItem[] = [
                   </div>
                 </section>
               )}
+
+              {customerTrialError && (
+                <section
+                  className="error-panel"
+                  role="alert"
+                >
+                  <div>
+                    <p className="error-title">
+                      Customer trial status unavailable
+                    </p>
+
+                    <p>
+                      {customerTrialError}
+                    </p>
+                  </div>
+                </section>
+              )}
+
+              <CustomerTrialStatusPanel
+                preflight={
+                  customerTrialPreflight
+                }
+                handoff={
+                  customerTrialHandoff
+                }
+                loading={
+                  customerTrialLoading
+                }
+              />
+
+              <CustomerTrialExecutionHandoffControl
+                trialReady={
+                  customerTrialReady
+                }
+                authorizationComplete={
+                  executionAuthorizationComplete
+                }
+                bindingAvailable={
+                  executionBinding !== null
+                }
+                handoffPrepared={
+                  customerTrialHandoffPrepared
+                }
+                preparing={
+                  customerTrialHandoffPreparing
+                }
+                error={
+                  customerTrialHandoffPreparationError
+                }
+                onPrepare={
+                  () => {
+                    void handlePrepareCustomerTrialHandoff();
+                  }
+                }
+              />
 
               <PaidAssessmentExecutionAuthorization
                 binding={
