@@ -1675,8 +1675,10 @@ const readinessItems: AssessmentReadinessItem[] = [
   }
 
   const customerTrialReady =
+    customerTrialPreflight?.status ===
+      "trial_ready" &&
     customerTrialPreflight
-      ?.result
+      .result
       .receipt_found === true;
 
   const customerTrialHandoffPrepared =
