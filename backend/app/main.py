@@ -2310,3 +2310,52 @@ _register_customer_trial_execution_handoff_api(
         app.state.governance_commercial_paid_assessment_execution_input_binding_service
     ),
 )
+
+
+# 04J-05C: Controlled Customer Trial Execution Observation API
+from pathlib import Path as _CustomerTrialExecutionObservationPath
+
+from backend.app.gagf.governance_customer_trial_execution_observation_api_registration import (
+    register_customer_trial_execution_observation_api as _register_customer_trial_execution_observation_api,
+)
+
+_CUSTOMER_TRIAL_EXECUTION_OBSERVATION_DATABASE_PATH = (
+    _CustomerTrialExecutionObservationPath(__file__).resolve().parent
+    / "data"
+    / "governance_customer_trial_execution_observation.sqlite3"
+)
+
+_register_customer_trial_execution_observation_api(
+    app=app,
+    database_path=(
+        _CUSTOMER_TRIAL_EXECUTION_OBSERVATION_DATABASE_PATH
+    ),
+)
+
+
+# 04J-05D-02: Bind controlled-trial observation recording
+# to the existing commercial PA015 execution service.
+from backend.app.gagf.governance_customer_trial_execution_observation_recording_bridge import (
+    GovernanceCustomerTrialExecutionObservationRecordingBridge as _CustomerTrialExecutionObservationRecordingBridge,
+)
+
+_customer_trial_execution_observation_recorder = (
+    _CustomerTrialExecutionObservationRecordingBridge(
+        handoff_receipt_store=(
+            app.state.governance_customer_trial_execution_handoff_receipt_store
+        ),
+        observation_receipt_store=(
+            app.state.governance_customer_trial_execution_observation_receipt_store
+        ),
+    )
+)
+
+app.state.governance_commercial_paid_assessment_execution_service.configure_customer_trial_observation_recorder(
+    recorder=(
+        _customer_trial_execution_observation_recorder
+    )
+)
+
+app.state.governance_customer_trial_execution_observation_recording_bridge = (
+    _customer_trial_execution_observation_recorder
+)

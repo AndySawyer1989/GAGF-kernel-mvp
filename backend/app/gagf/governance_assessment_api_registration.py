@@ -221,6 +221,12 @@ def register_governance_assessment_api(
         )
     )
 
+    setattr(
+        app.state,
+        "governance_commercial_paid_assessment_execution_service",
+        paid_assessment_service,
+    )
+
     paid_assessment_router = (
         create_governance_commercial_paid_assessment_router(
             service=paid_assessment_service,

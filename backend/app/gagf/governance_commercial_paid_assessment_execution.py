@@ -36,6 +36,9 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution_snapshot_b
     CommercialPaidAssessmentExecutionSnapshotBridgeError,
     GovernanceCommercialPaidAssessmentExecutionSnapshotBridgeService,
 )
+from backend.app.gagf.governance_customer_trial_execution_observation_recording_bridge import (
+    GovernanceCustomerTrialExecutionObservationRecordingBridge,
+)
 
 COMMERCIAL_PAID_ASSESSMENT_EXECUTION_VERSION = "0.4.0"
 
@@ -175,6 +178,36 @@ class GovernanceCommercialPaidAssessmentExecutionService:
                 / COMMERCIAL_PAID_ASSESSMENT_EXECUTION_STATUS_DATABASE
             )
         )
+
+        self._customer_trial_observation_recorder: (
+            GovernanceCustomerTrialExecutionObservationRecordingBridge
+            | None
+        ) = None
+
+    def configure_customer_trial_observation_recorder(
+        self,
+        *,
+        recorder:
+            GovernanceCustomerTrialExecutionObservationRecordingBridge,
+    ) -> None:
+        """
+        Attach the post-execution controlled-trial observation recorder.
+
+        This does not change execution authority. The recorder is invoked
+        only after PA015 execution, durable execution-status persistence,
+        and the existing operator-result snapshot have succeeded.
+        """
+
+        if not isinstance(
+            recorder,
+            GovernanceCustomerTrialExecutionObservationRecordingBridge,
+        ):
+            raise CommercialPaidAssessmentExecutionError(
+                "customer-trial observation recorder must be a "
+                "GovernanceCustomerTrialExecutionObservationRecordingBridge"
+            )
+
+        self._customer_trial_observation_recorder = recorder
 
     @property
     def status_store(
@@ -412,6 +445,17 @@ class GovernanceCommercialPaidAssessmentExecutionService:
                     result=result
                 )
             )
+
+            if (
+                self._customer_trial_observation_recorder
+                is not None
+            ):
+                (
+                    self._customer_trial_observation_recorder
+                    .capture(
+                        result=result
+                    )
+                )
 
             return result
 
