@@ -2396,6 +2396,27 @@ _register_customer_trial_client_receipt_observation_api(
 )
 
 
+# 04J-09C: Controlled Customer Trial Client Response Observation API
+from pathlib import Path as _CustomerTrialClientResponseObservationPath
+
+from backend.app.gagf.governance_customer_trial_client_response_observation_api_registration import (
+    register_customer_trial_client_response_observation_api as _register_customer_trial_client_response_observation_api,
+)
+
+_CUSTOMER_TRIAL_CLIENT_RESPONSE_OBSERVATION_DATABASE_PATH = (
+    _CustomerTrialClientResponseObservationPath(__file__).resolve().parent
+    / "data"
+    / "governance_customer_trial_client_response_observation.sqlite3"
+)
+
+_register_customer_trial_client_response_observation_api(
+    app=app,
+    database_path=(
+        _CUSTOMER_TRIAL_CLIENT_RESPONSE_OBSERVATION_DATABASE_PATH
+    ),
+)
+
+
 # 04J-05D-02: Bind controlled-trial observation recording
 # to the existing commercial PA015 execution service.
 from backend.app.gagf.governance_customer_trial_execution_observation_recording_bridge import (
@@ -2544,4 +2565,44 @@ app.state.governance_commercial_paid_assessment_client_acknowledgment_service.co
 
 app.state.governance_customer_trial_client_receipt_observation_recording_bridge = (
     _customer_trial_client_receipt_observation_recorder
+)
+
+
+# 04J-09D: Observe governed PA-007 client response for controlled trials.
+#
+# PA-007/PA-012 remain authoritative. This bridge records only
+# controlled-trial evidence after commercial response succeeds.
+from backend.app.gagf.governance_customer_trial_client_response_observation import (
+    GovernanceCustomerTrialClientResponseObservationService as _CustomerTrialClientResponseObservationProjectionService,
+)
+from backend.app.gagf.governance_customer_trial_client_response_observation_recording_bridge import (
+    GovernanceCustomerTrialClientResponseObservationRecordingBridge as _CustomerTrialClientResponseObservationRecordingBridge,
+)
+
+_customer_trial_client_response_observation_projection_service = (
+    _CustomerTrialClientResponseObservationProjectionService()
+)
+
+_customer_trial_client_response_observation_recorder = (
+    _CustomerTrialClientResponseObservationRecordingBridge(
+        client_receipt_observation_receipt_store=(
+            app.state.governance_customer_trial_client_receipt_observation_receipt_store
+        ),
+        observation_service=(
+            _customer_trial_client_response_observation_projection_service
+        ),
+        observation_receipt_store=(
+            app.state.governance_customer_trial_client_response_observation_receipt_store
+        ),
+    )
+)
+
+app.state.governance_commercial_paid_assessment_client_response_service.configure_customer_trial_client_response_observation_recorder(
+    recorder=(
+        _customer_trial_client_response_observation_recorder
+    )
+)
+
+app.state.governance_customer_trial_client_response_observation_recording_bridge = (
+    _customer_trial_client_response_observation_recorder
 )

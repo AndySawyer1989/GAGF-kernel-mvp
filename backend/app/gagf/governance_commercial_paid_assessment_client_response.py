@@ -156,6 +156,32 @@ class GovernanceCommercialPaidAssessmentClientResponseService:
             GovernanceRealPaidAssessmentClientResponseService()
         )
 
+        # Optional downstream controlled-trial observer.
+        #
+        # PA-007 and PA-012 remain authoritative. This hook observes
+        # only an already-authoritative commercial client response.
+        self._customer_trial_client_response_observation_recorder = None
+
+    def configure_customer_trial_client_response_observation_recorder(
+        self,
+        *,
+        recorder: Any,
+    ) -> None:
+        from backend.app.gagf.governance_customer_trial_client_response_observation_recording_bridge import (
+            GovernanceCustomerTrialClientResponseObservationRecordingBridge,
+        )
+
+        if not isinstance(
+            recorder,
+            GovernanceCustomerTrialClientResponseObservationRecordingBridge,
+        ):
+            raise CommercialPaidAssessmentClientResponseError(
+                "recorder must be a "
+                "GovernanceCustomerTrialClientResponseObservationRecordingBridge"
+            )
+
+        self._customer_trial_client_response_observation_recorder = recorder
+
     def record(
         self,
         *,
@@ -428,7 +454,7 @@ class GovernanceCommercialPaidAssessmentClientResponseService:
                 "invalid after client response persistence"
             )
 
-        return CommercialPaidAssessmentClientResponseResult(
+        result = CommercialPaidAssessmentClientResponseResult(
             tenant_id=context.tenant_id,
             client_id=context.client_id,
             engagement_id=context.engagement_id,
@@ -449,6 +475,16 @@ class GovernanceCommercialPaidAssessmentClientResponseService:
             ),
             response_note=client_response.response_note,
         )
+
+        if (
+            self._customer_trial_client_response_observation_recorder
+            is not None
+        ):
+            self._customer_trial_client_response_observation_recorder.capture(
+                commercial_client_response=result
+            )
+
+        return result
 
     def _require_persisted_acknowledgment_hierarchy(
         self,
