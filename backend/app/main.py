@@ -2244,10 +2244,50 @@ from backend.app.gagf.governance_assessment_api_registration import (
     register_governance_assessment_api as _register_governance_assessment_api,
 )
 
-_ASSESSMENT_DATABASE_PATH = (
+from backend.app.gagf.governance_release_storage_configuration import (
+    load_governance_release_storage_configuration as _load_governance_release_storage_configuration,
+)
+
+_APPLICATION_DATA_ROOT = (
     _AssessmentPath(__file__).resolve().parent
     / "data"
-    / "governance_assessments.sqlite3"
+)
+
+_GOVERNANCE_RELEASE_STORAGE_CONFIGURATION = (
+    _load_governance_release_storage_configuration(
+        application_data_root=_APPLICATION_DATA_ROOT,
+    )
+)
+
+app.state.governance_release_storage_configuration = (
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+)
+
+
+# 04K-01D: Read-only release storage observability.
+from backend.app.gagf.governance_release_storage_status_api import (
+    create_governance_release_storage_status_router as _create_governance_release_storage_status_router,
+)
+
+_GOVERNANCE_RELEASE_STORAGE_STATUS_ROUTER = (
+    _create_governance_release_storage_status_router(
+        configuration=(
+            _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+        ),
+    )
+)
+
+for route in (
+    _GOVERNANCE_RELEASE_STORAGE_STATUS_ROUTER.routes
+):
+    app.router.routes.append(
+        route
+    )
+
+app.openapi_schema = None
+
+_ASSESSMENT_DATABASE_PATH = (
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION.assessment_database_path
 )
 
 _register_governance_assessment_api(
@@ -2274,9 +2314,8 @@ from backend.app.gagf.governance_customer_trial_preflight_api_registration impor
 )
 
 _CUSTOMER_TRIAL_PREFLIGHT_DATABASE_PATH = (
-    _CustomerTrialPreflightPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_preflight.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_preflight_database_path
 )
 
 _register_customer_trial_preflight_api(
@@ -2293,9 +2332,8 @@ from backend.app.gagf.governance_customer_trial_execution_handoff_api_registrati
 )
 
 _CUSTOMER_TRIAL_EXECUTION_HANDOFF_DATABASE_PATH = (
-    _CustomerTrialExecutionHandoffPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_execution_handoff.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_execution_handoff_database_path
 )
 
 _register_customer_trial_execution_handoff_api(
@@ -2320,9 +2358,8 @@ from backend.app.gagf.governance_customer_trial_execution_observation_api_regist
 )
 
 _CUSTOMER_TRIAL_EXECUTION_OBSERVATION_DATABASE_PATH = (
-    _CustomerTrialExecutionObservationPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_execution_observation.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_execution_observation_database_path
 )
 
 _register_customer_trial_execution_observation_api(
@@ -2341,9 +2378,8 @@ from backend.app.gagf.governance_customer_trial_delivery_readiness_api_registrat
 )
 
 _CUSTOMER_TRIAL_DELIVERY_READINESS_DATABASE_PATH = (
-    _CustomerTrialDeliveryReadinessPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_delivery_readiness.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_delivery_readiness_database_path
 )
 
 _register_customer_trial_delivery_readiness_api(
@@ -2362,9 +2398,8 @@ from backend.app.gagf.governance_customer_trial_delivery_observation_api_registr
 )
 
 _CUSTOMER_TRIAL_DELIVERY_OBSERVATION_DATABASE_PATH = (
-    _CustomerTrialDeliveryObservationPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_delivery_observation.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_delivery_observation_database_path
 )
 
 _register_customer_trial_delivery_observation_api(
@@ -2383,9 +2418,8 @@ from backend.app.gagf.governance_customer_trial_client_receipt_observation_api_r
 )
 
 _CUSTOMER_TRIAL_CLIENT_RECEIPT_OBSERVATION_DATABASE_PATH = (
-    _CustomerTrialClientReceiptObservationPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_client_receipt_observation.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_client_receipt_observation_database_path
 )
 
 _register_customer_trial_client_receipt_observation_api(
@@ -2404,9 +2438,8 @@ from backend.app.gagf.governance_customer_trial_client_response_observation_api_
 )
 
 _CUSTOMER_TRIAL_CLIENT_RESPONSE_OBSERVATION_DATABASE_PATH = (
-    _CustomerTrialClientResponseObservationPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_client_response_observation.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_client_response_observation_database_path
 )
 
 _register_customer_trial_client_response_observation_api(
@@ -2425,9 +2458,8 @@ from backend.app.gagf.governance_customer_trial_administrative_closeout_observat
 )
 
 _CUSTOMER_TRIAL_ADMINISTRATIVE_CLOSEOUT_OBSERVATION_DATABASE_PATH = (
-    _CustomerTrialAdministrativeCloseoutObservationPath(__file__).resolve().parent
-    / "data"
-    / "governance_customer_trial_administrative_closeout_observation.sqlite3"
+    _GOVERNANCE_RELEASE_STORAGE_CONFIGURATION
+    .customer_trial_administrative_closeout_observation_database_path
 )
 
 _register_customer_trial_administrative_closeout_observation_api(

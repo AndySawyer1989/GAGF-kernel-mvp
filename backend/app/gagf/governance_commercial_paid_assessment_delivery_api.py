@@ -241,8 +241,8 @@ def create_governance_commercial_paid_assessment_delivery_router(
     lifecycle_status_service: LifecycleStatusService,
     client_acknowledgment_service: ClientAcknowledgmentService,
     client_response_service: ClientResponseService,
-    closeout_status_service: CloseoutStatusService,
-    administrative_closeout_service: AdministrativeCloseoutService,
+    closeout_status_service: CloseoutStatusService | None = None,
+    administrative_closeout_service: AdministrativeCloseoutService | None = None,
     dependencies: tuple[Any, ...] = (),
 ) -> APIRouter:
     """
@@ -481,64 +481,72 @@ def create_governance_commercial_paid_assessment_delivery_router(
 
         return _safe_result_dict(result)
 
-    @router.get(
-        hierarchy_path + "/closeout-status",
-    )
-    def get_closeout_status(
-        tenant_id: str,
-        client_id: str,
-        engagement_id: str,
-        assessment_id: str,
-    ) -> dict[str, Any]:
-        try:
-            result = closeout_status_service.get_status(
-                tenant_id=tenant_id,
-                client_id=client_id,
-                engagement_id=engagement_id,
-                assessment_id=assessment_id,
+    if closeout_status_service is not None:
+        if administrative_closeout_service is None:
+            raise TypeError(
+                "administrative_closeout_service "
+                "is required when closeout_status_service "
+                "is provided"
             )
-        except CommercialPaidAssessmentCloseoutStatusError as exc:
-            raise HTTPException(
-                status_code=409,
-                detail=str(exc),
-            ) from exc
 
-        return _safe_result_dict(
-            result
+        @router.get(
+            hierarchy_path + "/closeout-status",
         )
-
-
-    @router.post(
-        hierarchy_path + "/administrative-closeout",
-    )
-    def post_administrative_closeout(
-        tenant_id: str,
-        client_id: str,
-        engagement_id: str,
-        assessment_id: str,
-        request: AdministrativeCloseoutRequest,
-    ) -> dict[str, Any]:
-        try:
-            result = (
-                administrative_closeout_service.record(
+        def get_closeout_status(
+            tenant_id: str,
+            client_id: str,
+            engagement_id: str,
+            assessment_id: str,
+        ) -> dict[str, Any]:
+            try:
+                result = closeout_status_service.get_status(
                     tenant_id=tenant_id,
                     client_id=client_id,
                     engagement_id=engagement_id,
                     assessment_id=assessment_id,
-                    closeout_payload=(
-                        request.model_dump()
-                    ),
                 )
-            )
-        except CommercialPaidAssessmentCloseoutError as exc:
-            raise HTTPException(
-                status_code=409,
-                detail=str(exc),
-            ) from exc
+            except CommercialPaidAssessmentCloseoutStatusError as exc:
+                raise HTTPException(
+                    status_code=409,
+                    detail=str(exc),
+                ) from exc
 
-        return _safe_result_dict(
-            result
+            return _safe_result_dict(
+                result
+            )
+
+
+        @router.post(
+            hierarchy_path + "/administrative-closeout",
         )
+        def post_administrative_closeout(
+            tenant_id: str,
+            client_id: str,
+            engagement_id: str,
+            assessment_id: str,
+            request: AdministrativeCloseoutRequest,
+        ) -> dict[str, Any]:
+            try:
+                result = (
+                    administrative_closeout_service.record(
+                        tenant_id=tenant_id,
+                        client_id=client_id,
+                        engagement_id=engagement_id,
+                        assessment_id=assessment_id,
+                        closeout_payload=(
+                            request.model_dump()
+                        ),
+                    )
+                )
+            except CommercialPaidAssessmentCloseoutError as exc:
+                raise HTTPException(
+                    status_code=409,
+                    detail=str(exc),
+                ) from exc
+
+            return _safe_result_dict(
+                result
+            )
 
 
     return router
