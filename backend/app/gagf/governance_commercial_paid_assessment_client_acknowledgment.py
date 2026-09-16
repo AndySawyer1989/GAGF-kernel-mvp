@@ -137,6 +137,32 @@ class GovernanceCommercialPaidAssessmentClientAcknowledgmentService:
 
         self._execution_service = execution_service
 
+        # Optional downstream controlled-trial observer.
+        #
+        # PA-006 and PA-012 remain authoritative. This hook may only
+        # observe an already-authoritative commercial receipt result.
+        self._customer_trial_client_receipt_observation_recorder = None
+
+    def configure_customer_trial_client_receipt_observation_recorder(
+        self,
+        *,
+        recorder: Any,
+    ) -> None:
+        from backend.app.gagf.governance_customer_trial_client_receipt_observation_recording_bridge import (
+            GovernanceCustomerTrialClientReceiptObservationRecordingBridge,
+        )
+
+        if not isinstance(
+            recorder,
+            GovernanceCustomerTrialClientReceiptObservationRecordingBridge,
+        ):
+            raise CommercialPaidAssessmentClientAcknowledgmentError(
+                "recorder must be a "
+                "GovernanceCustomerTrialClientReceiptObservationRecordingBridge"
+            )
+
+        self._customer_trial_client_receipt_observation_recorder = recorder
+
     def record(
         self,
         *,
@@ -301,10 +327,20 @@ class GovernanceCommercialPaidAssessmentClientAcknowledgmentService:
                 str(exc)
             ) from exc
 
-        return self._build_result(
+        result = self._build_result(
             acknowledgment=governed_acknowledgment,
             persistence_result=persistence_result,
         )
+
+        if (
+            self._customer_trial_client_receipt_observation_recorder
+            is not None
+        ):
+            self._customer_trial_client_receipt_observation_recorder.capture(
+                commercial_client_acknowledgment=result
+            )
+
+        return result
 
     def _rehydrate_delivery_event(
         self,
