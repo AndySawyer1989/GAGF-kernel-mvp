@@ -2333,6 +2333,27 @@ _register_customer_trial_execution_observation_api(
 )
 
 
+# 04J-06C: Controlled Customer Trial Delivery Readiness API
+from pathlib import Path as _CustomerTrialDeliveryReadinessPath
+
+from backend.app.gagf.governance_customer_trial_delivery_readiness_api_registration import (
+    register_customer_trial_delivery_readiness_api as _register_customer_trial_delivery_readiness_api,
+)
+
+_CUSTOMER_TRIAL_DELIVERY_READINESS_DATABASE_PATH = (
+    _CustomerTrialDeliveryReadinessPath(__file__).resolve().parent
+    / "data"
+    / "governance_customer_trial_delivery_readiness.sqlite3"
+)
+
+_register_customer_trial_delivery_readiness_api(
+    app=app,
+    database_path=(
+        _CUSTOMER_TRIAL_DELIVERY_READINESS_DATABASE_PATH
+    ),
+)
+
+
 # 04J-05D-02: Bind controlled-trial observation recording
 # to the existing commercial PA015 execution service.
 from backend.app.gagf.governance_customer_trial_execution_observation_recording_bridge import (
@@ -2358,4 +2379,46 @@ app.state.governance_commercial_paid_assessment_execution_service.configure_cust
 
 app.state.governance_customer_trial_execution_observation_recording_bridge = (
     _customer_trial_execution_observation_recorder
+)
+
+
+# 04J-06D: Bind controlled-trial delivery-readiness recording
+# to the existing authoritative commercial PA-003 readiness service.
+from backend.app.gagf.governance_customer_trial_delivery_readiness import (
+    GovernanceCustomerTrialDeliveryReadinessService as _CustomerTrialDeliveryReadinessProjectionService,
+)
+from backend.app.gagf.governance_customer_trial_delivery_readiness_recording_bridge import (
+    GovernanceCustomerTrialDeliveryReadinessRecordingBridge as _CustomerTrialDeliveryReadinessRecordingBridge,
+)
+
+_customer_trial_delivery_readiness_projection_service = (
+    _CustomerTrialDeliveryReadinessProjectionService(
+        commercial_readiness_service=(
+            app.state.governance_commercial_paid_assessment_delivery_readiness_service
+        )
+    )
+)
+
+_customer_trial_delivery_readiness_recorder = (
+    _CustomerTrialDeliveryReadinessRecordingBridge(
+        observation_receipt_store=(
+            app.state.governance_customer_trial_execution_observation_receipt_store
+        ),
+        readiness_projection_service=(
+            _customer_trial_delivery_readiness_projection_service
+        ),
+        readiness_receipt_store=(
+            app.state.governance_customer_trial_delivery_readiness_receipt_store
+        ),
+    )
+)
+
+app.state.governance_commercial_paid_assessment_delivery_readiness_service.configure_customer_trial_readiness_recorder(
+    recorder=(
+        _customer_trial_delivery_readiness_recorder
+    )
+)
+
+app.state.governance_customer_trial_delivery_readiness_recording_bridge = (
+    _customer_trial_delivery_readiness_recorder
 )

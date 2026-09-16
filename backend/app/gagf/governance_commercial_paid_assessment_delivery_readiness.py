@@ -163,6 +163,33 @@ class GovernanceCommercialPaidAssessmentDeliveryReadinessService:
             else GovernanceRealPaidAssessmentDeliveryReadinessService()
         )
 
+        # Optional downstream observation hook.
+        #
+        # This recorder has zero PA-003 authority. It may only observe
+        # an already-authoritative commercial readiness result after all
+        # governed readiness verification has completed.
+        self._customer_trial_readiness_recorder = None
+
+    def configure_customer_trial_readiness_recorder(
+        self,
+        *,
+        recorder: Any,
+    ) -> None:
+        from backend.app.gagf.governance_customer_trial_delivery_readiness_recording_bridge import (
+            GovernanceCustomerTrialDeliveryReadinessRecordingBridge,
+        )
+
+        if not isinstance(
+            recorder,
+            GovernanceCustomerTrialDeliveryReadinessRecordingBridge,
+        ):
+            raise CommercialPaidAssessmentDeliveryReadinessError(
+                "recorder must be a "
+                "GovernanceCustomerTrialDeliveryReadinessRecordingBridge"
+            )
+
+        self._customer_trial_readiness_recorder = recorder
+
     @property
     def execution_service(
         self,
@@ -297,7 +324,7 @@ class GovernanceCommercialPaidAssessmentDeliveryReadinessService:
                 "durable execution status"
             )
 
-        return CommercialPaidAssessmentDeliveryReadiness(
+        result = CommercialPaidAssessmentDeliveryReadiness(
             tenant_id=hierarchy[0],
             client_id=hierarchy[1],
             engagement_id=hierarchy[2],
@@ -307,6 +334,13 @@ class GovernanceCommercialPaidAssessmentDeliveryReadinessService:
             operator_snapshot_hash=snapshot.snapshot_hash,
             readiness=readiness,
         )
+
+        if self._customer_trial_readiness_recorder is not None:
+            self._customer_trial_readiness_recorder.capture(
+                commercial_readiness=result
+            )
+
+        return result
 
     @staticmethod
     def _validate_hierarchy(
