@@ -2417,6 +2417,27 @@ _register_customer_trial_client_response_observation_api(
 )
 
 
+# 04J-10C: Controlled Trial Administrative Closeout Observation API
+from pathlib import Path as _CustomerTrialAdministrativeCloseoutObservationPath
+
+from backend.app.gagf.governance_customer_trial_administrative_closeout_observation_api_registration import (
+    register_customer_trial_administrative_closeout_observation_api as _register_customer_trial_administrative_closeout_observation_api,
+)
+
+_CUSTOMER_TRIAL_ADMINISTRATIVE_CLOSEOUT_OBSERVATION_DATABASE_PATH = (
+    _CustomerTrialAdministrativeCloseoutObservationPath(__file__).resolve().parent
+    / "data"
+    / "governance_customer_trial_administrative_closeout_observation.sqlite3"
+)
+
+_register_customer_trial_administrative_closeout_observation_api(
+    app=app,
+    database_path=(
+        _CUSTOMER_TRIAL_ADMINISTRATIVE_CLOSEOUT_OBSERVATION_DATABASE_PATH
+    ),
+)
+
+
 # 04J-05D-02: Bind controlled-trial observation recording
 # to the existing commercial PA015 execution service.
 from backend.app.gagf.governance_customer_trial_execution_observation_recording_bridge import (
@@ -2605,4 +2626,45 @@ app.state.governance_commercial_paid_assessment_client_response_service.configur
 
 app.state.governance_customer_trial_client_response_observation_recording_bridge = (
     _customer_trial_client_response_observation_recorder
+)
+
+# 04J-10D: Observe authoritative PA-010 administrative closeout
+# for controlled trials.
+#
+# PA-010 remains administrative-closeout authority.
+# PA-012 remains lifecycle-persistence authority.
+# PA-013 remains operator-coordination authority.
+from backend.app.gagf.governance_customer_trial_administrative_closeout_observation import (
+    GovernanceCustomerTrialAdministrativeCloseoutObservationService as _CustomerTrialAdministrativeCloseoutObservationProjectionService,
+)
+from backend.app.gagf.governance_customer_trial_administrative_closeout_observation_recording_bridge import (
+    GovernanceCustomerTrialAdministrativeCloseoutObservationRecordingBridge as _CustomerTrialAdministrativeCloseoutObservationRecordingBridge,
+)
+
+_customer_trial_administrative_closeout_observation_projection_service = (
+    _CustomerTrialAdministrativeCloseoutObservationProjectionService()
+)
+
+_customer_trial_administrative_closeout_observation_recorder = (
+    _CustomerTrialAdministrativeCloseoutObservationRecordingBridge(
+        client_response_observation_receipt_store=(
+            app.state.governance_customer_trial_client_response_observation_receipt_store
+        ),
+        observation_service=(
+            _customer_trial_administrative_closeout_observation_projection_service
+        ),
+        observation_receipt_store=(
+            app.state.governance_customer_trial_administrative_closeout_observation_receipt_store
+        ),
+    )
+)
+
+app.state.governance_commercial_paid_assessment_closeout_service.configure_customer_trial_administrative_closeout_observation_recorder(
+    recorder=(
+        _customer_trial_administrative_closeout_observation_recorder
+    )
+)
+
+app.state.governance_customer_trial_administrative_closeout_observation_recording_bridge = (
+    _customer_trial_administrative_closeout_observation_recorder
 )

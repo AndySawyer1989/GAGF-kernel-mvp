@@ -153,6 +153,35 @@ class GovernanceCommercialPaidAssessmentCloseoutService:
 
         self._execution_service = execution_service
 
+        # Optional downstream controlled-trial observer.
+        #
+        # PA-010 remains administrative-closeout authority.
+        # PA-012 remains lifecycle-persistence authority.
+        # PA-013 remains operator-coordination authority.
+        self._customer_trial_administrative_closeout_observation_recorder = None
+
+    def configure_customer_trial_administrative_closeout_observation_recorder(
+        self,
+        *,
+        recorder: Any,
+    ) -> None:
+        from backend.app.gagf.governance_customer_trial_administrative_closeout_observation_recording_bridge import (
+            GovernanceCustomerTrialAdministrativeCloseoutObservationRecordingBridge,
+        )
+
+        if not isinstance(
+            recorder,
+            GovernanceCustomerTrialAdministrativeCloseoutObservationRecordingBridge,
+        ):
+            raise CommercialPaidAssessmentCloseoutError(
+                "recorder must be a "
+                "GovernanceCustomerTrialAdministrativeCloseoutObservationRecordingBridge"
+            )
+
+        self._customer_trial_administrative_closeout_observation_recorder = (
+            recorder
+        )
+
     def record(
         self,
         *,
@@ -442,7 +471,7 @@ class GovernanceCommercialPaidAssessmentCloseoutService:
                 "repository chain verification failed after closeout"
             )
 
-        return CommercialPaidAssessmentCloseoutResult(
+        result = CommercialPaidAssessmentCloseoutResult(
             tenant_id=context.tenant_id,
             client_id=context.client_id,
             engagement_id=self._require_context_text(
@@ -465,6 +494,16 @@ class GovernanceCommercialPaidAssessmentCloseoutService:
             ),
             repository_chain_valid=True,
         )
+
+        if (
+            self._customer_trial_administrative_closeout_observation_recorder
+            is not None
+        ):
+            self._customer_trial_administrative_closeout_observation_recorder.capture(
+                commercial_closeout=result
+            )
+
+        return result
 
     @staticmethod
     def _require_text(
