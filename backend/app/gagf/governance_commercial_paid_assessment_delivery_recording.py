@@ -154,6 +154,33 @@ class GovernanceCommercialPaidAssessmentDeliveryRecordingService:
             else GovernanceRealPaidAssessmentDeliveryRecordingService()
         )
 
+        # Optional downstream controlled-trial observation hook.
+        #
+        # This recorder has zero PA-005 delivery-event authority.
+        # It may only observe an already-authoritative commercial
+        # delivery result after governed delivery has succeeded.
+        self._customer_trial_delivery_observation_recorder = None
+
+    def configure_customer_trial_delivery_observation_recorder(
+        self,
+        *,
+        recorder: Any,
+    ) -> None:
+        from backend.app.gagf.governance_customer_trial_delivery_observation_recording_bridge import (
+            GovernanceCustomerTrialDeliveryObservationRecordingBridge,
+        )
+
+        if not isinstance(
+            recorder,
+            GovernanceCustomerTrialDeliveryObservationRecordingBridge,
+        ):
+            raise CommercialPaidAssessmentDeliveryRecordingError(
+                "recorder must be a "
+                "GovernanceCustomerTrialDeliveryObservationRecordingBridge"
+            )
+
+        self._customer_trial_delivery_observation_recorder = recorder
+
     def record(
         self,
         *,
@@ -251,7 +278,7 @@ class GovernanceCommercialPaidAssessmentDeliveryRecordingService:
                 "delivery recording did not produce delivered status"
             )
 
-        return CommercialPaidAssessmentDeliveryRecording(
+        result = CommercialPaidAssessmentDeliveryRecording(
             tenant_id=hierarchy[0],
             client_id=hierarchy[1],
             engagement_id=hierarchy[2],
@@ -259,6 +286,16 @@ class GovernanceCommercialPaidAssessmentDeliveryRecordingService:
             approved_delivery_snapshot_hash=approved.snapshot_hash,
             recording=recording,
         )
+
+        if (
+            self._customer_trial_delivery_observation_recorder
+            is not None
+        ):
+            self._customer_trial_delivery_observation_recorder.capture(
+                commercial_delivery_recording=result
+            )
+
+        return result
 
     @staticmethod
     def _validate_hierarchy(

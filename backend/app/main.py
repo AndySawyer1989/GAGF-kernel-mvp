@@ -2354,6 +2354,27 @@ _register_customer_trial_delivery_readiness_api(
 )
 
 
+# 04J-07C: Controlled Customer Trial Delivery Observation API
+from pathlib import Path as _CustomerTrialDeliveryObservationPath
+
+from backend.app.gagf.governance_customer_trial_delivery_observation_api_registration import (
+    register_customer_trial_delivery_observation_api as _register_customer_trial_delivery_observation_api,
+)
+
+_CUSTOMER_TRIAL_DELIVERY_OBSERVATION_DATABASE_PATH = (
+    _CustomerTrialDeliveryObservationPath(__file__).resolve().parent
+    / "data"
+    / "governance_customer_trial_delivery_observation.sqlite3"
+)
+
+_register_customer_trial_delivery_observation_api(
+    app=app,
+    database_path=(
+        _CUSTOMER_TRIAL_DELIVERY_OBSERVATION_DATABASE_PATH
+    ),
+)
+
+
 # 04J-05D-02: Bind controlled-trial observation recording
 # to the existing commercial PA015 execution service.
 from backend.app.gagf.governance_customer_trial_execution_observation_recording_bridge import (
@@ -2421,4 +2442,45 @@ app.state.governance_commercial_paid_assessment_delivery_readiness_service.confi
 
 app.state.governance_customer_trial_delivery_readiness_recording_bridge = (
     _customer_trial_delivery_readiness_recorder
+)
+
+
+# 04J-07D: Observe governed PA-005 delivery for controlled trials.
+#
+# The existing commercial delivery-recording service remains
+# authoritative. This bridge only records controlled-trial evidence
+# after that service has produced an authoritative delivered result.
+from backend.app.gagf.governance_customer_trial_delivery_observation import (
+    GovernanceCustomerTrialDeliveryObservationService as _CustomerTrialDeliveryObservationProjectionService,
+)
+from backend.app.gagf.governance_customer_trial_delivery_observation_recording_bridge import (
+    GovernanceCustomerTrialDeliveryObservationRecordingBridge as _CustomerTrialDeliveryObservationRecordingBridge,
+)
+
+_customer_trial_delivery_observation_projection_service = (
+    _CustomerTrialDeliveryObservationProjectionService()
+)
+
+_customer_trial_delivery_observation_recorder = (
+    _CustomerTrialDeliveryObservationRecordingBridge(
+        readiness_receipt_store=(
+            app.state.governance_customer_trial_delivery_readiness_receipt_store
+        ),
+        observation_service=(
+            _customer_trial_delivery_observation_projection_service
+        ),
+        observation_receipt_store=(
+            app.state.governance_customer_trial_delivery_observation_receipt_store
+        ),
+    )
+)
+
+app.state.governance_commercial_paid_assessment_delivery_recording_service.configure_customer_trial_delivery_observation_recorder(
+    recorder=(
+        _customer_trial_delivery_observation_recorder
+    )
+)
+
+app.state.governance_customer_trial_delivery_observation_recording_bridge = (
+    _customer_trial_delivery_observation_recorder
 )
