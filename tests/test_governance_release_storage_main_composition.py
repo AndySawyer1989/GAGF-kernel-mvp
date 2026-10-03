@@ -27,6 +27,10 @@ def run_main_probe(
         None,
     )
 
+    probe_environment.pop(
+        "GAGF_RELEASE_CORS_ORIGINS",
+        None,
+    )
     probe_environment.update(
         environment
     )
@@ -153,6 +157,8 @@ def test_main_paid_trial_uses_isolated_root(
                 str(
                     paid_trial_root
                 ),
+            "GAGF_RELEASE_CORS_ORIGINS":
+                "https://operator.example.com",
         }
     )
 
@@ -224,6 +230,8 @@ def test_main_prelive_uses_isolated_root(
                 str(
                     prelive_root
                 ),
+            "GAGF_RELEASE_CORS_ORIGINS":
+                "https://prelive.example.com",
         }
     )
 
@@ -271,6 +279,8 @@ def test_main_paid_trial_fails_closed_without_root(
         environment={
             "GAGF_RELEASE_ENVIRONMENT":
                 "paid_trial",
+            "GAGF_RELEASE_CORS_ORIGINS":
+                "https://operator.example.com",
         }
     )
 
@@ -297,6 +307,8 @@ def test_main_prelive_fails_closed_without_root(
         environment={
             "GAGF_RELEASE_ENVIRONMENT":
                 "prelive",
+            "GAGF_RELEASE_CORS_ORIGINS":
+                "https://prelive.example.com",
         }
     )
 
@@ -338,6 +350,6 @@ def test_main_rejects_unknown_release_environment(
     )
 
     assert (
-        "unsupported GAGF_RELEASE_ENVIRONMENT"
+        "unsupported release environment: customer-production-maybe"
         in combined
     )

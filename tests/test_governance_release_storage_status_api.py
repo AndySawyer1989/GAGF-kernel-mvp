@@ -216,6 +216,10 @@ def test_main_exposes_paid_trial_redacted_status(
         root
     )
 
+    environment[
+        "GAGF_RELEASE_CORS_ORIGINS"
+    ] = "https://operator.example.com"
+
     code = r'''
 from fastapi.testclient import TestClient
 from backend.app.main import app

@@ -48,6 +48,10 @@ def build_paid_trial_environment(
         ).resolve()
     )
 
+    environment[
+        "GAGF_RELEASE_CORS_ORIGINS"
+    ] = "https://operator.example.com"
+
     return environment
 
 

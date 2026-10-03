@@ -5,6 +5,9 @@ from uuid import uuid4
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from backend.app.gagf.governance_release_cors_configuration import (
+    load_governance_release_cors_configuration,
+)
 from backend.app.gagf.assessment_factory_lite_scope_call_agenda_message_service import AssessmentFactoryLiteScopeCallAgendaMessageService
 from backend.app.gagf.assessment_factory_lite_scope_call_agenda_message_event_record_service import AssessmentFactoryLiteScopeCallAgendaMessageEventRecordService
 from backend.app.gagf.assessment_factory_lite_scope_call_event_package_service import AssessmentFactoryLiteScopeCallEventPackageService
@@ -210,23 +213,30 @@ from backend.app.services.ingestion_service import IngestionService
 
 GPL_POLICY_PATH = "backend/app/gagf/policies/gpl_v0_1.yaml"
 
+_GOVERNANCE_RELEASE_CORS_CONFIGURATION = (
+    load_governance_release_cors_configuration()
+)
+
 app = FastAPI(title="GAGF Kernel MVP")
+
+app.state.governance_release_cors_configuration = (
+    _GOVERNANCE_RELEASE_CORS_CONFIGURATION
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=[
-        "Accept",
-        "Content-Type",
-        "X-Tenant-ID",
-        "X-Actor-ID",
-        "X-Actor-Roles",
-    ],
+    allow_origins=(
+        _GOVERNANCE_RELEASE_CORS_CONFIGURATION.allow_origins
+    ),
+    allow_credentials=(
+        _GOVERNANCE_RELEASE_CORS_CONFIGURATION.allow_credentials
+    ),
+    allow_methods=(
+        _GOVERNANCE_RELEASE_CORS_CONFIGURATION.allow_methods
+    ),
+    allow_headers=(
+        _GOVERNANCE_RELEASE_CORS_CONFIGURATION.allow_headers
+    ),
 )
 
 
