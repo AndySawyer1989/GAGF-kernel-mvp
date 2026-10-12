@@ -624,38 +624,6 @@ export async function fetchAssessments(
     );
   }
 
-if (
-  typeof payload !== "object" ||
-  payload === null ||
-  (payload as AssessmentExecutionResponse).completed !== true ||
-  typeof (
-    payload as AssessmentExecutionResponse
-  ).hierarchy_key !== "string" ||
-  typeof (
-    payload as AssessmentExecutionResponse
-  ).artifact_count !== "number" ||
-  typeof (
-    payload as AssessmentExecutionResponse
-  ).request_hash !== "string" ||
-  typeof (
-    payload as AssessmentExecutionResponse
-  ).demonstration_hash !== "string" ||
-  typeof (
-    payload as AssessmentExecutionResponse
-  ).persistence_hash !== "string" ||
-  typeof (
-    payload as AssessmentExecutionResponse
-  ).report_id !== "string" ||
-  typeof (
-    payload as AssessmentExecutionResponse
-  ).application_hash !== "string"
-) {
-  throw new GovernanceAssessmentApiError(
-    "Assessment execution response did not match the expected contract",
-    response.status,
-    payload
-  );
-}
   return payload as GovernanceAssessmentListResponse;
 }
 
