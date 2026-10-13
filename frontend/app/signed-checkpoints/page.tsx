@@ -13,6 +13,7 @@ import {
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ConsolePagination } from "@/components/console-pagination";
 import { ConsoleSidebar } from "@/components/console-sidebar";
+import { ConsoleSkipLink } from "@/components/console-skip-link";
 import { ConsoleToast } from "@/components/console-toast";
 import { SigningCapabilityPanel } from "@/components/signing-capability-panel";
 import { SigningCapabilityAction } from "@/components/signing-capability-action";
@@ -333,6 +334,7 @@ export default function SignedCheckpointsPage() {
 
   return (
     <main className="console-shell">
+      <ConsoleSkipLink />
 <ConsoleSidebar
         activePage="signed-checkpoints"
         tenantId={config.tenantId}
