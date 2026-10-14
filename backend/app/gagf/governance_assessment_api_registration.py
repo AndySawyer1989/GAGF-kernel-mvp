@@ -92,6 +92,12 @@ from backend.app.gagf.governance_commercial_paid_assessment_closeout import (
 from backend.app.gagf.governance_commercial_paid_assessment_closeout_status import (
     GovernanceCommercialPaidAssessmentCloseoutStatusService,
 )
+from backend.app.gagf.governance_paid_work_authorization_api import (
+    create_governance_paid_work_authorization_router,
+)
+from backend.app.gagf.governance_paid_work_authorization_issuance_service import (
+    GovernancePaidWorkAuthorizationIssuanceService,
+)
 from backend.app.gagf.governance_paid_work_authorization_record_store import (
     GovernancePaidWorkAuthorizationRecordStore,
 )
@@ -235,6 +241,24 @@ def register_governance_assessment_api(
                 paid_work_authorization_database_path
             )
         )
+    )
+
+    paid_work_authorization_issuance_service = (
+        GovernancePaidWorkAuthorizationIssuanceService(
+            record_store=paid_work_authorization_store
+        )
+    )
+
+    paid_work_authorization_router = (
+        create_governance_paid_work_authorization_router(
+            issuance_service=(
+                paid_work_authorization_issuance_service
+            )
+        )
+    )
+
+    app.router.routes.extend(
+        paid_work_authorization_router.routes
     )
 
     setattr(
@@ -548,6 +572,10 @@ def register_governance_assessment_api(
 
     app.state.governance_paid_work_authorization_store = (
         paid_work_authorization_store
+    )
+
+    app.state.governance_paid_work_authorization_issuance_service = (
+        paid_work_authorization_issuance_service
     )
 
     app.state.governance_paid_work_authorization_database_path = (

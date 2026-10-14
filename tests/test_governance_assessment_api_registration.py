@@ -26,6 +26,12 @@ from backend.app.gagf.governance_commercial_paid_assessment_closeout import (
 from backend.app.gagf.governance_commercial_paid_assessment_closeout_status import (
     GovernanceCommercialPaidAssessmentCloseoutStatusService,
 )
+from backend.app.gagf.governance_paid_work_authorization_issuance_service import (
+    GovernancePaidWorkAuthorizationIssuanceService,
+)
+from backend.app.gagf.governance_paid_work_authorization_record_store import (
+    GovernancePaidWorkAuthorizationRecordStore,
+)
 
 
 def route_paths(app: FastAPI) -> tuple[str, ...]:
@@ -809,3 +815,120 @@ def test_registered_administrative_closeout_requires_assessment_actor(
         401,
         403,
     }
+
+
+
+def test_registration_adds_paid_work_authorization_issue_route(
+    tmp_path,
+):
+    app = FastAPI()
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    assert (
+        "/api/v1/governance-paid-work-authorizations/issue"
+        in route_paths(app)
+    )
+
+
+def test_registration_stores_paid_work_authorization_services(
+    tmp_path,
+):
+    app = FastAPI()
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    assert isinstance(
+        app.state.governance_paid_work_authorization_store,
+        GovernancePaidWorkAuthorizationRecordStore,
+    )
+
+    assert isinstance(
+        app.state.governance_paid_work_authorization_issuance_service,
+        GovernancePaidWorkAuthorizationIssuanceService,
+    )
+
+    assert (
+        app.state
+        .governance_paid_work_authorization_issuance_service
+        .record_store
+        is app.state.governance_paid_work_authorization_store
+    )
+
+
+def test_registration_uses_expected_paid_work_authorization_database(
+    tmp_path,
+):
+    app = FastAPI()
+
+    database_path = (
+        tmp_path
+        / "assessment.sqlite3"
+    )
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=database_path,
+    )
+
+    expected_path = (
+        database_path.parent
+        / "governance_paid_work_authorizations.sqlite3"
+    )
+
+    assert (
+        app.state.governance_paid_work_authorization_database_path
+        == expected_path
+    )
+
+    assert (
+        app.state.governance_paid_work_authorization_store
+        .database_path
+        == expected_path
+    )
+
+
+def test_registered_paid_work_authorization_issue_requires_actor(
+    tmp_path,
+):
+    app = FastAPI()
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/governance-paid-work-authorizations/issue",
+        json={
+            "tenant_id": "tenant-alpha",
+            "client_id": "client-acme",
+            "engagement_id": "engagement-001",
+            "assessment_id": "assessment-001",
+            "authorization_package": {},
+            "contract_execution_event": {},
+            "payment_confirmation_event": {},
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == (
+        "ASSESSMENT_AUTH_REQUIRED"
+    )
