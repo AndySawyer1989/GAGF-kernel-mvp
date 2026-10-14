@@ -18,6 +18,15 @@ from backend.app.gagf.governance_commercial_paid_assessment_execution import (
 from backend.app.gagf.governance_commercial_paid_assessment_execution_input_binding import (
     GovernanceCommercialPaidAssessmentExecutionInputBindingService,
 )
+from backend.app.gagf.governance_paid_assessment_execution_handoff import (
+    PaidAssessmentWorkAuthorization,
+)
+from backend.app.gagf.governance_paid_work_authorization_record import (
+    build_paid_work_authorization_record,
+)
+from backend.app.gagf.governance_paid_work_authorization_record_store import (
+    GovernancePaidWorkAuthorizationRecordStore,
+)
 
 
 CSV_TEXT = (
@@ -224,6 +233,7 @@ def build_client(
     TestClient,
     GovernanceCommercialPaidAssessmentExecutionService,
     GovernanceCommercialPaidAssessmentExecutionInputBindingService,
+    GovernancePaidWorkAuthorizationRecordStore,
 ]:
     execution_directory = (
         tmp_path
@@ -233,6 +243,11 @@ def build_client(
     binding_directory = (
         tmp_path
         / "execution-input-bindings"
+    )
+
+    authorization_database_path = (
+        tmp_path
+        / "paid-work-authorizations.sqlite3"
     )
 
     service = (
@@ -251,6 +266,14 @@ def build_client(
         )
     )
 
+    authorization_store = (
+        GovernancePaidWorkAuthorizationRecordStore(
+            database_path=(
+                authorization_database_path
+            )
+        )
+    )
+
     app = FastAPI()
 
     app.include_router(
@@ -259,6 +282,9 @@ def build_client(
             execution_input_binding_service=(
                 binding_service
             ),
+            paid_work_authorization_store=(
+                authorization_store
+            ),
         )
     )
 
@@ -266,6 +292,42 @@ def build_client(
         TestClient(app),
         service,
         binding_service,
+        authorization_store,
+    )
+
+
+def seed_paid_work_authorization(
+    *,
+    authorization_store: GovernancePaidWorkAuthorizationRecordStore,
+    tenant_id: str = "tenant-001",
+    client_id: str = "client-001",
+    engagement_id: str = "engagement-001",
+    assessment_id: str = "assessment-001",
+    authorized_by: str = "Authorized Operator",
+    authorized_at: str = "2026-08-29T18:00:00+00:00",
+) -> None:
+    authorization = PaidAssessmentWorkAuthorization(
+        authorization_id=(
+            f"authorization-{assessment_id}"
+        ),
+        tenant_id=tenant_id,
+        client_id=client_id,
+        engagement_id=engagement_id,
+        assessment_id=assessment_id,
+        contract_execution_event_id=(
+            f"contract-event-{assessment_id}"
+        ),
+        authorized_by=authorized_by,
+        authorized_at=authorized_at,
+        paid_assessment_authorized=True,
+    )
+
+    authorization_store.save(
+        record=(
+            build_paid_work_authorization_record(
+                authorization=authorization
+            )
+        )
     )
 
 
@@ -300,7 +362,7 @@ def bind_execution_input(
 def test_get_execution_input_binding_returns_safe_metadata(
     tmp_path: Path,
 ) -> None:
-    client, _, binding_service = (
+    client, _, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -451,7 +513,7 @@ def test_get_execution_input_binding_returns_safe_metadata(
 def test_get_execution_input_binding_does_not_expose_raw_evidence(
     tmp_path: Path,
 ) -> None:
-    client, _, binding_service = (
+    client, _, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -497,7 +559,7 @@ def test_get_execution_input_binding_does_not_expose_raw_evidence(
 def test_get_execution_input_binding_rejects_missing_binding(
     tmp_path: Path,
 ) -> None:
-    client, _, _ = (
+    client, _, _, authorization_store = (
         build_client(
             tmp_path
         )
@@ -530,7 +592,7 @@ def test_get_execution_input_binding_rejects_missing_binding(
 def test_execute_paid_assessment_returns_created(
     tmp_path: Path,
 ) -> None:
-    client, service, binding_service = (
+    client, service, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -539,6 +601,12 @@ def test_execute_paid_assessment_returns_created(
     bind_execution_input(
         binding_service=(
             binding_service
+        )
+    )
+
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
         )
     )
 
@@ -653,7 +721,7 @@ def test_execute_paid_assessment_returns_created(
 def test_execute_paid_assessment_reconciles_repeat(
     tmp_path: Path,
 ) -> None:
-    client, _, binding_service = (
+    client, _, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -662,6 +730,12 @@ def test_execute_paid_assessment_reconciles_repeat(
     bind_execution_input(
         binding_service=(
             binding_service
+        )
+    )
+
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
         )
     )
 
@@ -717,7 +791,7 @@ def test_execute_paid_assessment_reconciles_repeat(
 def test_two_hierarchies_use_distinct_server_databases(
     tmp_path: Path,
 ) -> None:
-    client, service, binding_service = (
+    client, service, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -739,6 +813,20 @@ def test_two_hierarchies_use_distinct_server_databases(
         assessment_id=(
             "assessment-002"
         ),
+    )
+
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
+        ),
+        assessment_id="assessment-001",
+    )
+
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
+        ),
+        assessment_id="assessment-002",
     )
 
     first_payload = build_payload(
@@ -811,7 +899,7 @@ def test_two_hierarchies_use_distinct_server_databases(
 def test_repository_path_is_not_browser_input(
     tmp_path: Path,
 ) -> None:
-    client, service, binding_service = (
+    client, service, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -820,6 +908,12 @@ def test_repository_path_is_not_browser_input(
     bind_execution_input(
         binding_service=(
             binding_service
+        )
+    )
+
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
         )
     )
 
@@ -878,7 +972,7 @@ def test_repository_path_is_not_browser_input(
 def test_execute_rejects_missing_execution_input_binding(
     tmp_path: Path,
 ) -> None:
-    client, _, _ = (
+    client, _, _, authorization_store = (
         build_client(
             tmp_path
         )
@@ -909,7 +1003,7 @@ def test_execute_rejects_missing_execution_input_binding(
 def test_execute_rejects_intake_name_mismatch(
     tmp_path: Path,
 ) -> None:
-    client, _, binding_service = (
+    client, _, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -953,10 +1047,10 @@ def test_execute_rejects_intake_name_mismatch(
     )
 
 
-def test_execute_rejects_false_paid_work_authorization(
+def test_execute_ignores_browser_paid_work_authorization_fields(
     tmp_path: Path,
 ) -> None:
-    client, _, binding_service = (
+    client, _, binding_service, authorization_store = (
         build_client(
             tmp_path
         )
@@ -968,9 +1062,63 @@ def test_execute_rejects_false_paid_work_authorization(
         )
     )
 
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
+        ),
+        authorized_by=(
+            "Server Authorized Operator"
+        ),
+        authorized_at=(
+            "2026-08-29T17:45:00+00:00"
+        ),
+    )
+
     payload = (
         build_payload()
     )
+
+    payload[
+        "paid_work_authorization"
+    ][
+        "tenant_id"
+    ] = "browser-tenant"
+
+    payload[
+        "paid_work_authorization"
+    ][
+        "client_id"
+    ] = "browser-client"
+
+    payload[
+        "paid_work_authorization"
+    ][
+        "engagement_id"
+    ] = "browser-engagement"
+
+    payload[
+        "paid_work_authorization"
+    ][
+        "assessment_id"
+    ] = "browser-assessment"
+
+    payload[
+        "paid_work_authorization"
+    ][
+        "contract_execution_event_id"
+    ] = "browser-contract-event"
+
+    payload[
+        "paid_work_authorization"
+    ][
+        "authorized_by"
+    ] = "Browser Claimed Operator"
+
+    payload[
+        "paid_work_authorization"
+    ][
+        "authorized_at"
+    ] = "2099-01-01T00:00:00+00:00"
 
     payload[
         "paid_work_authorization"
@@ -983,24 +1131,40 @@ def test_execute_rejects_false_paid_work_authorization(
         json=payload,
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 201
+
+    body = response.json()
 
     assert (
-        response.json()[
-            "detail"
-        ][
-            "code"
+        body[
+            "operator_run_passed"
         ]
-        == (
-            "COMMERCIAL_PAID_ASSESSMENT_EXECUTION_ERROR"
-        )
+        is True
+    )
+
+    assert (
+        body[
+            "boundaries"
+        ][
+            "paid_work_authorization_is_server_resolved"
+        ]
+        is True
+    )
+
+    assert (
+        body[
+            "boundaries"
+        ][
+            "browser_authorization_fields_are_not_authority"
+        ]
+        is True
     )
 
 
-def test_execute_rejects_wrong_evidence_hash(
+def test_execute_rejects_missing_server_paid_work_authorization(
     tmp_path: Path,
 ) -> None:
-    client, _, binding_service = (
+    client, _, binding_service, _ = (
         build_client(
             tmp_path
         )
@@ -1009,6 +1173,49 @@ def test_execute_rejects_wrong_evidence_hash(
     bind_execution_input(
         binding_service=(
             binding_service
+        )
+    )
+
+    response = client.post(
+        "/api/v1/governance-paid-assessments/execute",
+        json=(
+            build_payload()
+        ),
+    )
+
+    assert response.status_code == 409
+
+    assert (
+        response.json()[
+            "detail"
+        ][
+            "code"
+        ]
+        == (
+            "COMMERCIAL_PAID_ASSESSMENT_"
+            "PAID_WORK_AUTHORIZATION_ERROR"
+        )
+    )
+
+
+def test_execute_rejects_wrong_evidence_hash(
+    tmp_path: Path,
+) -> None:
+    client, _, binding_service, authorization_store = (
+        build_client(
+            tmp_path
+        )
+    )
+
+    bind_execution_input(
+        binding_service=(
+            binding_service
+        )
+    )
+
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
         )
     )
 
@@ -1046,7 +1253,7 @@ def test_execute_rejects_wrong_evidence_hash(
 def test_browser_cannot_supply_assessment_execution_request(
     tmp_path: Path,
 ) -> None:
-    client, _, binding_service = (
+    client, _, binding_service, authorization_store = (
         build_client(
             tmp_path
         )

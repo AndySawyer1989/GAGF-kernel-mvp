@@ -41,6 +41,7 @@ from backend.app.gagf.governance_customer_trial_execution_observation_service im
 from tests.test_governance_commercial_paid_assessment_api import (
     bind_execution_input,
     build_payload as build_commercial_execution_payload,
+    seed_paid_work_authorization,
 )
 from tests.test_governance_customer_trial_execution_handoff_api import (
     HIERARCHY_KEY,
@@ -119,6 +120,19 @@ def build_e2e_app(
         )
     )
 
+    from backend.app.gagf.governance_paid_work_authorization_record_store import (
+        GovernancePaidWorkAuthorizationRecordStore,
+    )
+
+    authorization_store = (
+        GovernancePaidWorkAuthorizationRecordStore(
+            database_path=(
+                tmp_path
+                / "paid-work-authorizations.sqlite3"
+            )
+        )
+    )
+
     preflight_service, handoff_bridge = (
         build_services(
             tmp_path
@@ -183,6 +197,9 @@ def build_e2e_app(
             execution_input_binding_service=(
                 binding_service
             ),
+            paid_work_authorization_store=(
+                authorization_store
+            ),
         )
     )
 
@@ -214,6 +231,8 @@ def build_e2e_app(
             commercial_service,
         "binding_service":
             binding_service,
+        "authorization_store":
+            authorization_store,
         "handoff_store":
             handoff_store,
         "observation_store":
@@ -236,6 +255,10 @@ def test_controlled_trial_execution_observation_true_e2e(
 
     binding_service = runtime[
         "binding_service"
+    ]
+
+    authorization_store = runtime[
+        "authorization_store"
     ]
 
     handoff_store = runtime[
@@ -305,6 +328,16 @@ def test_controlled_trial_execution_observation_true_e2e(
             engagement_id=ENGAGEMENT_ID,
             assessment_id=ASSESSMENT_ID,
         )
+    )
+
+    seed_paid_work_authorization(
+        authorization_store=(
+            authorization_store
+        ),
+        tenant_id=TENANT_ID,
+        client_id=CLIENT_ID,
+        engagement_id=ENGAGEMENT_ID,
+        assessment_id=ASSESSMENT_ID,
     )
 
     handoff_payload = (

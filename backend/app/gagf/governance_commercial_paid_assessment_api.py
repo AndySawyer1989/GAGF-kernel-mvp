@@ -34,6 +34,10 @@ from backend.app.gagf.governance_commercial_paid_assessment_results_read_model i
     CommercialPaidAssessmentResultsReadModelError,
     GovernanceCommercialPaidAssessmentResultsReadModelService,
 )
+from backend.app.gagf.governance_paid_work_authorization_record_store import (
+    GovernancePaidWorkAuthorizationRecordStore,
+    GovernancePaidWorkAuthorizationRecordStoreError,
+)
 
 
 COMMERCIAL_PAID_ASSESSMENT_API_VERSION = "0.6.0"
@@ -407,6 +411,9 @@ class CommercialPaidAssessmentExecutionApiRequest(
         *,
         repository_path: str,
         assessment_execution_request: Any,
+        paid_work_authorization: (
+            CommercialPaidWorkAuthorizationInput
+        ),
     ) -> CommercialPaidAssessmentExecutionInput:
         return CommercialPaidAssessmentExecutionInput(
             intake=self.intake.to_domain(
@@ -418,7 +425,7 @@ class CommercialPaidAssessmentExecutionApiRequest(
                 self.contract_execution_event.to_domain()
             ),
             paid_work_authorization=(
-                self.paid_work_authorization.to_domain()
+                paid_work_authorization
             ),
             execution_evidence_approvals=tuple(
                 item.to_domain()
@@ -513,6 +520,9 @@ def create_governance_commercial_paid_assessment_router(
     execution_input_binding_service: (
         GovernanceCommercialPaidAssessmentExecutionInputBindingService
     ),
+    paid_work_authorization_store: (
+        GovernancePaidWorkAuthorizationRecordStore | None
+    ) = None,
     results_read_model_service: (
         GovernanceCommercialPaidAssessmentResultsReadModelService | None
     ) = None,
@@ -873,6 +883,78 @@ def create_governance_commercial_paid_assessment_router(
                 )
             )
 
+            if paid_work_authorization_store is None:
+                raise GovernancePaidWorkAuthorizationRecordStoreError(
+                    "server-side PA-001 authorization store is required "
+                    "for paid-assessment execution"
+                )
+
+            paid_work_authorization_record = (
+                paid_work_authorization_store
+                .require_for_execution(
+                    authorization_id=(
+                        request
+                        .paid_work_authorization
+                        .authorization_id
+                    ),
+                    tenant_id=(
+                        request.intake.tenant_id
+                    ),
+                    client_id=(
+                        request.intake.client_id
+                    ),
+                    engagement_id=(
+                        request.intake.engagement_id
+                    ),
+                    assessment_id=(
+                        request.intake.assessment_id
+                    ),
+                    contract_execution_event_id=(
+                        request
+                        .contract_execution_event
+                        .contract_execution_event_id
+                    ),
+                )
+            )
+
+            paid_work_authorization = (
+                CommercialPaidWorkAuthorizationInput(
+                    authorization_id=(
+                        paid_work_authorization_record
+                        .authorization_id
+                    ),
+                    tenant_id=(
+                        paid_work_authorization_record
+                        .tenant_id
+                    ),
+                    client_id=(
+                        paid_work_authorization_record
+                        .client_id
+                    ),
+                    engagement_id=(
+                        paid_work_authorization_record
+                        .engagement_id
+                    ),
+                    assessment_id=(
+                        paid_work_authorization_record
+                        .assessment_id
+                    ),
+                    contract_execution_event_id=(
+                        paid_work_authorization_record
+                        .contract_execution_event_id
+                    ),
+                    authorized_by=(
+                        paid_work_authorization_record
+                        .authorized_by
+                    ),
+                    authorized_at=(
+                        paid_work_authorization_record
+                        .authorized_at
+                    ),
+                    paid_assessment_authorized=True,
+                )
+            )
+
             execution_input = (
                 request.to_execution_input(
                     repository_path=str(
@@ -880,6 +962,9 @@ def create_governance_commercial_paid_assessment_router(
                     ),
                     assessment_execution_request=(
                         assessment_execution_request
+                    ),
+                    paid_work_authorization=(
+                        paid_work_authorization
                     ),
                 )
             )
@@ -913,6 +998,8 @@ def create_governance_commercial_paid_assessment_router(
                 },
                 "boundaries": {
                     "api_request_is_not_paid_work_authorization": True,
+                    "paid_work_authorization_is_server_resolved": True,
+                    "browser_authorization_fields_are_not_authority": True,
                     "api_request_is_not_execution_authority": True,
                     "api_request_is_not_recovery_authority": True,
                     "assessment_execution_request_is_server_bound": True,
@@ -935,6 +1022,22 @@ def create_governance_commercial_paid_assessment_router(
                     code=(
                         "COMMERCIAL_PAID_ASSESSMENT_"
                         "EXECUTION_INPUT_BINDING_ERROR"
+                    ),
+                    message=str(exc),
+                ),
+            ) from exc
+
+        except (
+            GovernancePaidWorkAuthorizationRecordStoreError
+        ) as exc:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_409_CONFLICT
+                ),
+                detail=error_detail(
+                    code=(
+                        "COMMERCIAL_PAID_ASSESSMENT_"
+                        "PAID_WORK_AUTHORIZATION_ERROR"
                     ),
                     message=str(exc),
                 ),

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 from collections.abc import Mapping
@@ -91,6 +91,9 @@ from backend.app.gagf.governance_commercial_paid_assessment_closeout import (
 )
 from backend.app.gagf.governance_commercial_paid_assessment_closeout_status import (
     GovernanceCommercialPaidAssessmentCloseoutStatusService,
+)
+from backend.app.gagf.governance_paid_work_authorization_record_store import (
+    GovernancePaidWorkAuthorizationRecordStore,
 )
 
 
@@ -221,6 +224,19 @@ def register_governance_assessment_api(
         )
     )
 
+    paid_work_authorization_database_path = (
+        assessment_database_path.parent
+        / "governance_paid_work_authorizations.sqlite3"
+    )
+
+    paid_work_authorization_store = (
+        GovernancePaidWorkAuthorizationRecordStore(
+            database_path=(
+                paid_work_authorization_database_path
+            )
+        )
+    )
+
     setattr(
         app.state,
         "governance_commercial_paid_assessment_execution_service",
@@ -232,6 +248,9 @@ def register_governance_assessment_api(
             service=paid_assessment_service,
             execution_input_binding_service=(
                 execution_input_binding_service
+            ),
+            paid_work_authorization_store=(
+                paid_work_authorization_store
             ),
             dependencies=[
                 Depends(require_assessment_actor)
@@ -525,6 +544,14 @@ def register_governance_assessment_api(
 
     app.state.governance_commercial_paid_assessment_service = (
         paid_assessment_service
+    )
+
+    app.state.governance_paid_work_authorization_store = (
+        paid_work_authorization_store
+    )
+
+    app.state.governance_paid_work_authorization_database_path = (
+        paid_work_authorization_database_path
     )
 
     app.state.governance_commercial_paid_assessment_delivery_readiness_service = (
