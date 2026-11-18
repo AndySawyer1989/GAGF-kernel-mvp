@@ -24,6 +24,10 @@ from backend.app.gagf.governance_agent_work_item_contract import (
     AgentWorkItemRecord,
 )
 
+from backend.app.gagf.governance_agent_worker_registry_store import (
+    AgentWorkerRegistryStore,
+)
+
 
 WORK_ITEM_STORE_VERSION = "0.1.0"
 
@@ -719,6 +723,85 @@ class AgentWorkItemStore(AgentWorkItemRecoveryMixin):
         finally:
             connection.close()
 
+    def list_ready_work_items(
+        self,
+        *,
+        tenant_id: str,
+        workflow_id: str | None = None,
+        now: datetime | None = None,
+        limit: int = 100,
+    ) -> list[AgentWorkItemRecord]:
+        """Return a bounded, deterministic page of claimable work items.
+
+        This is a read-only candidate query. The registered claim operation
+        remains responsible for transactional eligibility and worker checks.
+        """
+        tenant_id = _require_text(tenant_id, "tenant_id")
+
+        if workflow_id is not None:
+            workflow_id = _require_text(workflow_id, "workflow_id")
+
+        if (
+            isinstance(limit, bool)
+            or not isinstance(limit, int)
+            or limit < 1
+            or limit > 500
+        ):
+            raise AgentWorkItemStoreError(
+                "limit must be an integer between 1 and 500"
+            )
+
+        current_time = _normalize_datetime(
+            now or _utc_now(),
+            "now",
+        )
+
+        connection = self._connect()
+
+        try:
+            query = """
+                SELECT work_item.*
+                FROM gagf_agent_work_items AS work_item
+                INNER JOIN gagf_agent_workflows AS workflow
+                    ON workflow.tenant_id = work_item.tenant_id
+                   AND workflow.workflow_id = work_item.workflow_id
+                WHERE work_item.tenant_id = ?
+                  AND work_item.state = ?
+                  AND work_item.available_at <= ?
+                  AND work_item.attempt_count < work_item.max_attempts
+                  AND workflow.state = ?
+            """
+
+            parameters = [
+                tenant_id,
+                WorkItemState.PENDING.value,
+                _datetime_text(current_time),
+                WorkflowState.ACTIVE.value,
+            ]
+
+            if workflow_id is not None:
+                query += "\n AND work_item.workflow_id = ?"
+                parameters.append(workflow_id)
+
+            query += """
+                ORDER BY
+                    work_item.available_at ASC,
+                    work_item.created_at ASC,
+                    work_item.work_item_id ASC
+                LIMIT ?
+            """
+            parameters.append(limit)
+
+            rows = connection.execute(
+                query,
+                tuple(parameters),
+            ).fetchall()
+
+            return [self._record(row) for row in rows]
+
+        finally:
+            connection.close()
+
     def list_events(
         self,
         *,
@@ -753,6 +836,45 @@ class AgentWorkItemStore(AgentWorkItemRecoveryMixin):
         finally:
             connection.close()
 
+    def _registered_worker(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        tenant_id: str,
+        worker_id: str,
+    ):
+        from backend.app.gagf.governance_agent_worker_registry_contract import (
+            AgentWorkerRegistrationIntegrityError,
+            AgentWorkerRegistrationNotFoundError,
+        )
+        from backend.app.gagf.governance_agent_worker_registry_store import (
+            AgentWorkerRegistryStore,
+        )
+
+        try:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM gagf_agent_worker_registry
+                WHERE tenant_id = ?
+                  AND worker_id = ?
+                """,
+                (tenant_id, worker_id),
+            ).fetchone()
+        except sqlite3.OperationalError as exc:
+            if "no such table" in str(exc).lower():
+                raise AgentWorkerRegistrationIntegrityError(
+                    "Worker registry table is unavailable"
+                ) from exc
+            raise
+
+        if row is None:
+            raise AgentWorkerRegistrationNotFoundError(
+                "Worker registration was not found for this tenant"
+            )
+
+        return AgentWorkerRegistryStore._record(row)
+
     def claim_work_item(
         self,
         *,
@@ -763,6 +885,80 @@ class AgentWorkItemStore(AgentWorkItemRecoveryMixin):
         idempotency_key: str,
         now: datetime | None = None,
     ) -> AgentWorkItemRecord:
+        return self._claim_work_item(
+            tenant_id=tenant_id,
+            work_item_id=work_item_id,
+            worker_id=worker_id,
+            lease_seconds=lease_seconds,
+            idempotency_key=idempotency_key,
+            now=now,
+            expected_registration_revision=None,
+            required_capabilities=None,
+        )
+
+    def claim_registered_work_item(
+        self,
+        *,
+        tenant_id: str,
+        work_item_id: str,
+        worker_id: str,
+        expected_registration_revision: int,
+        required_capabilities: tuple[str, ...],
+        lease_seconds: int,
+        idempotency_key: str,
+        now: datetime | None = None,
+    ) -> AgentWorkItemRecord:
+        if (
+            isinstance(expected_registration_revision, bool)
+            or not isinstance(expected_registration_revision, int)
+            or expected_registration_revision < 1
+        ):
+            raise AgentWorkItemStoreError(
+                "expected_registration_revision must be a positive integer"
+            )
+
+        if isinstance(required_capabilities, (str, bytes)):
+            raise AgentWorkItemStoreError(
+                "required_capabilities must be a collection of strings"
+            )
+
+        try:
+            normalized_capabilities = tuple(
+                sorted(
+                    {
+                        _require_text(capability, "required_capabilities")
+                        for capability in required_capabilities
+                    }
+                )
+            )
+        except TypeError as exc:
+            raise AgentWorkItemStoreError(
+                "required_capabilities must be an iterable of strings"
+            ) from exc
+
+        return self._claim_work_item(
+            tenant_id=tenant_id,
+            work_item_id=work_item_id,
+            worker_id=worker_id,
+            lease_seconds=lease_seconds,
+            idempotency_key=idempotency_key,
+            now=now,
+            expected_registration_revision=expected_registration_revision,
+            required_capabilities=normalized_capabilities,
+        )
+
+    def _claim_work_item(
+        self,
+        *,
+        tenant_id: str,
+        work_item_id: str,
+        worker_id: str,
+        lease_seconds: int,
+        idempotency_key: str,
+        now: datetime | None,
+        expected_registration_revision: int | None,
+        required_capabilities: tuple[str, ...] | None,
+    ) -> AgentWorkItemRecord:
         tenant_id = _require_text(tenant_id, "tenant_id")
         work_item_id = _require_text(work_item_id, "work_item_id")
         worker_id = _require_text(worker_id, "worker_id")
@@ -770,6 +966,13 @@ class AgentWorkItemStore(AgentWorkItemRecoveryMixin):
             idempotency_key,
             "idempotency_key",
         )
+
+        registered_claim = expected_registration_revision is not None
+
+        if registered_claim != (required_capabilities is not None):
+            raise AgentWorkItemStoreError(
+                "Registered claim qualification is incomplete"
+            )
 
         if (
             isinstance(lease_seconds, bool)
@@ -788,41 +991,102 @@ class AgentWorkItemStore(AgentWorkItemRecoveryMixin):
             seconds=lease_seconds
         )
 
-        request = {
-            "operation": "claim_work_item",
-            "tenant_id": tenant_id,
-            "work_item_id": work_item_id,
-            "worker_id": worker_id,
-            "lease_seconds": lease_seconds,
-        }
-        digest = _request_hash(request)
+        if registered_claim:
+            request = {
+                "operation": "claim_registered_work_item",
+                "tenant_id": tenant_id,
+                "work_item_id": work_item_id,
+                "worker_id": worker_id,
+                "lease_seconds": lease_seconds,
+                "expected_registration_revision": expected_registration_revision,
+                "required_capabilities": list(required_capabilities),
+            }
+        else:
+            request = {
+                "operation": "claim_work_item",
+                "tenant_id": tenant_id,
+                "work_item_id": work_item_id,
+                "worker_id": worker_id,
+                "lease_seconds": lease_seconds,
+            }
 
+        digest = _request_hash(request)
         connection = self._connect()
 
         try:
             connection.execute("BEGIN IMMEDIATE")
 
-            existing = self._existing_request(
-                connection,
-                tenant_id=tenant_id,
-                idempotency_key=idempotency_key,
-                request_hash=digest,
-            )
-
-            if existing is not None:
+            if registered_claim:
                 record = self._get_record(
                     connection,
                     tenant_id=tenant_id,
                     work_item_id=work_item_id,
                 )
-                connection.commit()
-                return record
 
-            record = self._get_record(
-                connection,
-                tenant_id=tenant_id,
-                work_item_id=work_item_id,
-            )
+                registration = self._registered_worker(
+                    connection,
+                    tenant_id=tenant_id,
+                    worker_id=worker_id,
+                )
+
+                if not registration.enabled:
+                    raise AgentWorkItemConflictError(
+                        "Worker registration is disabled"
+                    )
+
+                if record.task_type not in registration.supported_task_types:
+                    raise AgentWorkItemConflictError(
+                        "Worker registration does not support this task type"
+                    )
+
+                if not set(required_capabilities).issubset(
+                    registration.capabilities
+                ):
+                    raise AgentWorkItemConflictError(
+                        "Worker registration lacks required capabilities"
+                    )
+
+                if (
+                    registration.registration_revision
+                    != expected_registration_revision
+                ):
+                    raise AgentWorkItemConflictError(
+                        "Worker registration revision changed after matching"
+                    )
+
+                existing = self._existing_request(
+                    connection,
+                    tenant_id=tenant_id,
+                    idempotency_key=idempotency_key,
+                    request_hash=digest,
+                )
+
+                if existing is not None:
+                    connection.commit()
+                    return record
+
+            else:
+                existing = self._existing_request(
+                    connection,
+                    tenant_id=tenant_id,
+                    idempotency_key=idempotency_key,
+                    request_hash=digest,
+                )
+
+                if existing is not None:
+                    record = self._get_record(
+                        connection,
+                        tenant_id=tenant_id,
+                        work_item_id=work_item_id,
+                    )
+                    connection.commit()
+                    return record
+
+                record = self._get_record(
+                    connection,
+                    tenant_id=tenant_id,
+                    work_item_id=work_item_id,
+                )
 
             workflow_state, _ = self._workflow_context(
                 connection,
@@ -903,9 +1167,25 @@ class AgentWorkItemStore(AgentWorkItemRecoveryMixin):
                     WorkItemState.PENDING.value,
                 ),
             )
+
             if update_cursor.rowcount != 1:
                 raise AgentWorkItemConflictError(
                     "Work item changed before the claim could be persisted"
+                )
+
+            event_payload = {
+                "worker_id": worker_id,
+                "attempt_count": updated.attempt_count,
+                "lease_expires_at": _datetime_text(lease_expiry),
+                "fencing_token": updated.fencing_token,
+            }
+
+            if registered_claim:
+                event_payload["registration_revision"] = (
+                    expected_registration_revision
+                )
+                event_payload["required_capabilities"] = list(
+                    required_capabilities
                 )
 
             self._insert_event(
@@ -914,12 +1194,7 @@ class AgentWorkItemStore(AgentWorkItemRecoveryMixin):
                 event_type="work_item.claimed",
                 idempotency_key=idempotency_key,
                 request_hash=digest,
-                payload={
-                    "worker_id": worker_id,
-                    "attempt_count": updated.attempt_count,
-                    "lease_expires_at": _datetime_text(lease_expiry),
-                    "fencing_token": updated.fencing_token,
-                },
+                payload=event_payload,
                 occurred_at=current_time,
             )
 

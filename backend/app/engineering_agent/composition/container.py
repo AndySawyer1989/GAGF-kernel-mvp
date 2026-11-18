@@ -54,6 +54,10 @@ from backend.app.engineering_agent.config import (
     EngineeringAgentSettings,
 )
 
+from backend.app.engineering_agent.runtime_operations import (
+    RuntimeOperationsService,
+)
+
 
 @dataclass(slots=True)
 class EngineeringAgentContainer:
@@ -68,6 +72,7 @@ class EngineeringAgentContainer:
     capability_policy: AgentTaskCapabilityPolicy
     bounded_dispatcher: AgentBoundedDispatcher
     runtime_coordinator: GovernanceAgentRuntimeCoordinator
+    runtime_operations: RuntimeOperationsService
 
     event_bus: GovernanceAgentEventBus
     orchestrator: GovernanceAgentOrchestrator
@@ -135,6 +140,10 @@ class EngineeringAgentContainer:
             task_capability_policy=capability_policy,
         )
 
+        runtime_operations = RuntimeOperationsService(
+            runtime_coordinator=runtime_coordinator,
+        )
+
         event_bus = GovernanceAgentEventBus()
 
         orchestrator = GovernanceAgentOrchestrator(
@@ -187,6 +196,7 @@ class EngineeringAgentContainer:
             capability_policy=capability_policy,
             bounded_dispatcher=bounded_dispatcher,
             runtime_coordinator=runtime_coordinator,
+            runtime_operations=runtime_operations,
             event_bus=event_bus,
             orchestrator=orchestrator,
             approval_store=approval_store,
