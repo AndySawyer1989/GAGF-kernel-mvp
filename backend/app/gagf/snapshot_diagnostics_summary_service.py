@@ -5,8 +5,8 @@ class SnapshotDiagnosticsSummaryService:
     def __init__(self, ledger: SnapshotDiagnosticsLedger | None = None):
         self.ledger = ledger or SnapshotDiagnosticsLedger()
 
-    def get_summary(self) -> dict:
-        records = self.ledger.list_diagnostics()
+    def get_summary(self, *, tenant_id: str) -> dict:
+        records = self.ledger.list_diagnostics(tenant_id=tenant_id)
 
         confidence_scores = self.get_confidence_scores(records)
         confidence_band_counts = self.get_confidence_band_counts(records)

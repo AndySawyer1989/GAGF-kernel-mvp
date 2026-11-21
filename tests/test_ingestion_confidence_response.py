@@ -45,7 +45,10 @@ class FakeSnapshotLedger:
 
 
 class FakeDecisionLedger:
-    def save_decision(self, decision, snapshot_id):
+    saved_tenant_id = None
+
+    def save_decision(self, decision, *, tenant_id):
+        FakeDecisionLedger.saved_tenant_id = tenant_id
         return "decision-test-id"
 
 
@@ -60,6 +63,7 @@ class FakeArbiter:
 
 def install_fakes(monkeypatch):
     FakeSnapshotLedger.saved_snapshot = None
+    FakeDecisionLedger.saved_tenant_id = None
 
     monkeypatch.setattr(main, "SnapshotLedger", lambda: FakeSnapshotLedger())
     monkeypatch.setattr(main, "DecisionLedger", lambda: FakeDecisionLedger())
@@ -84,6 +88,7 @@ def test_ingest_source_response_includes_evidence_confidence_score_band_and_fact
         source_system="defender",
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
+        tenant_id="tenant-confidence-test",
     )
 
     assert result["status"] == "ingested"
@@ -99,6 +104,8 @@ def test_ingest_source_response_includes_evidence_confidence_score_band_and_fact
     snapshot = FakeSnapshotLedger.saved_snapshot
 
     assert snapshot is not None
+    assert snapshot.tenant_id == "tenant-confidence-test"
+    assert FakeDecisionLedger.saved_tenant_id == "tenant-confidence-test"
     assert snapshot.evidence_confidence.score == result["evidence_confidence_score"]
     assert (
         snapshot.evidence_confidence.factors
@@ -136,6 +143,7 @@ def test_ingest_source_response_includes_conflict_adjusted_confidence(monkeypatc
         source_system="defender",
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
+        tenant_id="tenant-confidence-test",
     )
 
     assert result["status"] == "ingested"
@@ -156,6 +164,7 @@ def test_ingest_source_failed_validation_does_not_return_confidence_fields(monke
         source_system="defender",
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
+        tenant_id="tenant-confidence-test",
     )
 
     assert result == {

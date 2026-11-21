@@ -1,4 +1,6 @@
-﻿import sqlite3
+from backend.app.gagf.governance_assessment_auth import AssessmentActorContext
+from fastapi import HTTPException
+import sqlite3
 
 import pytest
 from fastapi import FastAPI
@@ -9,6 +11,31 @@ from backend.app.gagf.governance_assessment_api_registration import (
     register_governance_assessment_api,
 )
 
+
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=tuple(
+            role.strip()
+            for role in roles_header.split(",")
+            if role.strip()
+        ),
+    )
+
+
+def configure_test_identity(app):
+    app.state.assessment_identity_verifier = verify_test_identity
 
 def admin_headers():
     return {
@@ -37,6 +64,7 @@ def test_registration_without_configuration_starts_unsigned(
     tmp_path,
 ):
     app = FastAPI()
+    configure_test_identity(app)
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",
@@ -59,6 +87,7 @@ def test_registration_without_configuration_starts_unsigned(
 
 def test_configured_registration_signs_checkpoint(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",
@@ -82,6 +111,7 @@ def test_configured_registration_signs_checkpoint(tmp_path):
 
 def test_registration_persists_key_metadata(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     database_path = tmp_path / "assessment.sqlite3"
 
     register_governance_assessment_api(
@@ -115,6 +145,7 @@ def test_registration_persists_key_metadata(tmp_path):
 
 def test_metadata_database_does_not_store_secret(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     database_path = tmp_path / "assessment.sqlite3"
 
     register_governance_assessment_api(
@@ -140,6 +171,7 @@ def test_partial_signing_configuration_rejects_registration(
         "GAGF_ASSESSMENT_CHECKPOINT_KEY_ID"
     ]
     app = FastAPI()
+    configure_test_identity(app)
 
     with pytest.raises(
         AssessmentApiRegistrationError,
@@ -160,6 +192,7 @@ def test_missing_secret_rejects_configured_registration(
         "GAGF_ASSESSMENT_CHECKPOINT_SIGNING_SECRET"
     ]
     app = FastAPI()
+    configure_test_identity(app)
 
     with pytest.raises(
         AssessmentApiRegistrationError,
@@ -176,6 +209,7 @@ def test_registration_exposes_checkpoint_stores_on_state(
     tmp_path,
 ):
     app = FastAPI()
+    configure_test_identity(app)
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",
@@ -194,6 +228,7 @@ def test_registration_exposes_checkpoint_stores_on_state(
 
 def test_configured_registration_is_idempotent(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     database_path = tmp_path / "assessment.sqlite3"
     environment = signing_environment()
 
@@ -213,6 +248,7 @@ def test_configured_registration_is_idempotent(tmp_path):
 
 def test_configured_registration_exposes_key_admin_api(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",
@@ -237,6 +273,7 @@ def test_unsigned_registration_does_not_expose_key_admin_api(
     tmp_path,
 ):
     app = FastAPI()
+    configure_test_identity(app)
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",
@@ -257,6 +294,7 @@ def test_unsigned_registration_does_not_expose_key_admin_api(
 
 def test_registered_admin_api_can_activate_second_key(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     database_path = tmp_path / "assessment.sqlite3"
     environment = signing_environment()
     environment["GAGF_SECOND_CHECKPOINT_SECRET"] = (
@@ -295,6 +333,7 @@ def test_registered_admin_api_can_activate_second_key(tmp_path):
 
 def test_registration_exposes_key_audit_store_on_state(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",
@@ -311,6 +350,7 @@ def test_registered_activation_writes_production_audit_event(
     tmp_path,
 ):
     app = FastAPI()
+    configure_test_identity(app)
     environment = signing_environment()
     environment["GAGF_SECOND_CHECKPOINT_SECRET"] = (
         "second-secret"
@@ -367,6 +407,7 @@ def test_key_audit_database_survives_application_restart(tmp_path):
     )
 
     first_app = FastAPI()
+    configure_test_identity(first_app)
     register_governance_assessment_api(
         app=first_app,
         database_path=database_path,
@@ -395,6 +436,7 @@ def test_key_audit_database_survives_application_restart(tmp_path):
     assert activation.status_code == 200
 
     second_app = FastAPI()
+    configure_test_identity(second_app)
     register_governance_assessment_api(
         app=second_app,
         database_path=database_path,
@@ -419,6 +461,7 @@ def test_key_audit_database_survives_application_restart(tmp_path):
 
 def test_key_audit_database_contains_no_signing_secret(tmp_path):
     app = FastAPI()
+    configure_test_identity(app)
     database_path = tmp_path / "assessment.sqlite3"
 
     register_governance_assessment_api(

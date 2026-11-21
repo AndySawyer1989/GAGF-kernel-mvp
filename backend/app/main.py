@@ -1,9 +1,10 @@
 import shutil
+import tempfile
 from pathlib import Path
 from typing import List
 from uuid import uuid4
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.gagf.governance_release_cors_configuration import (
     load_governance_release_cors_configuration,
@@ -193,6 +194,10 @@ from backend.app.gagf.schemas import (
     RawSecurityEvent,
 )
 from backend.app.gagf.signal_correlation_service import SignalCorrelationService
+from backend.app.gagf.governance_assessment_auth import (
+    AssessmentActorContext,
+    require_assessment_actor,
+)
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_diagnostics_risk_service import (
     SnapshotDiagnosticsRiskService,
@@ -263,11 +268,12 @@ def build_snapshot_diagnostics_record(confidence_result: dict) -> dict:
     }
 
 
-def save_snapshot_diagnostics(snapshot_id: str, confidence_result: dict) -> dict:
+def save_snapshot_diagnostics(snapshot_id: str, confidence_result: dict, *, tenant_id: str) -> dict:
     diagnostics_record = build_snapshot_diagnostics_record(confidence_result)
 
     return SnapshotDiagnosticsLedger().save_diagnostics(
         snapshot_id=snapshot_id,
+        tenant_id=tenant_id,
         diagnostics=diagnostics_record,
     )
 
@@ -554,6 +560,8 @@ def ingest_source(
     source_system: str,
     snapshot_prefix: str,
     work_item_id: str,
+    *,
+    tenant_id: str,
 ):
     if validation_errors:
         return {
@@ -571,7 +579,7 @@ def ingest_source(
 
     snapshot = AdaptiveStateSnapshot(
         snapshot_id=snapshot_id,
-        tenant_id="demo",
+        tenant_id=tenant_id,
         work_item_id=work_item_id,
         status="VALID",
         adaptive_state=adapter_result.adaptive_state,
@@ -592,6 +600,7 @@ def ingest_source(
     save_snapshot_diagnostics(
         snapshot_id=snapshot.snapshot_id,
         confidence_result=confidence_result,
+        tenant_id=tenant_id,
     )
 
     decision = get_arbiter().arbitrate(
@@ -602,7 +611,7 @@ def ingest_source(
 
     decision_id = DecisionLedger().save_decision(
         decision,
-        snapshot.snapshot_id,
+        tenant_id=tenant_id,
     )
 
     return {
@@ -669,7 +678,7 @@ def arbitrate(state: AdaptiveState):
 
 
 @app.post("/snapshot")
-def create_snapshot(events: List[RawSecurityEvent]):
+def create_snapshot(events: List[RawSecurityEvent], actor: AssessmentActorContext = Depends(require_assessment_actor)):
     adapter_result = MetricAdapter().build_snapshot(events)
     confidence_result = EvidenceConfidenceAdapter().build_confidence(events)
 
@@ -701,7 +710,7 @@ def create_snapshot(events: List[RawSecurityEvent]):
 
     snapshot = AdaptiveStateSnapshot(
         snapshot_id=snapshot_id,
-        tenant_id="demo",
+        tenant_id=actor.tenant_id,
         work_item_id="demo",
         status=status,
         adaptive_state=adapter_result.adaptive_state,
@@ -718,6 +727,7 @@ def create_snapshot(events: List[RawSecurityEvent]):
     save_snapshot_diagnostics(
         snapshot_id=snapshot.snapshot_id,
         confidence_result=confidence_result,
+        tenant_id=actor.tenant_id,
     )
 
     return snapshot
@@ -1343,31 +1353,31 @@ def map_product_zta_controls(product_security_result: dict):
 
 
 @app.get("/snapshots")
-def list_snapshots():
-    return SnapshotLedger().list_snapshots()
+def list_snapshots(actor: AssessmentActorContext = Depends(require_assessment_actor)):
+    return SnapshotLedger().list_snapshots(tenant_id=actor.tenant_id)
 
 
 @app.get("/snapshot-diagnostics")
-def list_snapshot_diagnostics():
+def list_snapshot_diagnostics(actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return {
         "status": "ok",
-        "diagnostics": SnapshotDiagnosticsLedger().list_diagnostics(),
+        "diagnostics": SnapshotDiagnosticsLedger().list_diagnostics(tenant_id=actor.tenant_id),
     }
 
 
 @app.get("/snapshot-diagnostics/summary")
-def snapshot_diagnostics_summary():
-    return SnapshotDiagnosticsSummaryService().get_summary()
+def snapshot_diagnostics_summary(actor: AssessmentActorContext = Depends(require_assessment_actor)):
+    return SnapshotDiagnosticsSummaryService().get_summary(tenant_id=actor.tenant_id)
 
 
 @app.get("/snapshot-diagnostics/risk")
-def snapshot_diagnostics_risk():
-    return SnapshotDiagnosticsRiskService().get_risk_summary()
+def snapshot_diagnostics_risk(actor: AssessmentActorContext = Depends(require_assessment_actor)):
+    return SnapshotDiagnosticsRiskService().get_risk_summary(tenant_id=actor.tenant_id)
 
 
 @app.get("/snapshot-diagnostics/{snapshot_id}")
-def get_snapshot_diagnostics(snapshot_id: str):
-    diagnostics = SnapshotDiagnosticsLedger().get_diagnostics(snapshot_id)
+def get_snapshot_diagnostics(snapshot_id: str, actor: AssessmentActorContext = Depends(require_assessment_actor)):
+    diagnostics = SnapshotDiagnosticsLedger().get_diagnostics(snapshot_id, tenant_id=actor.tenant_id)
 
     if diagnostics is None:
         return {
@@ -1384,13 +1394,13 @@ def get_snapshot_diagnostics(snapshot_id: str):
 
 
 @app.get("/decisions")
-def list_decisions():
-    return DecisionLedger().list_decisions()
+def list_decisions(actor: AssessmentActorContext = Depends(require_assessment_actor)):
+    return DecisionLedger().list_decisions(tenant_id=actor.tenant_id)
 
 
 @app.get("/decision/{decision_id}")
-def get_decision(decision_id: str):
-    decision = DecisionLedger().get_decision(decision_id)
+def get_decision(decision_id: str, actor: AssessmentActorContext = Depends(require_assessment_actor)):
+    decision = DecisionLedger().get_decision(decision_id, tenant_id=actor.tenant_id)
 
     if decision is None:
         return {"error": "decision_not_found"}
@@ -1399,8 +1409,8 @@ def get_decision(decision_id: str):
 
 
 @app.get("/dashboard")
-def dashboard():
-    return DashboardService().get_dashboard_summary()
+def dashboard(actor: AssessmentActorContext = Depends(require_assessment_actor)):
+    return DashboardService().get_dashboard_summary(tenant_id=actor.tenant_id)
 
 
 @app.get("/sources")
@@ -1479,22 +1489,49 @@ def console():
 
 
 @app.post("/upload-csv")
-def upload_csv(file: UploadFile = File(...)):
-    upload_dir = Path("uploads")
-    upload_dir.mkdir(exist_ok=True)
+def upload_csv(
+    file: UploadFile = File(...),
+    actor: AssessmentActorContext = Depends(require_assessment_actor),
+):
+    max_upload_bytes = 10 * 1024 * 1024
+    chunk_size = 1024 * 1024
+    total_bytes = 0
 
-    file_path = upload_dir / file.filename
+    with tempfile.TemporaryDirectory(prefix="gagf_csv_") as temp_dir:
+        file_path = Path(temp_dir) / "upload.csv"
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        with file_path.open("xb") as buffer:
+            while True:
+                remaining = max_upload_bytes - total_bytes
+                chunk = file.file.read(min(chunk_size, remaining + 1))
 
-    result = IngestionService().ingest_csv(str(file_path))
+                if not chunk:
+                    break
 
-    return result
+                total_bytes += len(chunk)
+
+                if total_bytes > max_upload_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail="csv_upload_too_large",
+                    )
+
+                buffer.write(chunk)
+
+        if total_bytes == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="csv_upload_empty",
+            )
+
+        return IngestionService().ingest_csv(
+            str(file_path),
+            tenant_id=actor.tenant_id,
+        )
 
 
 @app.post("/ingest/github")
-def ingest_github(payload: dict):
+def ingest_github(payload: dict, actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return ingest_source(
         payload=payload,
         validation_errors=validate_github_payload(payload),
@@ -1502,11 +1539,12 @@ def ingest_github(payload: dict):
         source_system="github",
         snapshot_prefix="github",
         work_item_id="github-ingestion",
+        tenant_id=actor.tenant_id,
     )
 
 
 @app.post("/ingest/servicenow")
-def ingest_servicenow(payload: dict):
+def ingest_servicenow(payload: dict, actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return ingest_source(
         payload=payload,
         validation_errors=validate_servicenow_payload(payload),
@@ -1514,11 +1552,12 @@ def ingest_servicenow(payload: dict):
         source_system="servicenow",
         snapshot_prefix="servicenow",
         work_item_id="servicenow-ingestion",
+        tenant_id=actor.tenant_id,
     )
 
 
 @app.post("/ingest/jira")
-def ingest_jira(payload: dict):
+def ingest_jira(payload: dict, actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return ingest_source(
         payload=payload,
         validation_errors=validate_jira_payload(payload),
@@ -1526,11 +1565,12 @@ def ingest_jira(payload: dict):
         source_system="jira",
         snapshot_prefix="jira",
         work_item_id="jira-ingestion",
+        tenant_id=actor.tenant_id,
     )
 
 
 @app.post("/ingest/okta")
-def ingest_okta(payload: dict):
+def ingest_okta(payload: dict, actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return ingest_source(
         payload=payload,
         validation_errors=validate_okta_payload(payload),
@@ -1538,11 +1578,12 @@ def ingest_okta(payload: dict):
         source_system="okta",
         snapshot_prefix="okta",
         work_item_id="okta-ingestion",
+        tenant_id=actor.tenant_id,
     )
 
 
 @app.post("/ingest/entra")
-def ingest_entra(payload: dict):
+def ingest_entra(payload: dict, actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return ingest_source(
         payload=payload,
         validation_errors=validate_entra_payload(payload),
@@ -1550,11 +1591,12 @@ def ingest_entra(payload: dict):
         source_system="entra",
         snapshot_prefix="entra",
         work_item_id="entra-ingestion",
+        tenant_id=actor.tenant_id,
     )
 
 
 @app.post("/ingest/sentinelone")
-def ingest_sentinelone(payload: dict):
+def ingest_sentinelone(payload: dict, actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return ingest_source(
         payload=payload,
         validation_errors=validate_sentinelone_payload(payload),
@@ -1562,11 +1604,12 @@ def ingest_sentinelone(payload: dict):
         source_system="sentinelone",
         snapshot_prefix="sentinelone",
         work_item_id="sentinelone-ingestion",
+        tenant_id=actor.tenant_id,
     )
 
 
 @app.post("/ingest/defender")
-def ingest_defender(payload: dict):
+def ingest_defender(payload: dict, actor: AssessmentActorContext = Depends(require_assessment_actor)):
     return ingest_source(
         payload=payload,
         validation_errors=validate_defender_payload(payload),
@@ -1574,6 +1617,7 @@ def ingest_defender(payload: dict):
         source_system="defender",
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
+        tenant_id=actor.tenant_id,
     )
 
 

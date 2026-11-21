@@ -5,8 +5,8 @@ class SnapshotDiagnosticsRiskService:
     def __init__(self, ledger: SnapshotDiagnosticsLedger | None = None):
         self.ledger = ledger or SnapshotDiagnosticsLedger()
 
-    def get_risk_summary(self) -> dict:
-        records = self.ledger.list_diagnostics()
+    def get_risk_summary(self, *, tenant_id: str) -> dict:
+        records = self.ledger.list_diagnostics(tenant_id=tenant_id)
         risk_records = [self.score_record(record) for record in records]
 
         risk_records = sorted(

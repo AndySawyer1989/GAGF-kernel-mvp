@@ -1,10 +1,34 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from backend.app.gagf.governance_assessment_auth import (
+    AssessmentActorContext,
+)
 from fastapi.testclient import TestClient
 
 from backend.app.gagf.governance_assessment_api_registration import (
     register_governance_assessment_api,
 )
 
+
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=tuple(
+            role.strip()
+            for role in roles_header.split(",")
+            if role.strip()
+        ),
+    )
 
 def headers():
     return {
@@ -29,6 +53,8 @@ def signing_environment():
 
 def test_dashboard_is_registered_in_unsigned_environment(tmp_path):
     app = FastAPI()
+    # Test-only verifier; never configure this in production.
+    app.state.assessment_identity_verifier = verify_test_identity
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",
@@ -51,6 +77,8 @@ def test_dashboard_is_registered_in_unsigned_environment(tmp_path):
 
 def test_dashboard_is_registered_with_signing_enabled(tmp_path):
     app = FastAPI()
+    # Test-only verifier; never configure this in production.
+    app.state.assessment_identity_verifier = verify_test_identity
     register_governance_assessment_api(
         app=app,
         database_path=tmp_path / "assessment.sqlite3",

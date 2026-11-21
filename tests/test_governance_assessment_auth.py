@@ -1,13 +1,42 @@
-﻿from fastapi import Depends, FastAPI
+﻿from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from backend.app.gagf.governance_assessment_auth import (
+    AssessmentActorContext,
     require_assessment_actor,
 )
 
 
-def build_client() -> TestClient:
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    roles = tuple(
+        role.strip()
+        for role in roles_header.split(",")
+        if role.strip()
+    )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=roles,
+    )
+
+
+def build_client(*, configure_verifier: bool = True) -> TestClient:
     app = FastAPI()
+
+    if configure_verifier:
+        # Explicit test-only verifier. Never configure this in production.
+        app.state.assessment_identity_verifier = verify_test_identity
 
     @app.get(
         "/assessments/{tenant_id}",
@@ -45,10 +74,20 @@ def auth_headers(
     }
 
 
-def test_missing_headers_returns_401():
-    response = build_client().get(
-        "/assessments/tenant-alpha"
+def test_missing_verifier_configuration_fails_closed():
+    response = build_client(configure_verifier=False).get(
+        "/assessments/tenant-alpha",
+        headers=auth_headers(),
     )
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == (
+        "ASSESSMENT_IDENTITY_VERIFIER_UNAVAILABLE"
+    )
+
+
+def test_missing_credentials_returns_401():
+    response = build_client().get("/assessments/tenant-alpha")
 
     assert response.status_code == 401
     assert response.json()["detail"]["code"] == (
@@ -157,3 +196,15 @@ def test_comma_separated_roles_are_supported():
     )
 
     assert response.status_code == 200
+
+
+def test_unsupported_verified_role_is_rejected():
+    response = build_client().get(
+        "/assessments/tenant-alpha",
+        headers=auth_headers(roles="assessment:superuser"),
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == (
+        "ASSESSMENT_ROLE_CLAIM_INVALID"
+    )

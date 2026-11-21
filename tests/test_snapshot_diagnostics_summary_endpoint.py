@@ -1,4 +1,8 @@
-﻿from fastapi.testclient import TestClient
+﻿import pytest
+
+pytestmark = pytest.mark.usefixtures("legacy_api_test_identity")
+
+from fastapi.testclient import TestClient
 
 import backend.app.main as main
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger

@@ -1,4 +1,4 @@
-﻿from fastapi import Depends, FastAPI
+﻿from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from backend.app.gagf.governance_assessment_audit import (
@@ -8,12 +8,41 @@ from backend.app.gagf.governance_assessment_audit_middleware import (
     install_assessment_audit_middleware,
 )
 from backend.app.gagf.governance_assessment_auth import (
+    AssessmentActorContext,
     require_assessment_actor,
 )
 
 
-def build_client(tmp_path):
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=tuple(
+            role.strip()
+            for role in roles_header.split(",")
+            if role.strip()
+        ),
+    )
+
+
+def build_client(tmp_path, *, configure_verifier=True):
     app = FastAPI()
+
+    if configure_verifier:
+        # Test-only verifier. Never configure this in production.
+        app.state.assessment_identity_verifier = (
+            verify_test_identity
+        )
     ledger = AssessmentAuditLedger(
         tmp_path / "audit.sqlite3"
     )
@@ -84,16 +113,59 @@ def test_missing_authentication_is_audited(tmp_path):
 
     assert response.status_code == 401
 
-    events = ledger.list_events(
-        tenant_id="tenant-alpha"
-    )
+    with ledger._connect() as connection:
+        event = connection.execute(
+            """
+            SELECT tenant_id, actor_id, actor_roles_json,
+                   outcome, status_code, reason_code
+            FROM assessment_audit_events
+            WHERE request_id = ?
+            """,
+            ("request-002",),
+        ).fetchone()
 
-    assert len(events) == 1
-    assert events[0].outcome == "denied"
-    assert events[0].status_code == 401
-    assert events[0].reason_code == (
+    assert event is not None
+    assert event["tenant_id"] is None
+    assert event["actor_id"] is None
+    assert event["actor_roles_json"] == "[]"
+    assert event["outcome"] == "denied"
+    assert event["status_code"] == 401
+    assert event["reason_code"] == (
         "ASSESSMENT_AUTH_REQUIRED"
     )
+
+
+def test_forged_identity_headers_are_not_audit_attribution(tmp_path):
+    client, ledger = build_client(
+        tmp_path,
+        configure_verifier=False,
+    )
+
+    response = client.get(
+        "/api/v1/governance-assessments",
+        params={"tenant_id": "tenant-alpha"},
+        headers=headers(),
+    )
+
+    assert response.status_code == 503
+
+    with ledger._connect() as connection:
+        event = connection.execute(
+            """
+            SELECT tenant_id, actor_id, actor_roles_json,
+                   outcome, status_code
+            FROM assessment_audit_events
+            WHERE request_id = ?
+            """,
+            ("request-001",),
+        ).fetchone()
+
+    assert event is not None
+    assert event["tenant_id"] is None
+    assert event["actor_id"] is None
+    assert event["actor_roles_json"] == "[]"
+    assert event["outcome"] == "denied"
+    assert event["status_code"] == 503
 
 
 def test_cross_tenant_request_is_audited(tmp_path):

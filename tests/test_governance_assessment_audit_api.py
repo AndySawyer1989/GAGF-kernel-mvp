@@ -1,4 +1,7 @@
-﻿from fastapi import FastAPI
+﻿from fastapi import FastAPI, HTTPException
+from backend.app.gagf.governance_assessment_auth import (
+    AssessmentActorContext,
+)
 from fastapi.testclient import TestClient
 
 from backend.app.gagf.governance_assessment_audit import (
@@ -10,11 +13,36 @@ from backend.app.gagf.governance_assessment_audit_api import (
 )
 
 
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=tuple(
+            role.strip()
+            for role in roles_header.split(",")
+            if role.strip()
+        ),
+    )
+
+
 def build_client(tmp_path):
     ledger = AssessmentAuditLedger(
         tmp_path / "audit.sqlite3"
     )
     app = FastAPI()
+
+    # Test-only verifier. Production identity remains unconfigured.
+    app.state.assessment_identity_verifier = verify_test_identity
     router = create_governance_assessment_audit_router(
         ledger=ledger
     )

@@ -1,15 +1,15 @@
+import asyncio
 from dataclasses import FrozenInstanceError
 
 import pytest
 
-from backend.app.gagf.governance_assessment_auth import (
-    ASSESSMENT_AUTH_VERSION,
-)
+
 from backend.app.gagf.governance_release_environment_security_preflight import (
     GovernanceReleaseEnvironmentSecurityPreflightResult,
 )
 from backend.app.gagf.governance_release_identity_tenant_boundary_preflight import (
     GovernanceReleaseIdentityTenantBoundaryPreflightResult,
+    evaluate_governance_release_identity_tenant_boundary_preflight,
 )
 from backend.app.gagf.governance_release_invalid_security_configuration_proof import (
     GovernanceReleaseInvalidSecurityConfigurationProofResult,
@@ -82,30 +82,12 @@ def build_environment_preflight(
 def build_identity_preflight(
     *,
     release_environment: str = "paid_trial",
-    passed: bool = True,
 ) -> GovernanceReleaseIdentityTenantBoundaryPreflightResult:
-    return GovernanceReleaseIdentityTenantBoundaryPreflightResult(
-        release_environment=release_environment,
-        assessment_auth_version=ASSESSMENT_AUTH_VERSION,
-        tenant_identity_required=passed,
-        actor_identity_required=passed,
-        actor_roles_required=passed,
-        missing_identity_fails_closed=passed,
-        deterministic_role_parsing=passed,
-        tenant_scope_binding_enforced=passed,
-        insufficient_role_fails_closed=passed,
-        valid_identity_accepted=passed,
-        passed=passed,
-        failure_reasons=(
-            ()
-            if passed
-            else (
-                "missing_identity_fails_closed",
-            )
-        ),
+    return asyncio.run(
+        evaluate_governance_release_identity_tenant_boundary_preflight(
+            release_environment=release_environment,
+        )
     )
-
-
 def build_redaction_proof(
     *,
     release_environment: str = "paid_trial",
@@ -213,12 +195,9 @@ def test_security_gate_passes_when_all_evidence_passes(
     result = evaluate()
 
     assert result.release_environment == "paid_trial"
-    assert result.passed is True
-    assert result.failure_reasons == ()
-
-    assert all(
-        result.checks.values()
-    )
+    assert result.passed is False
+    assert "identity_tenant_boundary_preflight_passed" in result.failure_reasons
+    assert result.checks["identity_tenant_boundary_preflight_passed"] is False
 
 
 def test_security_gate_requires_paid_trial_environment(
@@ -254,6 +233,7 @@ def test_security_gate_requires_paid_trial_environment(
     assert result.passed is False
     assert result.failure_reasons == (
         "paid_trial_environment",
+        "identity_tenant_boundary_preflight_passed",
     )
 
 
@@ -280,9 +260,7 @@ def test_security_gate_requires_paid_trial_environment(
         ),
         (
             "identity_preflight",
-            build_identity_preflight(
-                passed=False
-            ),
+            build_identity_preflight(),
             "identity_tenant_boundary_preflight_passed",
         ),
         (
@@ -396,8 +374,8 @@ def test_security_gate_public_projection_preserves_boundaries(
         "release_environment"
     ] == "paid_trial"
 
-    assert payload["passed"] is True
-    assert payload["failure_reasons"] == []
+    assert payload["passed"] is False
+    assert "identity_tenant_boundary_preflight_passed" in payload["failure_reasons"]
 
     boundaries = payload[
         "boundaries"

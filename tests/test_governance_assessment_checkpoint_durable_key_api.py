@@ -1,5 +1,7 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+
+from backend.app.gagf.governance_assessment_auth import AssessmentActorContext
 
 from backend.app.gagf.governance_assessment_audit import (
     AssessmentAuditLedger,
@@ -71,6 +73,27 @@ def build_components(tmp_path):
     )
 
 
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=tuple(
+            role.strip()
+            for role in roles_header.split(",")
+            if role.strip()
+        ),
+    )
+
 def build_client(tmp_path):
     components = build_components(tmp_path)
     (
@@ -83,6 +106,7 @@ def build_client(tmp_path):
     ) = components
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     router = create_governance_assessment_audit_router(
         ledger=ledger,
         checkpoint_store=checkpoint_store,
@@ -155,6 +179,7 @@ def test_signing_survives_service_restart(tmp_path):
     )
 
     restarted_app = FastAPI()
+    restarted_app.state.assessment_identity_verifier = verify_test_identity
     restarted_router = create_governance_assessment_audit_router(
         ledger=ledger,
         checkpoint_store=checkpoint_store,
@@ -192,6 +217,7 @@ def test_missing_resolved_secret_returns_503(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     router = create_governance_assessment_audit_router(
         ledger=ledger,
         checkpoint_store=checkpoint_store,
@@ -246,6 +272,7 @@ def test_rotation_persists_across_restart(tmp_path):
         secret_resolver=resolver,
     )
     restarted_app = FastAPI()
+    restarted_app.state.assessment_identity_verifier = verify_test_identity
     restarted_router = create_governance_assessment_audit_router(
         ledger=ledger,
         checkpoint_store=checkpoint_store,

@@ -23,7 +23,7 @@ class IngestionService:
         self.gpl = GPLLoader("backend/app/gagf/policies/gpl_v0_1.yaml")
         self.arbiter = ArbitrationService(self.gpl)
 
-    def ingest_csv(self, file_path: str):
+    def ingest_csv(self, file_path: str, *, tenant_id: str):
         rows = self.csv_connector.read_events(file_path)
 
         validation = self.validator.validate_rows(rows)
@@ -56,7 +56,7 @@ class IngestionService:
 
         snapshot = AdaptiveStateSnapshot(
             snapshot_id=str(uuid4()),
-            tenant_id="demo",
+            tenant_id=tenant_id,
             work_item_id="csv-import",
             status=snapshot_status,
             adaptive_state=adapter_result.adaptive_state,
@@ -78,6 +78,7 @@ class IngestionService:
 
         decision_id = self.decision_ledger.save_decision(
             decision,
+            tenant_id=tenant_id,
             evidence=snapshot.evidence,
         )
 

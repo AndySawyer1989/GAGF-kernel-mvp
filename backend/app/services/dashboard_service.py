@@ -6,9 +6,9 @@ from backend.app.services.evidence_source_registry import EvidenceSourceRegistry
 
 
 class DashboardService:
-    def get_dashboard_summary(self):
-        snapshots = SnapshotLedger().list_snapshots()
-        decisions = DecisionLedger().list_decisions()
+    def get_dashboard_summary(self, *, tenant_id: str):
+        snapshots = SnapshotLedger().list_snapshots(tenant_id=tenant_id)
+        decisions = DecisionLedger().list_decisions(tenant_id=tenant_id)
 
         latest_snapshot = snapshots[0] if snapshots else None
         latest_decision = decisions[0] if decisions else None

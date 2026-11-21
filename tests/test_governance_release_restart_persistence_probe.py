@@ -14,6 +14,84 @@ from backend.app.gagf.governance_release_storage_configuration import (
 )
 
 
+import secrets
+import subprocess
+import sys
+
+import pytest
+
+import backend.app.gagf.governance_release_restart_persistence_probe as probe_module
+
+
+@pytest.fixture(autouse=True)
+def authenticated_restart_runtime(monkeypatch):
+    """Exercise real HTTP and process restarts with test-only credentials."""
+    token = secrets.token_urlsafe(32)
+    tenant_id = "restart-tenant"
+
+    monkeypatch.setenv("GAGF_TEST_RESTART_BEARER_TOKEN", token)
+    monkeypatch.setenv("GAGF_TEST_RESTART_TENANT_ID", tenant_id)
+
+    original_get_json = probe_module._get_json
+
+    def start_test_process(*, repo_root, environment, host, port):
+        child_environment = dict(environment)
+
+        test_directory = str(Path(repo_root).resolve() / "tests")
+        existing_path = child_environment.get("PYTHONPATH", "")
+
+        child_environment["PYTHONPATH"] = os.pathsep.join(
+            part for part in (
+                test_directory,
+                str(Path(repo_root).resolve()),
+                existing_path,
+            ) if part
+        )
+
+        return subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "uvicorn",
+                "restart_auth_asgi:app",
+                "--host",
+                host,
+                "--port",
+                str(port),
+                "--log-level",
+                "warning",
+            ],
+            cwd=Path(repo_root).resolve(),
+            env=child_environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    def authenticated_get_json(*, host, port, path, headers=None):
+        request_headers = dict(headers or {})
+
+        if path.endswith("/lifecycle-status"):
+            request_headers["Authorization"] = f"Bearer {token}"
+
+        return original_get_json(
+            host=host,
+            port=port,
+            path=path,
+            headers=request_headers,
+        )
+
+    monkeypatch.setattr(
+        probe_module,
+        "_start_process",
+        start_test_process,
+    )
+    monkeypatch.setattr(
+        probe_module,
+        "_get_json",
+        authenticated_get_json,
+    )
+
 def find_free_port() -> int:
     with socket.socket(
         socket.AF_INET,

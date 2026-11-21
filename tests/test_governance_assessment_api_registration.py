@@ -1,8 +1,12 @@
 ﻿from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+
+from backend.app.gagf.governance_assessment_auth import (
+    AssessmentActorContext,
+)
 import pytest
 
 from backend.app.gagf.governance_assessment_api_registration import (
@@ -32,6 +36,34 @@ from backend.app.gagf.governance_paid_work_authorization_issuance_service import
 from backend.app.gagf.governance_paid_work_authorization_record_store import (
     GovernancePaidWorkAuthorizationRecordStore,
 )
+from backend.app.gagf.governance_paid_work_prerequisite_record_store import (
+    GovernancePaidWorkPrerequisiteRecordStore,
+)
+from backend.app.gagf.governance_paid_work_prerequisite_resolver import (
+    GovernancePaidWorkPrerequisiteResolver,
+)
+
+
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=tuple(
+            role.strip()
+            for role in roles_header.split(",")
+            if role.strip()
+        ),
+    )
 
 
 def route_paths(app: FastAPI) -> tuple[str, ...]:
@@ -111,6 +143,8 @@ def test_registration_adds_assessment_routes(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -130,6 +164,8 @@ def test_registration_returns_application_service(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     service = register_governance_assessment_api(
         app=app,
@@ -149,6 +185,8 @@ def test_registration_stores_service_on_app_state(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     service = register_governance_assessment_api(
         app=app,
@@ -168,6 +206,8 @@ def test_registration_stores_repository_on_app_state(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -187,6 +227,8 @@ def test_registration_sets_state_flag(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -206,6 +248,8 @@ def test_registration_is_idempotent(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = (
         tmp_path
@@ -245,6 +289,8 @@ def test_registration_accepts_existing_repository(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     repository = GovernanceAssessmentRepository(
         tmp_path
@@ -266,6 +312,8 @@ def test_registration_creates_parent_directory(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = (
         tmp_path
@@ -292,6 +340,8 @@ def test_registration_rejects_repository_and_path(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     repository = GovernanceAssessmentRepository(
         tmp_path
@@ -314,6 +364,8 @@ def test_registration_rejects_repository_and_path(
 
 def test_registration_requires_storage_configuration():
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     with pytest.raises(
         AssessmentApiRegistrationError,
@@ -328,6 +380,8 @@ def test_registered_list_endpoint_is_reachable(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -368,6 +422,8 @@ def test_registered_unknown_assessment_returns_404(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -402,6 +458,8 @@ def test_database_path_can_be_a_string(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = str(
         tmp_path
@@ -424,6 +482,8 @@ def test_registration_stores_execution_input_binding_service(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -443,6 +503,8 @@ def test_registration_sets_execution_input_binding_directory(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = (
         tmp_path
@@ -479,6 +541,8 @@ def test_registered_execute_creates_execution_input_binding(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = (
         tmp_path
@@ -560,6 +624,8 @@ def test_registered_execute_reuses_identical_binding(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = (
         tmp_path
@@ -628,6 +694,8 @@ def test_registered_execute_rejects_changed_bound_evidence(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = (
         tmp_path
@@ -700,6 +768,8 @@ def test_registration_adds_paid_assessment_closeout_routes(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -732,6 +802,8 @@ def test_registration_stores_closeout_services_on_app_state(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -758,6 +830,8 @@ def test_registered_closeout_status_requires_assessment_actor(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -786,6 +860,8 @@ def test_registered_administrative_closeout_requires_assessment_actor(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -816,12 +892,12 @@ def test_registered_administrative_closeout_requires_assessment_actor(
         403,
     }
 
-
-
 def test_registration_adds_paid_work_authorization_issue_route(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -841,6 +917,8 @@ def test_registration_stores_paid_work_authorization_services(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -868,10 +946,53 @@ def test_registration_stores_paid_work_authorization_services(
     )
 
 
-def test_registration_uses_expected_paid_work_authorization_database(
+def test_registration_stores_paid_work_prerequisite_services(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    assert isinstance(
+        app.state.governance_paid_work_prerequisite_store,
+        GovernancePaidWorkPrerequisiteRecordStore,
+    )
+
+    assert isinstance(
+        app.state.governance_paid_work_prerequisite_resolver,
+        GovernancePaidWorkPrerequisiteResolver,
+    )
+
+    resolver = (
+        app.state
+        .governance_paid_work_prerequisite_resolver
+    )
+
+    assert (
+        resolver.prerequisite_store
+        is app.state.governance_paid_work_prerequisite_store
+    )
+
+    assert (
+        resolver.issuance_service
+        is app.state.governance_paid_work_authorization_issuance_service
+    )
+
+
+def test_registration_uses_expected_paid_work_authorization_databases(
+    tmp_path,
+):
+    app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     database_path = (
         tmp_path
@@ -883,20 +1004,36 @@ def test_registration_uses_expected_paid_work_authorization_database(
         database_path=database_path,
     )
 
-    expected_path = (
+    expected_authorization_path = (
         database_path.parent
         / "governance_paid_work_authorizations.sqlite3"
     )
 
+    expected_prerequisite_path = (
+        database_path.parent
+        / "governance_paid_work_prerequisites.sqlite3"
+    )
+
     assert (
         app.state.governance_paid_work_authorization_database_path
-        == expected_path
+        == expected_authorization_path
     )
 
     assert (
         app.state.governance_paid_work_authorization_store
         .database_path
-        == expected_path
+        == expected_authorization_path
+    )
+
+    assert (
+        app.state.governance_paid_work_prerequisite_database_path
+        == expected_prerequisite_path
+    )
+
+    assert (
+        app.state.governance_paid_work_prerequisite_store
+        .database_path
+        == expected_prerequisite_path
     )
 
 
@@ -904,6 +1041,8 @@ def test_registered_paid_work_authorization_issue_requires_actor(
     tmp_path,
 ):
     app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
 
     register_governance_assessment_api(
         app=app,
@@ -922,13 +1061,113 @@ def test_registered_paid_work_authorization_issue_requires_actor(
             "client_id": "client-acme",
             "engagement_id": "engagement-001",
             "assessment_id": "assessment-001",
-            "authorization_package": {},
-            "contract_execution_event": {},
-            "payment_confirmation_event": {},
+            "authorization_package_id": (
+                "authorization-package-001"
+            ),
+            "contract_execution_event_id": (
+                "contract-event-001"
+            ),
+            "payment_confirmation_event_id": (
+                "payment-event-001"
+            ),
         },
     )
 
     assert response.status_code == 401
     assert response.json()["detail"]["code"] == (
         "ASSESSMENT_AUTH_REQUIRED"
+    )
+
+
+def test_registered_paid_work_authorization_issue_is_id_only(
+    tmp_path,
+):
+    app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/governance-paid-work-authorizations/issue",
+        json={
+            "tenant_id": "tenant-alpha",
+            "client_id": "client-acme",
+            "engagement_id": "engagement-001",
+            "assessment_id": "assessment-001",
+            "authorization_package_id": (
+                "authorization-package-001"
+            ),
+            "contract_execution_event_id": (
+                "contract-event-001"
+            ),
+            "payment_confirmation_event_id": (
+                "payment-event-001"
+            ),
+            "authorization_package": {},
+            "contract_execution_event": {},
+            "payment_confirmation_event": {},
+        },
+        headers={
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "actor-admin-001",
+            "X-Actor-Roles": "assessment:admin",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_registered_paid_work_authorization_issue_resolves_server_store(
+    tmp_path,
+):
+    app = FastAPI()
+    # Test-only identity verifier; never used by the production app.
+    app.state.assessment_identity_verifier = verify_test_identity
+
+    register_governance_assessment_api(
+        app=app,
+        database_path=(
+            tmp_path
+            / "assessment.sqlite3"
+        ),
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/governance-paid-work-authorizations/issue",
+        json={
+            "tenant_id": "tenant-alpha",
+            "client_id": "client-acme",
+            "engagement_id": "engagement-001",
+            "assessment_id": "assessment-001",
+            "authorization_package_id": (
+                "authorization-package-001"
+            ),
+            "contract_execution_event_id": (
+                "contract-event-001"
+            ),
+            "payment_confirmation_event_id": (
+                "payment-event-001"
+            ),
+        },
+        headers={
+            "X-Tenant-ID": "tenant-alpha",
+            "X-Actor-ID": "actor-admin-001",
+            "X-Actor-Roles": "assessment:admin",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == (
+        "PA001_PREREQUISITE_RESOLUTION_BLOCKED"
     )

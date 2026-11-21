@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
+
+from backend.app.gagf.governance_assessment_auth import AssessmentActorContext
 
 from backend.app.gagf.governance_assessment_checkpoint_durable_key_service import (
     AssessmentCheckpointDurableKeyService,
@@ -18,6 +20,27 @@ from backend.app.gagf.governance_assessment_checkpoint_secret_resolver import (
     InMemoryAssessmentCheckpointSecretResolver,
 )
 
+
+async def verify_test_identity(request):
+    tenant_id = request.headers.get("X-Tenant-ID")
+    actor_id = request.headers.get("X-Actor-ID")
+    roles_header = request.headers.get("X-Actor-Roles")
+
+    if not tenant_id or not actor_id or not roles_header:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "ASSESSMENT_AUTH_REQUIRED"},
+        )
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=tuple(
+            role.strip()
+            for role in roles_header.split(",")
+            if role.strip()
+        ),
+    )
 
 def headers(
     *,
@@ -63,6 +86,7 @@ def build_client(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,
@@ -208,6 +232,7 @@ def test_successful_activation_records_audit_event(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,
@@ -251,6 +276,7 @@ def test_failed_activation_does_not_record_success_event(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,
@@ -310,6 +336,7 @@ def test_admin_can_list_key_activation_audit_events(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,
@@ -359,6 +386,7 @@ def test_key_audit_history_is_tenant_protected(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,
@@ -393,6 +421,7 @@ def test_non_admin_cannot_list_key_audit_history(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,
@@ -444,6 +473,7 @@ def test_key_audit_history_honors_limit(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,
@@ -480,6 +510,7 @@ def test_missing_key_audit_store_returns_unavailable(tmp_path):
     )
 
     app = FastAPI()
+    app.state.assessment_identity_verifier = verify_test_identity
     app.include_router(
         create_assessment_checkpoint_key_admin_router(
             metadata_store=store,

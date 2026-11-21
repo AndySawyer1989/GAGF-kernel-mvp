@@ -1,4 +1,4 @@
-﻿from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
+from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_diagnostics_risk_service import (
     SnapshotDiagnosticsRiskService,
 )
@@ -54,7 +54,7 @@ def test_snapshot_diagnostics_risk_service_returns_empty_summary(tmp_path):
         str(tmp_path / "snapshot_diagnostics.jsonl")
     )
 
-    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary()
+    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary(tenant_id="tenant-alpha")
 
     assert result == {
         "status": "ok",
@@ -78,9 +78,10 @@ def test_snapshot_diagnostics_risk_service_scores_healthy_snapshot_as_no_risk(tm
     ledger.save_diagnostics(
         snapshot_id="snapshot-healthy",
         diagnostics=make_diagnostics_record(),
+        tenant_id="tenant-alpha",
     )
 
-    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary()
+    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary(tenant_id="tenant-alpha")
     risk = result["top_risks"][0]
 
     assert result["record_count"] == 1
@@ -111,9 +112,10 @@ def test_snapshot_diagnostics_risk_service_scores_watch_snapshot(tmp_path):
                 "info": 0,
             },
         ),
+        tenant_id="tenant-alpha",
     )
 
-    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary()
+    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary(tenant_id="tenant-alpha")
     risk = result["top_risks"][0]
 
     assert result["risk_record_count"] == 1
@@ -148,9 +150,10 @@ def test_snapshot_diagnostics_risk_service_scores_high_risk_snapshot(tmp_path):
                 "info": 0,
             },
         ),
+        tenant_id="tenant-alpha",
     )
 
-    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary()
+    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary(tenant_id="tenant-alpha")
     risk = result["top_risks"][0]
 
     assert result["risk_record_count"] == 1
@@ -186,9 +189,10 @@ def test_snapshot_diagnostics_risk_service_scores_critical_snapshot(tmp_path):
                 "info": 0,
             },
         ),
+        tenant_id="tenant-alpha",
     )
 
-    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary()
+    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary(tenant_id="tenant-alpha")
     risk = result["top_risks"][0]
 
     assert result["risk_record_count"] == 1
@@ -218,6 +222,7 @@ def test_snapshot_diagnostics_risk_service_sorts_highest_risk_first(tmp_path):
                 "info": 0,
             },
         ),
+        tenant_id="tenant-alpha",
     )
 
     ledger.save_diagnostics(
@@ -241,14 +246,16 @@ def test_snapshot_diagnostics_risk_service_sorts_highest_risk_first(tmp_path):
                 "info": 0,
             },
         ),
+        tenant_id="tenant-alpha",
     )
 
     ledger.save_diagnostics(
         snapshot_id="snapshot-healthy",
         diagnostics=make_diagnostics_record(),
+        tenant_id="tenant-alpha",
     )
 
-    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary()
+    result = SnapshotDiagnosticsRiskService(ledger).get_risk_summary(tenant_id="tenant-alpha")
 
     assert [record["snapshot_id"] for record in result["top_risks"]] == [
         "snapshot-critical",

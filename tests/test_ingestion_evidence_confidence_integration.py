@@ -48,11 +48,11 @@ class FakeSnapshotLedger:
 
 class FakeDecisionLedger:
     saved_decision = None
-    saved_snapshot_id = None
+    saved_tenant_id = None
 
-    def save_decision(self, decision, snapshot_id):
+    def save_decision(self, decision, *, tenant_id):
         FakeDecisionLedger.saved_decision = decision
-        FakeDecisionLedger.saved_snapshot_id = snapshot_id
+        FakeDecisionLedger.saved_tenant_id = tenant_id
         return "decision-test-id"
 
 
@@ -69,7 +69,7 @@ def reset_fakes():
     FakeSnapshotLedger.saved_snapshot = None
     FakeSnapshotLedger.normalization_applied = None
     FakeDecisionLedger.saved_decision = None
-    FakeDecisionLedger.saved_snapshot_id = None
+    FakeDecisionLedger.saved_tenant_id = None
 
 
 def install_fakes(monkeypatch):
@@ -98,6 +98,7 @@ def test_ingest_source_saves_snapshot_with_upgraded_single_source_confidence(mon
         source_system="defender",
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
+        tenant_id="tenant-confidence-test",
     )
 
     snapshot = FakeSnapshotLedger.saved_snapshot
@@ -105,6 +106,8 @@ def test_ingest_source_saves_snapshot_with_upgraded_single_source_confidence(mon
     assert result["status"] == "ingested"
     assert result["events_normalized"] == 1
     assert snapshot is not None
+    assert snapshot.tenant_id == "tenant-confidence-test"
+    assert FakeDecisionLedger.saved_tenant_id == "tenant-confidence-test"
     assert snapshot.evidence_confidence.score == 0.874
     assert snapshot.evidence_confidence.factors["evidence_quality"] == 1.0
     assert snapshot.evidence_confidence.factors["cross_source_agreement"] == 0.58
@@ -142,6 +145,7 @@ def test_ingest_source_saves_snapshot_with_conflict_adjusted_confidence(monkeypa
         source_system="defender",
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
+        tenant_id="tenant-confidence-test",
     )
 
     snapshot = FakeSnapshotLedger.saved_snapshot
@@ -149,6 +153,8 @@ def test_ingest_source_saves_snapshot_with_conflict_adjusted_confidence(monkeypa
     assert result["status"] == "ingested"
     assert result["events_normalized"] == 2
     assert snapshot is not None
+    assert snapshot.tenant_id == "tenant-confidence-test"
+    assert FakeDecisionLedger.saved_tenant_id == "tenant-confidence-test"
     assert snapshot.evidence_confidence.score == 0.8074
     assert snapshot.evidence_confidence.factors["conflict_health"] == 0.65
 
@@ -163,6 +169,7 @@ def test_ingest_source_does_not_save_snapshot_when_validation_fails(monkeypatch)
         source_system="defender",
         snapshot_prefix="defender",
         work_item_id="defender-ingestion",
+        tenant_id="tenant-confidence-test",
     )
 
     assert result == {

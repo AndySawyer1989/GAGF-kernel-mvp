@@ -1,11 +1,15 @@
 ﻿from pathlib import Path
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
 
 client = TestClient(app)
+
+pytestmark = pytest.mark.usefixtures("legacy_api_test_identity")
 
 
 def setup_function():

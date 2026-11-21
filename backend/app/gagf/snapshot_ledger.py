@@ -31,13 +31,27 @@ class SnapshotLedger:
                 """
             )
 
+    @staticmethod
+    def _require_tenant_id(tenant_id):
+        if not isinstance(tenant_id, str) or not tenant_id.strip():
+            raise ValueError("tenant_id is required")
+        return tenant_id.strip()
+
     def save_snapshot(self, snapshot, normalization_applied=None):
+        tenant_id = self._require_tenant_id(
+            getattr(snapshot, "tenant_id", None)
+        )
+
+        snapshot_id = getattr(snapshot, "snapshot_id", None)
+        if not isinstance(snapshot_id, str) or not snapshot_id.strip():
+            raise ValueError("snapshot_id is required")
+
         normalization_applied = normalization_applied or []
 
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO gagf_state_snapshots (
+                INSERT INTO gagf_state_snapshots (
                     snapshot_id,
                     tenant_id,
                     work_item_id,
@@ -52,8 +66,8 @@ class SnapshotLedger:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    snapshot.snapshot_id,
-                    snapshot.tenant_id,
+                    snapshot_id,
+                    tenant_id,
                     snapshot.work_item_id,
                     snapshot.status,
                     json.dumps(snapshot.adaptive_state.model_dump()),
@@ -65,31 +79,38 @@ class SnapshotLedger:
                 ),
             )
 
-        return snapshot.snapshot_id
+        return snapshot_id
 
-    def get_snapshot(self, snapshot_id):
+    def get_snapshot(self, snapshot_id, *, tenant_id):
+        tenant_id = self._require_tenant_id(tenant_id)
+
         with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(
                 """
                 SELECT *
                 FROM gagf_state_snapshots
-                WHERE snapshot_id = ?
+                WHERE snapshot_id = ? AND tenant_id = ?
                 """,
-                (snapshot_id,),
+                (snapshot_id, tenant_id),
             ).fetchone()
 
         return dict(row) if row else None
 
-    def list_snapshots(self):
+    def list_snapshots(self, *, tenant_id):
+        tenant_id = self._require_tenant_id(tenant_id)
+
         with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 """
                 SELECT *
                 FROM gagf_state_snapshots
+                WHERE tenant_id = ?
                 ORDER BY created_at DESC
                 """
+            ,
+                (tenant_id,),
             ).fetchall()
 
         return [dict(row) for row in rows]

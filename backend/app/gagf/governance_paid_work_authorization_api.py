@@ -12,14 +12,19 @@ from backend.app.gagf.governance_assessment_auth import (
 )
 from backend.app.gagf.governance_paid_work_authorization_issuance_service import (
     GovernancePaidWorkAuthorizationIssuanceError,
-    GovernancePaidWorkAuthorizationIssuanceService,
 )
 from backend.app.gagf.governance_paid_work_authorization_record_store import (
     GovernancePaidWorkAuthorizationRecordStoreError,
 )
+from backend.app.gagf.governance_paid_work_prerequisite_record_store import (
+    GovernancePaidWorkPrerequisiteRecordStoreError,
+)
+from backend.app.gagf.governance_paid_work_prerequisite_resolver import (
+    GovernancePaidWorkPrerequisiteResolver,
+)
 
 
-PAID_WORK_AUTHORIZATION_API_VERSION = "0.1.0"
+PAID_WORK_AUTHORIZATION_API_VERSION = "0.2.0"
 PAID_WORK_AUTHORIZATION_API_PREFIX = (
     "/api/v1/governance-paid-work-authorizations"
 )
@@ -33,14 +38,14 @@ class PaidWorkAuthorizationIssuanceApiRequest(BaseModel):
     engagement_id: str
     assessment_id: str
 
-    authorization_package: dict[str, Any]
-    contract_execution_event: dict[str, Any]
-    payment_confirmation_event: dict[str, Any]
+    authorization_package_id: str
+    contract_execution_event_id: str
+    payment_confirmation_event_id: str
 
 
 def create_governance_paid_work_authorization_router(
     *,
-    issuance_service: GovernancePaidWorkAuthorizationIssuanceService,
+    prerequisite_resolver: GovernancePaidWorkPrerequisiteResolver,
 ) -> APIRouter:
     router = APIRouter(
         prefix=PAID_WORK_AUTHORIZATION_API_PREFIX,
@@ -73,22 +78,30 @@ def create_governance_paid_work_authorization_router(
             )
 
         try:
-            result = issuance_service.issue(
+            result = prerequisite_resolver.issue_from_ids(
                 tenant_id=request.tenant_id,
                 client_id=request.client_id,
                 engagement_id=request.engagement_id,
                 assessment_id=request.assessment_id,
-                authorization_package=(
-                    request.authorization_package
+                authorization_package_id=(
+                    request.authorization_package_id
                 ),
-                contract_execution_event=(
-                    request.contract_execution_event
+                contract_execution_event_id=(
+                    request.contract_execution_event_id
                 ),
-                payment_confirmation_event=(
-                    request.payment_confirmation_event
+                payment_confirmation_event_id=(
+                    request.payment_confirmation_event_id
                 ),
                 actor=actor,
             )
+        except GovernancePaidWorkPrerequisiteRecordStoreError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "PA001_PREREQUISITE_RESOLUTION_BLOCKED",
+                    "message": str(exc),
+                },
+            ) from exc
         except GovernancePaidWorkAuthorizationIssuanceError as exc:
             message = str(exc)
 
@@ -117,23 +130,29 @@ def create_governance_paid_work_authorization_router(
                 },
             ) from exc
 
+        authorization = result.issuance.authorization
+
         return {
             "status": "issued",
             "api_version": PAID_WORK_AUTHORIZATION_API_VERSION,
-            "authorization_id": (
-                result.authorization.authorization_id
-            ),
+            "authorization_id": authorization.authorization_id,
             "hierarchy_key": "/".join(
                 (
-                    result.authorization.tenant_id,
-                    result.authorization.client_id,
-                    result.authorization.engagement_id,
-                    result.authorization.assessment_id,
+                    authorization.tenant_id,
+                    authorization.client_id,
+                    authorization.engagement_id,
+                    authorization.assessment_id,
                 )
             ),
             "paid_assessment_authorized": True,
-            "issuance": result.to_dict(),
+            "prerequisite_resolution": (
+                result.resolution.to_dict()
+            ),
+            "issuance": result.issuance.to_dict(),
             "boundaries": {
+                "browser_supplies_prerequisite_ids_only": True,
+                "browser_does_not_supply_prerequisite_artifacts": True,
+                "prerequisites_resolved_server_side": True,
                 "browser_does_not_supply_authorized_by": True,
                 "browser_does_not_supply_authorized_at": True,
                 "browser_does_not_supply_authorization_id": True,

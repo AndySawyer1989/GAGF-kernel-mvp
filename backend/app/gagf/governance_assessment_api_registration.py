@@ -101,6 +101,21 @@ from backend.app.gagf.governance_paid_work_authorization_issuance_service import
 from backend.app.gagf.governance_paid_work_authorization_record_store import (
     GovernancePaidWorkAuthorizationRecordStore,
 )
+from backend.app.gagf.governance_paid_work_prerequisite_record_store import (
+    GovernancePaidWorkPrerequisiteRecordStore,
+)
+from backend.app.gagf.governance_paid_work_prerequisite_persistence_bridge import (
+    GovernancePaidWorkPrerequisitePersistenceBridge,
+)
+from backend.app.gagf.governance_paid_work_prerequisite_producer_api import (
+    create_governance_paid_work_prerequisite_producer_router,
+)
+from backend.app.gagf.governance_paid_work_prerequisite_producer_service import (
+    GovernancePaidWorkPrerequisiteProducerService,
+)
+from backend.app.gagf.governance_paid_work_prerequisite_resolver import (
+    GovernancePaidWorkPrerequisiteResolver,
+)
 
 
 ASSESSMENT_API_REGISTRATION_VERSION = "1.2.0"
@@ -243,16 +258,68 @@ def register_governance_assessment_api(
         )
     )
 
+    paid_work_prerequisite_database_path = (
+        assessment_database_path.parent
+        / "governance_paid_work_prerequisites.sqlite3"
+    )
+
+    paid_work_prerequisite_store = (
+        GovernancePaidWorkPrerequisiteRecordStore(
+            database_path=(
+                paid_work_prerequisite_database_path
+            )
+        )
+    )
+
+    paid_work_prerequisite_persistence_bridge = (
+        GovernancePaidWorkPrerequisitePersistenceBridge(
+            prerequisite_store=(
+                paid_work_prerequisite_store
+            )
+        )
+    )
+
+    paid_work_prerequisite_producer_service = (
+        GovernancePaidWorkPrerequisiteProducerService(
+            persistence_bridge=(
+                paid_work_prerequisite_persistence_bridge
+            )
+        )
+    )
+
+    paid_work_prerequisite_producer_router = (
+        create_governance_paid_work_prerequisite_producer_router(
+            producer_service=(
+                paid_work_prerequisite_producer_service
+            )
+        )
+    )
+
+    app.router.routes.extend(
+        paid_work_prerequisite_producer_router.routes
+    )
+
     paid_work_authorization_issuance_service = (
         GovernancePaidWorkAuthorizationIssuanceService(
             record_store=paid_work_authorization_store
         )
     )
 
-    paid_work_authorization_router = (
-        create_governance_paid_work_authorization_router(
+    paid_work_prerequisite_resolver = (
+        GovernancePaidWorkPrerequisiteResolver(
+            prerequisite_store=(
+                paid_work_prerequisite_store
+            ),
             issuance_service=(
                 paid_work_authorization_issuance_service
+            ),
+        )
+    )
+
+    paid_work_authorization_router = (
+        create_governance_paid_work_authorization_router(
+            prerequisite_resolver=(
+                paid_work_prerequisite_resolver
             )
         )
     )
@@ -580,6 +647,26 @@ def register_governance_assessment_api(
 
     app.state.governance_paid_work_authorization_database_path = (
         paid_work_authorization_database_path
+    )
+
+    app.state.governance_paid_work_prerequisite_store = (
+        paid_work_prerequisite_store
+    )
+
+    app.state.governance_paid_work_prerequisite_persistence_bridge = (
+        paid_work_prerequisite_persistence_bridge
+    )
+
+    app.state.governance_paid_work_prerequisite_producer_service = (
+        paid_work_prerequisite_producer_service
+    )
+
+    app.state.governance_paid_work_prerequisite_resolver = (
+        paid_work_prerequisite_resolver
+    )
+
+    app.state.governance_paid_work_prerequisite_database_path = (
+        paid_work_prerequisite_database_path
     )
 
     app.state.governance_commercial_paid_assessment_delivery_readiness_service = (

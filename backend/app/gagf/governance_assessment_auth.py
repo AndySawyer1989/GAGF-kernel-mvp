@@ -1,15 +1,24 @@
 ﻿from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
-from fastapi import Header, HTTPException, Request, status
+from fastapi import HTTPException, Request, status
 
 
-ASSESSMENT_AUTH_VERSION = "1.0.0"
+ASSESSMENT_AUTH_VERSION = "2.0.0"
+
 ASSESSMENT_READER_ROLE = "assessment:read"
 ASSESSMENT_EXECUTOR_ROLE = "assessment:execute"
 ASSESSMENT_ADMIN_ROLE = "assessment:admin"
+
+ALLOWED_ASSESSMENT_ROLES = frozenset(
+    {
+        ASSESSMENT_READER_ROLE,
+        ASSESSMENT_EXECUTOR_ROLE,
+        ASSESSMENT_ADMIN_ROLE,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -22,46 +31,86 @@ class AssessmentActorContext:
         return bool(set(self.roles).intersection(required_roles))
 
 
-def normalize_required_header(
-    *,
-    value: str | None,
-    header_name: str,
-) -> str:
-    normalized = (value or "").strip()
-    if not normalized:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "code": "ASSESSMENT_AUTH_REQUIRED",
-                "message": f"{header_name} is required",
-            },
-        )
-    return normalized
+class AssessmentIdentityVerifier(Protocol):
+    async def __call__(
+        self,
+        request: Request,
+    ) -> AssessmentActorContext:
+        """
+        Authenticate the request using a deployment-approved
+        identity mechanism and return verified identity claims.
+
+        Implementations must not treat caller-supplied identity
+        headers as trusted claims unless those claims have been
+        cryptographically or otherwise authoritatively verified.
+        """
+        ...
 
 
-def parse_roles(value: str | None) -> tuple[str, ...]:
-    normalized = normalize_required_header(
-        value=value,
-        header_name="X-Actor-Roles",
+def _authentication_required() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "code": "ASSESSMENT_AUTH_REQUIRED",
+            "message": "valid assessment identity credentials are required",
+        },
     )
+
+
+def _identity_verifier_unavailable() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail={
+            "code": "ASSESSMENT_IDENTITY_VERIFIER_UNAVAILABLE",
+            "message": (
+                "assessment identity verification is not configured"
+            ),
+        },
+    )
+
+
+def _validate_verified_context(
+    value: Any,
+) -> AssessmentActorContext:
+    if not isinstance(value, AssessmentActorContext):
+        raise _identity_verifier_unavailable()
+
+    tenant_id = value.tenant_id.strip()
+    actor_id = value.actor_id.strip()
+
+    if not tenant_id or not actor_id:
+        raise _authentication_required()
+
     roles = tuple(
         sorted(
             {
-                role.strip().lower()
-                for role in normalized.split(",")
-                if role.strip()
+                str(role).strip().lower()
+                for role in value.roles
+                if str(role).strip()
             }
         )
     )
+
     if not roles:
+        raise _authentication_required()
+
+    if not set(roles).issubset(ALLOWED_ASSESSMENT_ROLES):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail={
-                "code": "ASSESSMENT_AUTH_REQUIRED",
-                "message": "X-Actor-Roles is required",
+                "code": "ASSESSMENT_ROLE_CLAIM_INVALID",
+                "message": (
+                    "identity verifier returned an unsupported "
+                    "assessment role"
+                ),
             },
         )
-    return roles
+
+    return AssessmentActorContext(
+        tenant_id=tenant_id,
+        actor_id=actor_id,
+        roles=roles,
+    )
 
 
 async def read_json_body(request: Request) -> dict[str, Any]:
@@ -82,32 +131,33 @@ async def read_json_body(request: Request) -> dict[str, Any]:
 
 async def require_assessment_actor(
     request: Request,
-    x_tenant_id: str | None = Header(
-        default=None,
-        alias="X-Tenant-ID",
-    ),
-    x_actor_id: str | None = Header(
-        default=None,
-        alias="X-Actor-ID",
-    ),
-    x_actor_roles: str | None = Header(
-        default=None,
-        alias="X-Actor-Roles",
-    ),
 ) -> AssessmentActorContext:
-    context = AssessmentActorContext(
-        tenant_id=normalize_required_header(
-            value=x_tenant_id,
-            header_name="X-Tenant-ID",
-        ),
-        actor_id=normalize_required_header(
-            value=x_actor_id,
-            header_name="X-Actor-ID",
-        ),
-        roles=parse_roles(x_actor_roles),
+    verifier = getattr(
+        request.app.state,
+        "assessment_identity_verifier",
+        None,
     )
 
+    if verifier is None or not callable(verifier):
+        raise _identity_verifier_unavailable()
+
+    try:
+        verified_value = await verifier(request)
+    except HTTPException:
+        raise
+    except Exception:
+        # Do not expose provider internals or fail open.
+        raise _identity_verifier_unavailable() from None
+
+    context = _validate_verified_context(verified_value)
+
+    # Attach verified identity before authorization checks.
+    # This allows audit middleware to attribute denied requests
+    # to the authenticated actor without trusting request headers.
+    request.state.assessment_actor = context
+
     body = await read_json_body(request)
+
     candidate_tenants = {
         str(value).strip()
         for value in (
@@ -149,5 +199,4 @@ async def require_assessment_actor(
             },
         )
 
-    request.state.assessment_actor = context
     return context

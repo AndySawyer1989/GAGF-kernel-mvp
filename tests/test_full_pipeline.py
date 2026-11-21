@@ -6,7 +6,7 @@ from backend.app.gagf.arbitration_service import ArbitrationService
 from backend.app.gagf.decision_ledger import DecisionLedger
 
 
-def test_full_pipeline_selects_contain():
+def test_full_pipeline_selects_contain(tmp_path):
     events = [
         RawSecurityEvent(event_id="evt-1", event_type="honeyfile_interaction", timestamp_quality="SOURCE_OCCURRED_AT"),
         RawSecurityEvent(event_id="evt-2", event_type="honeyfile_interaction", timestamp_quality="SOURCE_OCCURRED_AT"),
@@ -31,21 +31,23 @@ def test_full_pipeline_selects_contain():
         },
     )
 
-    SnapshotLedger().save_snapshot(snapshot, adapter_result.normalization_applied)
+    db_path = tmp_path / "gagf_test.db"
+    SnapshotLedger(db_path=db_path).save_snapshot(
+        snapshot,
+        adapter_result.normalization_applied,
+    )
 
     gpl = GPLLoader("backend/app/gagf/policies/gpl_v0_1.yaml")
     decision = ArbitrationService(gpl).arbitrate(snapshot, "Probe", "continue")
 
-    decision_id = DecisionLedger().save_decision(decision, evidence=snapshot.evidence)
+    decision_id = DecisionLedger(db_path=db_path).save_decision(
+        decision,
+        tenant_id=snapshot.tenant_id,
+        evidence=snapshot.evidence,
+    )
 
     assert snapshot.adaptive_state.risk_index == 0.9
     assert decision.selected_strategy == "Contain"
     assert decision.kernel_decision == "transition_to_contain"
     assert decision.decision_meta.is_override_triggered is True
     assert decision_id is not None
-
-
-
-
-
-

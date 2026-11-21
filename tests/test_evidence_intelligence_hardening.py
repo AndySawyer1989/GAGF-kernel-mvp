@@ -1,4 +1,4 @@
-﻿from backend.app.gagf.evidence_confidence_adapter import EvidenceConfidenceAdapter
+from backend.app.gagf.evidence_confidence_adapter import EvidenceConfidenceAdapter
 from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_diagnostics_risk_service import (
     SnapshotDiagnosticsRiskService,
@@ -11,22 +11,20 @@ from backend.app.gagf.snapshot_diagnostics_summary_service import (
 def test_snapshot_diagnostics_ledger_ignores_blank_lines(tmp_path):
     ledger_path = tmp_path / "snapshot_diagnostics.jsonl"
 
-    ledger_path.write_text(
+    legacy_content = (
         "\n"
         '{"snapshot_id": "snapshot-1", "diagnostics": {"confidence_score": 0.9}}\n'
-        "\n",
-        encoding="utf-8",
+        "\n"
     )
+    ledger_path.write_text(legacy_content, encoding="utf-8")
 
     ledger = SnapshotDiagnosticsLedger(str(ledger_path))
 
-    records = ledger.list_diagnostics()
+    records = ledger.list_diagnostics(tenant_id="tenant-alpha")
 
-    assert len(records) == 1
-    assert records[0]["snapshot_id"] == "snapshot-1"
-    assert records[0]["diagnostics"]["confidence_score"] == 0.9
-
-
+    # Legacy records remain preserved but are excluded from tenant-scoped reads.
+    assert records == []
+    assert ledger_path.read_text(encoding="utf-8") == legacy_content
 def test_snapshot_diagnostics_ledger_returns_latest_duplicate_snapshot_record(tmp_path):
     ledger = SnapshotDiagnosticsLedger(
         str(tmp_path / "snapshot_diagnostics.jsonl")
@@ -38,6 +36,7 @@ def test_snapshot_diagnostics_ledger_returns_latest_duplicate_snapshot_record(tm
             "confidence_score": 0.4,
             "confidence_band": "low",
         },
+        tenant_id="tenant-alpha",
     )
 
     ledger.save_diagnostics(
@@ -46,9 +45,10 @@ def test_snapshot_diagnostics_ledger_returns_latest_duplicate_snapshot_record(tm
             "confidence_score": 0.9,
             "confidence_band": "high",
         },
+        tenant_id="tenant-alpha",
     )
 
-    result = ledger.get_diagnostics("snapshot-1")
+    result = ledger.get_diagnostics("snapshot-1", tenant_id="tenant-alpha")
 
     assert result["snapshot_id"] == "snapshot-1"
     assert result["diagnostics"]["confidence_score"] == 0.9
@@ -78,9 +78,10 @@ def test_snapshot_diagnostics_summary_service_ignores_non_numeric_confidence_sco
                 },
             },
         },
+        tenant_id="tenant-alpha",
     )
 
-    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary()
+    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary(tenant_id="tenant-alpha")
 
     assert summary["record_count"] == 1
     assert summary["average_confidence_score"] == 0.0
@@ -116,9 +117,10 @@ def test_snapshot_diagnostics_summary_service_merges_unknown_conflict_severities
                 },
             },
         },
+        tenant_id="tenant-alpha",
     )
 
-    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary()
+    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary(tenant_id="tenant-alpha")
 
     assert summary["conflict_summary"]["total_conflicts"] == 1
     assert summary["conflict_summary"]["severity_counts"]["experimental"] == 1

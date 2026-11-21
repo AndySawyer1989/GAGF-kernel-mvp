@@ -1,4 +1,4 @@
-﻿from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
+from backend.app.gagf.snapshot_diagnostics_ledger import SnapshotDiagnosticsLedger
 from backend.app.gagf.snapshot_diagnostics_summary_service import (
     SnapshotDiagnosticsSummaryService,
 )
@@ -58,7 +58,7 @@ def test_snapshot_diagnostics_summary_service_returns_empty_summary(tmp_path):
         str(tmp_path / "snapshot_diagnostics.jsonl")
     )
 
-    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary()
+    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary(tenant_id="tenant-alpha")
 
     assert summary == {
         "status": "ok",
@@ -106,6 +106,7 @@ def test_snapshot_diagnostics_summary_service_summarizes_confidence_scores_and_b
             confidence_band="high",
             diagnostic_band="healthy",
         ),
+        tenant_id="tenant-alpha",
     )
 
     ledger.save_diagnostics(
@@ -115,6 +116,7 @@ def test_snapshot_diagnostics_summary_service_summarizes_confidence_scores_and_b
             confidence_band="medium",
             diagnostic_band="watch",
         ),
+        tenant_id="tenant-alpha",
     )
 
     ledger.save_diagnostics(
@@ -124,9 +126,10 @@ def test_snapshot_diagnostics_summary_service_summarizes_confidence_scores_and_b
             confidence_band="low",
             diagnostic_band="degraded",
         ),
+        tenant_id="tenant-alpha",
     )
 
-    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary()
+    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary(tenant_id="tenant-alpha")
 
     assert summary["status"] == "ok"
     assert summary["record_count"] == 3
@@ -164,6 +167,7 @@ def test_snapshot_diagnostics_summary_service_summarizes_conflicts(tmp_path):
                 "info": 0,
             },
         ),
+        tenant_id="tenant-alpha",
     )
 
     ledger.save_diagnostics(
@@ -176,9 +180,10 @@ def test_snapshot_diagnostics_summary_service_summarizes_conflicts(tmp_path):
                 "info": 0,
             },
         ),
+        tenant_id="tenant-alpha",
     )
 
-    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary()
+    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary(tenant_id="tenant-alpha")
 
     assert summary["conflict_summary"] == {
         "total_conflicts": 3,
@@ -202,6 +207,7 @@ def test_snapshot_diagnostics_summary_service_summarizes_sources_and_missing_rol
             supporting_sources=["defender", "jira", "okta"],
             missing_roles=["delivery_evidence", "incident_evidence"],
         ),
+        tenant_id="tenant-alpha",
     )
 
     ledger.save_diagnostics(
@@ -211,9 +217,10 @@ def test_snapshot_diagnostics_summary_service_summarizes_sources_and_missing_rol
             supporting_sources=["defender", "sentinelone"],
             missing_roles=["identity_evidence"],
         ),
+        tenant_id="tenant-alpha",
     )
 
-    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary()
+    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary(tenant_id="tenant-alpha")
 
     assert summary["source_summary"] == {
         "average_source_count": 2.5,
@@ -242,9 +249,10 @@ def test_snapshot_diagnostics_summary_service_handles_unknown_bands(tmp_path):
             confidence_band="experimental",
             diagnostic_band="experimental",
         ),
+        tenant_id="tenant-alpha",
     )
 
-    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary()
+    summary = SnapshotDiagnosticsSummaryService(ledger).get_summary(tenant_id="tenant-alpha")
 
     assert summary["confidence_band_counts"]["unknown"] == 1
     assert summary["diagnostic_band_counts"]["unknown"] == 1

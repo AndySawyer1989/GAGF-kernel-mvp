@@ -1,13 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 
 import pytest
 
+from backend.app.gagf.governance_assessment_auth import (
+    ASSESSMENT_AUTH_VERSION,
+)
 from backend.app.gagf.governance_release_identity_tenant_boundary_preflight import (
     GOVERNANCE_RELEASE_IDENTITY_TENANT_BOUNDARY_PREFLIGHT_TYPE,
     GOVERNANCE_RELEASE_IDENTITY_TENANT_BOUNDARY_PREFLIGHT_VERSION,
-    REQUIRED_IDENTITY_HEADERS,
     evaluate_governance_release_identity_tenant_boundary_preflight,
 )
 
@@ -22,67 +24,37 @@ def evaluate(
     )
 
 
-def test_paid_trial_identity_tenant_boundary_preflight_passes(
+@pytest.mark.parametrize(
+    "release_environment",
+    (
+        "paid_trial",
+        "prelive",
+    ),
+)
+def test_identity_preflight_fails_closed_without_provider_evidence(
+    release_environment: str,
 ) -> None:
     result = evaluate(
-        "paid_trial"
+        release_environment
     )
 
-    assert result.passed is True
-    assert result.failure_reasons == ()
+    assert result.release_environment == release_environment
+    assert result.assessment_auth_version == ASSESSMENT_AUTH_VERSION
 
-    assert (
-        result.tenant_identity_required
-        is True
-    )
+    assert result.identity_provider_configured is False
+    assert result.deployment_identity_evidence_present is False
+    assert result.provider_claim_mapping_verified is False
+    assert result.tenant_boundary_evidence_verified is False
+    assert result.role_mapping_evidence_verified is False
 
-    assert (
-        result.actor_identity_required
-        is True
-    )
+    assert result.passed is False
 
-    assert (
-        result.actor_roles_required
-        is True
-    )
-
-    assert (
-        result.missing_identity_fails_closed
-        is True
-    )
-
-    assert (
-        result.deterministic_role_parsing
-        is True
-    )
-
-    assert (
-        result.tenant_scope_binding_enforced
-        is True
-    )
-
-    assert (
-        result.insufficient_role_fails_closed
-        is True
-    )
-
-    assert (
-        result.valid_identity_accepted
-        is True
-    )
-
-
-def test_prelive_identity_tenant_boundary_preflight_passes(
-) -> None:
-    result = evaluate(
-        "prelive"
-    )
-
-    assert result.passed is True
-
-    assert (
-        result.release_environment
-        == "prelive"
+    assert result.failure_reasons == (
+        "production_identity_provider_not_configured",
+        "deployment_identity_evidence_unavailable",
+        "provider_claim_mapping_unverified",
+        "tenant_boundary_evidence_unverified",
+        "role_mapping_evidence_unverified",
     )
 
 
@@ -117,192 +89,98 @@ def test_release_environment_is_normalized(
         "  PAID_TRIAL  "
     )
 
-    assert (
-        result.release_environment
-        == "paid_trial"
-    )
-
-    assert result.passed is True
+    assert result.release_environment == "paid_trial"
+    assert result.passed is False
 
 
-def test_public_result_exposes_identity_metadata_only(
+def test_public_result_reports_unverified_identity_evidence(
 ) -> None:
     result = evaluate(
         "paid_trial"
     )
 
-    public = (
-        result.to_public_dict()
-    )
+    public = result.to_public_dict()
 
     assert (
-        public[
-            "preflight_type"
-        ]
+        public["preflight_type"]
         == GOVERNANCE_RELEASE_IDENTITY_TENANT_BOUNDARY_PREFLIGHT_TYPE
     )
 
     assert (
-        public[
-            "version"
-        ]
+        public["version"]
         == GOVERNANCE_RELEASE_IDENTITY_TENANT_BOUNDARY_PREFLIGHT_VERSION
     )
 
-    assert (
-        public[
-            "required_identity_headers"
-        ]
-        == list(
-            REQUIRED_IDENTITY_HEADERS
-        )
-    )
+    assert public["assessment_auth_version"] == ASSESSMENT_AUTH_VERSION
 
-    assert (
-        public[
-            "assessment_auth_version"
-        ]
-        == result.assessment_auth_version
-    )
+    assert public["identity_provider_configured"] is False
+    assert public["deployment_identity_evidence_present"] is False
+    assert public["provider_claim_mapping_verified"] is False
+    assert public["tenant_boundary_evidence_verified"] is False
+    assert public["role_mapping_evidence_verified"] is False
 
-    assert (
-        public[
-            "tenant_scope_binding_enforced"
-        ]
-        is True
-    )
-
-    assert (
-        public[
-            "missing_identity_fails_closed"
-        ]
-        is True
-    )
-
-    assert (
-        public[
-            "insufficient_role_fails_closed"
-        ]
-        is True
-    )
-
-    assert (
-        public[
-            "valid_identity_accepted"
-        ]
-        is True
-    )
+    assert public["passed"] is False
+    assert public["failure_reasons"] == list(result.failure_reasons)
 
 
 def test_public_result_preserves_authority_boundaries(
 ) -> None:
-    result = evaluate(
+    boundaries = evaluate(
         "paid_trial"
-    )
+    ).to_public_dict()["boundaries"]
 
-    boundaries = (
-        result.to_public_dict()[
-            "boundaries"
-        ]
+    assert isinstance(boundaries, dict)
+
+    assert all(
+        value is True
+        for value in boundaries.values()
     )
 
     assert (
         boundaries[
-            "preflight_is_read_only"
+            "preflight_does_not_verify_identity_by_simulation"
         ]
         is True
     )
 
     assert (
         boundaries[
-            "preflight_uses_existing_assessment_auth_authority"
-        ]
-        is True
-    )
-
-    assert (
-        boundaries[
-            "preflight_does_not_create_identity"
-        ]
-        is True
-    )
-
-    assert (
-        boundaries[
-            "preflight_does_not_grant_roles"
-        ]
-        is True
-    )
-
-    assert (
-        boundaries[
-            "preflight_does_not_grant_access"
-        ]
-        is True
-    )
-
-    assert (
-        boundaries[
-            "identity_preflight_is_not_authentication"
-        ]
-        is True
-    )
-
-    assert (
-        boundaries[
-            "identity_preflight_is_not_authorization"
-        ]
-        is True
-    )
-
-    assert (
-        boundaries[
-            "identity_preflight_is_not_deployment_activation"
-        ]
-        is True
-    )
-
-    assert (
-        boundaries[
-            "identity_preflight_is_not_trial_authorization"
+            "unverified_identity_evidence_fails_closed"
         ]
         is True
     )
 
 
-def test_public_result_does_not_expose_synthetic_identity_values(
+def test_public_result_contains_no_synthetic_identity_values(
 ) -> None:
-    result = evaluate(
-        "paid_trial"
-    )
-
     public_text = repr(
-        result.to_public_dict()
+        evaluate(
+            "paid_trial"
+        ).to_public_dict()
     )
 
-    assert (
-        "tenant-alpha"
-        not in public_text
-    )
-
-    assert (
-        "tenant-beta"
-        not in public_text
-    )
-
-    assert (
-        "release-preflight-actor"
-        not in public_text
-    )
+    assert "tenant-alpha" not in public_text
+    assert "tenant-beta" not in public_text
+    assert "release-preflight-actor" not in public_text
 
 
-def test_required_identity_header_contract_is_exact(
+def test_preflight_has_no_synthetic_request_or_identity_helpers(
 ) -> None:
-    assert (
-        REQUIRED_IDENTITY_HEADERS
-        == (
-            "X-Tenant-ID",
-            "X-Actor-ID",
-            "X-Actor-Roles",
-        )
+    from backend.app.gagf import (
+        governance_release_identity_tenant_boundary_preflight as module,
     )
+
+    forbidden_helpers = (
+        "_build_request",
+        "_missing_header_fails_closed",
+        "_prove_deterministic_role_parsing",
+        "_tenant_mismatch_is_denied",
+        "_insufficient_role_is_denied",
+        "_valid_identity_is_accepted",
+    )
+
+    for helper_name in forbidden_helpers:
+        assert not hasattr(
+            module,
+            helper_name,
+        )

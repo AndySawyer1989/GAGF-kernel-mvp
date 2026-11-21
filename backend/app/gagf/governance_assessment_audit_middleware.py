@@ -41,24 +41,9 @@ def actor_context_from_request(
             tuple(context.roles),
         )
 
-    tenant_id = request.headers.get("X-Tenant-ID")
-    actor_id = request.headers.get("X-Actor-ID")
-    roles_header = request.headers.get(
-        "X-Actor-Roles",
-        "",
-    )
-    roles = tuple(
-        sorted(
-            {
-                role.strip().lower()
-                for role in roles_header.split(",")
-                if role.strip()
-            }
-        )
-    )
-
-    return tenant_id, actor_id, roles
-
+    # Audit attribution must come from verified identity context.
+    # Unauthenticated requests remain auditable without trusted identity.
+    return None, None, ()
 
 def install_assessment_audit_middleware(
     *,
